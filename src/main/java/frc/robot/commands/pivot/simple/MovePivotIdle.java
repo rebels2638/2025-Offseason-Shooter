@@ -4,9 +4,9 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.pivot.Pivot;
 
-public class MovePivotAlgay extends Command {
+public class MovePivotIdle extends Command {
     private final Pivot pivot;
-    public MovePivotAlgay() {
+    public MovePivotIdle() {
         this.pivot = Pivot.getInstance();
         
         addRequirements(pivot);
@@ -14,7 +14,7 @@ public class MovePivotAlgay extends Command {
 
     @Override
     public void initialize() {
-        pivot.setAngle(Rotation2d.fromDegrees(-34));
+        pivot.setAngle(Rotation2d.fromDegrees(122));//110
     }
 
     @Override

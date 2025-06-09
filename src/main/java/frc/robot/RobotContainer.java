@@ -215,7 +215,7 @@ public class RobotContainer {
         xboxOperator.getYButton().onTrue(new QueueL3Action());
         xboxOperator.getXButton().onTrue(new QueueL4Action());
 
-        xboxOperator.getRightMiddleButton().onTrue(new EjectCoral().andThen(new QueueL2Action()).andThen(new DequeueElevatorAction()));
+        xboxOperator.getRightMiddleButton().onTrue(new QueueL2Action().andThen(new DequeueElevatorAction()));
         xboxOperator.getLeftMiddleButton().onTrue(new QueueL4Action().andThen(new DequeueElevatorAction())).onFalse(new QueueStowAction().andThen(new DequeueElevatorAction()));
 
         xboxOperator.getRightBumper().whileTrue(
@@ -235,6 +235,10 @@ public class RobotContainer {
                 new InstantCommand(() -> RobotState.getInstance().requestGlobalVisionEstimateScale())
             )
         );
+
+        new Trigger(
+            () -> (xboxOperator.getLeftTriggerButton(0.5).getAsBoolean())
+        ).whileTrue(new RunRollerReverse()).onFalse(new StopRoller());
 
         xboxTester.getRightBumper().whileTrue(
             new IntakeCoral().withInterruptBehavior(InterruptionBehavior.kCancelIncoming).andThen(
