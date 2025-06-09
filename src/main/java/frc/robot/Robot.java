@@ -4,10 +4,6 @@
 
 package frc.robot;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -16,31 +12,12 @@ import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 
 import com.ctre.phoenix6.SignalLogger;
-import com.pathplanner.lib.commands.PathfindingCommand;
-import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.path.PathPoint;
-import com.pathplanner.lib.pathfinding.Pathfinding;
-import com.pathplanner.lib.util.PathPlannerLogging;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.net.WebServer;
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Filesystem;
-import edu.wpi.first.wpilibj.Servo;
-import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.commands.autoAlignment.LocalADStarAK;
-import frc.robot.commands.roller.simple.StopRoller;
 import frc.robot.constants.Constants;
-import frc.robot.constants.Constants.Mode;
-import frc.robot.lib.util.AlignmentUtil;
-import frc.robot.lib.util.Elastic;
-import frc.robot.subsystems.drivetrain.swerve.Phoenix6Odometry;
-import frc.robot.subsystems.drivetrain.swerve.SwerveDrive;
-import frc.robot.lib.util.NT4KeyLogger;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -120,22 +97,6 @@ public class Robot extends LoggedRobot {
         WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
 
         m_robotContainer = RobotContainer.getInstance();
-        Pathfinding.setPathfinder(new LocalADStarAK());
-        PathfindingCommand.warmupCommand().schedule();
-
-        // Threads.setCurrentThreadPriority(true, 10);
-        // Phoenix6Odometry.getInstance().setThreadPriority(8);
-
-        PathPlannerLogging.setLogCurrentPoseCallback(logCurrentPose -> Logger.recordOutput("PathPlanner/currentPose", logCurrentPose));        
-        PathPlannerLogging.setLogTargetPoseCallback(logTargetPose -> Logger.recordOutput("PathPlanner/targetPose", logTargetPose));
-        PathPlannerLogging.setLogActivePathCallback(logActivePath -> {
-                Pose2d[] a = new Pose2d[logActivePath.size()];
-                for (int i = 0; i < logActivePath.size(); i++) {
-                    a[i] = logActivePath.get(i);
-                }
-                Logger.recordOutput("PathPlanner/activePath", a);
-            }
-        );
     }
 
     /**
@@ -175,7 +136,7 @@ public class Robot extends LoggedRobot {
      */
     @Override
     public void autonomousInit() {
-        m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+        // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
         // schedule the autonomous command (example)
         if (m_autonomousCommand != null) {
@@ -199,9 +160,6 @@ public class Robot extends LoggedRobot {
         if (m_autonomousCommand != null) {
             m_autonomousCommand.cancel();
         }
-
-        new StopRoller().schedule();
-        SwerveDrive.getInstance().driveRobotRelative(new ChassisSpeeds());
 
         // m_robotContainer.offsetAngle();
     }

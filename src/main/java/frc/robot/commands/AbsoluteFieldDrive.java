@@ -18,7 +18,7 @@ import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigProto;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigSim;
 import frc.robot.lib.input.XboxController;
 import frc.robot.lib.util.RebelUtil;
-import frc.robot.subsystems.drivetrain.swerve.SwerveDrive; // Swerve drive subsystem for robot movement.
+import frc.robot.subsystems.swerve.SwerveDrive;
 
 public class AbsoluteFieldDrive extends Command {
 
