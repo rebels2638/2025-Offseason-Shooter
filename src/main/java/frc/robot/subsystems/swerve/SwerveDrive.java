@@ -4,26 +4,17 @@ import java.util.Optional;
 
 import org.littletonrobotics.junction.Logger;
 
-import com.pathplanner.lib.util.DriveFeedforwards;
-import com.pathplanner.lib.util.swerve.SwerveSetpoint;
-import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
-
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotState;
 import frc.robot.constants.Constants;
-import frc.robot.constants.swerve.controllerConfigs.SwerveControllerConfigBase;
-import frc.robot.constants.swerve.controllerConfigs.SwerveControllerConfigComp;
-import frc.robot.constants.swerve.controllerConfigs.SwerveControllerConfigProto;
-import frc.robot.constants.swerve.controllerConfigs.SwerveControllerConfigSim;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigBase;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigComp;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigProto;
@@ -58,10 +49,6 @@ public class SwerveDrive extends SubsystemBase {
         return instance;
     }
 
-    private final PIDController rotationalVelocityFeedbackController;
-
-    private Rotation2d rotationLock = new Rotation2d();
-
     private ModuleIO[] modules;
 
     private ModuleIOInputsAutoLogged[] moduleInputs = {
@@ -76,7 +63,6 @@ public class SwerveDrive extends SubsystemBase {
 
     private boolean isTranslationSlowdownEnabled = false;
     private boolean isRotationSlowdownEnabled = false;
-    private boolean isRotationLockEnabled = false;
 
     private double translationCoefficient = 1;
     private double rotationCoefficient = 1;
@@ -89,20 +75,13 @@ public class SwerveDrive extends SubsystemBase {
         new SwerveModuleState()
     };
 
-    private final SwerveSetpointGenerator swerveSetpointGenerator;
-    private SwerveSetpoint previousSetpoint = new SwerveSetpoint(
-        RobotState.getInstance().getRobotRelativeSpeeds(), 
-        moduleStates, 
-        DriveFeedforwards.zeros(4)
-    );
-
     private ChassisSpeeds desiredRobotRelativeSpeeds = new ChassisSpeeds();
 
     double prevLoopTime = Timer.getTimestamp();
 
     private final SwerveModuleGeneralConfigBase moduleGeneralConfig;
     private final SwerveDrivetrainConfigBase drivetrainConfig;
-    private final SwerveControllerConfigBase controllerConfig;
+    private SwerveDriveKinematics kinematics;
 
     @SuppressWarnings("static-access")
     private SwerveDrive() {
@@ -110,7 +89,6 @@ public class SwerveDrive extends SubsystemBase {
             case COMP:
                 drivetrainConfig = SwerveDrivetrainConfigComp.getInstance();
                 moduleGeneralConfig = SwerveModuleGeneralConfigComp.getInstance();
-                controllerConfig = SwerveControllerConfigComp.getInstance();
 
                 modules = new ModuleIO[] {
                     new ModuleIOTalonFX(moduleGeneralConfig, SwerveModuleSpecificFLConfigComp.getInstance(), 0),
@@ -127,7 +105,6 @@ public class SwerveDrive extends SubsystemBase {
             case PROTO:
                 drivetrainConfig = SwerveDrivetrainConfigProto.getInstance();
                 moduleGeneralConfig = SwerveModuleGeneralConfigProto.getInstance();
-                controllerConfig = SwerveControllerConfigProto.getInstance();
 
                 modules = new ModuleIO[] {
                     new ModuleIOTalonFX(moduleGeneralConfig, SwerveModuleSpecificBLConfigProto.getInstance(), 0),
@@ -143,7 +120,6 @@ public class SwerveDrive extends SubsystemBase {
             case SIM:
                 drivetrainConfig = SwerveDrivetrainConfigSim.getInstance();
                 moduleGeneralConfig = SwerveModuleGeneralConfigSim.getInstance();
-                controllerConfig = SwerveControllerConfigSim.getInstance();
 
                 modules = new ModuleIO[] {
                     new ModuleIOSim(moduleGeneralConfig, 0),
@@ -158,7 +134,6 @@ public class SwerveDrive extends SubsystemBase {
             case REPLAY:
                 drivetrainConfig = SwerveDrivetrainConfigComp.getInstance();
                 moduleGeneralConfig = SwerveModuleGeneralConfigComp.getInstance();
-                controllerConfig = SwerveControllerConfigComp.getInstance();
 
                 modules = new ModuleIO[] {
                     new ModuleIO() {},
@@ -174,7 +149,6 @@ public class SwerveDrive extends SubsystemBase {
             default:
                 drivetrainConfig = SwerveDrivetrainConfigComp.getInstance();
                 moduleGeneralConfig = SwerveModuleGeneralConfigComp.getInstance();
-                controllerConfig = SwerveControllerConfigComp.getInstance();
 
                 modules = new ModuleIO[] {
                     new ModuleIOTalonFX(moduleGeneralConfig, SwerveModuleSpecificFLConfigComp.getInstance(), 0),
@@ -190,14 +164,12 @@ public class SwerveDrive extends SubsystemBase {
                 
         }
 
-        // driveFFController = new DriveFFController(config);
-        swerveSetpointGenerator = new SwerveSetpointGenerator(
-            drivetrainConfig.getRobotConfig(), 
-            Units.rotationsToRadians(
-                moduleGeneralConfig.getSteerMotionMagicCruiseVelocityRotationsPerSec())
+        kinematics = new SwerveDriveKinematics(
+            drivetrainConfig.getFrontLeftPositionMeters(),
+            drivetrainConfig.getFrontRightPositionMeters(),
+            drivetrainConfig.getBackLeftPositionMeters(),
+            drivetrainConfig.getBackRightPositionMeters()
         );
-                
-        rotationalVelocityFeedbackController = controllerConfig.getRotationalPositionFeedbackController();
 
         CommandScheduler.getInstance().registerSubsystem(this);
     }
@@ -267,40 +239,25 @@ public class SwerveDrive extends SubsystemBase {
         }
 
         desiredRobotRelativeSpeeds = compensateRobotRelativeSpeeds(desiredRobotRelativeSpeeds);
-        Logger.recordOutput("SwerveDrive/compensatedRobotRelativeSpeeds", previousSetpoint.robotRelativeSpeeds());
+        Logger.recordOutput("SwerveDrive/compensatedRobotRelativeSpeeds", desiredRobotRelativeSpeeds);
 
-        if (isRotationLockEnabled) { // get the curr rot from robot state and the argument from here
-            double rotationalVelocity = MathUtil.clamp(
-                rotationalVelocityFeedbackController.calculate(
-                    RobotState.getInstance().getEstimatedPose().getRotation().getRadians(),
-                    this.rotationLock.getRadians()), 
-                -controllerConfig.getRotationalPositionMaxOutputRadSec(), 
-                controllerConfig.getRotationalPositionMaxOutputRadSec());
-
-            desiredRobotRelativeSpeeds.omegaRadiansPerSecond = rotationalVelocity;
-        }
-
-        Logger.recordOutput("SwerveDrive/lockedRotationLock", desiredRobotRelativeSpeeds);
-        
         Logger.recordOutput("SwerveDrive/dt", dt);
         
-        previousSetpoint = swerveSetpointGenerator.generateSetpoint(
-            previousSetpoint,
-            desiredRobotRelativeSpeeds,
-            dt // between calls of generate setpoint
+        SwerveModuleState[] moduleSetpoints = kinematics.toSwerveModuleStates(desiredRobotRelativeSpeeds);
+        SwerveDriveKinematics.desaturateWheelSpeeds(
+            moduleSetpoints, 
+            desiredRobotRelativeSpeeds, 
+            drivetrainConfig.getMaxModuleVelocity(),
+            drivetrainConfig.getMaxTranslationalVelocityMetersPerSec(),
+            drivetrainConfig.getMaxAngularVelocityRadiansPerSec()
         );
-        
-        Logger.recordOutput("SwerveDrive/generatedRobotRelativeSpeeds", previousSetpoint.robotRelativeSpeeds());
 
-        SwerveModuleState[] optimizedSetpoints = previousSetpoint.moduleStates();
         for (int i = 0; i < 4; i++) {
-            Logger.recordOutput("SwerveDrive/module" + i + "/accelerationsMPSSq", previousSetpoint.feedforwards().accelerationsMPSSq()[i]);
-            
-            optimizedSetpoints[i].optimize(moduleStates[i].angle);
-            modules[i].setState(optimizedSetpoints[i], Optional.of(Double.valueOf(previousSetpoint.feedforwards().accelerationsMPSSq()[i]))); // setTargetState's helper method is kind of funny
+            moduleSetpoints[i].optimize(moduleStates[i].angle);
+            modules[i].setState(moduleSetpoints[i]);
         }
 
-        Logger.recordOutput("SwerveDrive/optimizedModuleStates", optimizedSetpoints);
+        Logger.recordOutput("SwerveDrive/optimizedModuleStates", moduleSetpoints);
 
         Logger.recordOutput("SwerveDrive/translationCoefficient", translationCoefficient);
         Logger.recordOutput("SwerveDrive/rotationCoefficient", rotationCoefficient);
@@ -335,18 +292,6 @@ public class SwerveDrive extends SubsystemBase {
 
         speeds = ChassisSpeeds.fromFieldRelativeSpeeds(speeds, RobotState.getInstance().getEstimatedPose().getRotation());
         driveRobotRelative(speeds);
-    }
-
-    public void setRotationLock(Rotation2d rotation) {
-        isRotationLockEnabled = true;
-        rotationLock = rotation;
-        Logger.recordOutput("SwerveDrive/rotationLockEnabled", true);
-
-    }
-
-    public void disableRotationLock() {
-        isRotationLockEnabled = false;
-        Logger.recordOutput("SwerveDrive/rotationLockEnabled", false);
     }
 
     public void setSlowdownCoeffs(double transCoeff, double rotCoeff) {

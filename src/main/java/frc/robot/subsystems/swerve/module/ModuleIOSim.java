@@ -167,7 +167,7 @@ public class ModuleIOSim implements ModuleIO {
     }
 
     @Override
-    public void setState(SwerveModuleState state, Optional<Double> feedForwardTorqueCurrent) {
+    public void setState(SwerveModuleState state) {
         double dt = Timer.getTimestamp() - prevTimeState;
         prevTimeState = Timer.getTimestamp();
 

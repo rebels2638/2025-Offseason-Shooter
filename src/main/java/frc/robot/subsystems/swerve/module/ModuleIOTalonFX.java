@@ -5,7 +5,6 @@ import static edu.wpi.first.units.Units.Fahrenheit;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Rotation;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
 import java.util.Optional;
@@ -17,7 +16,6 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.MotionMagicVelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -26,7 +24,6 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.StaticFeedforwardSignValue;
 
 import edu.wpi.first.hal.HALUtil;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -67,9 +64,9 @@ public class ModuleIOTalonFX implements ModuleIO {
     private final StatusSignal<Angle> steerEncoderPositionStatusSignal;
     private final StatusSignal<Angle> steerEncoderAbsolutePosition;
 
-    private final VelocityTorqueCurrentFOC driveMotorRequest = new VelocityTorqueCurrentFOC(0);
-    private final MotionMagicExpoTorqueCurrentFOC steerMotorRequest = new MotionMagicExpoTorqueCurrentFOC(0);
-    private final SlewRateLimiter driveAcellLimiter;
+    private final VelocityTorqueCurrentFOC driveMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
+    private final MotionMagicExpoTorqueCurrentFOC steerMotorRequest = new MotionMagicExpoTorqueCurrentFOC(0).withSlot(0);
+    private final SlewRateLimiter driveAcelLimiter;
     private final SwerveModuleGeneralConfigBase generalConfig;
     private final int moduleID;
 
@@ -119,7 +116,7 @@ public class ModuleIOTalonFX implements ModuleIO {
 
         driveConfig.MotionMagic.MotionMagicAcceleration = generalConfig.getDriveMotionMagicVelocityAccelerationMetersPerSecSec();
         driveConfig.MotionMagic.MotionMagicJerk = generalConfig.getDriveMotionMagicVelocityJerkMetersPerSecSecSec();
-        driveAcellLimiter = new SlewRateLimiter(generalConfig.getDriveMotionMagicVelocityJerkMetersPerSecSecSec());
+        driveAcelLimiter = new SlewRateLimiter(generalConfig.getDriveMotionMagicVelocityJerkMetersPerSecSecSec());
         // Cancoder + encoder
         driveConfig.ClosedLoopGeneral.ContinuousWrap = false;
         driveConfig.Feedback.SensorToMechanismRatio = 
@@ -364,23 +361,13 @@ public class ModuleIOTalonFX implements ModuleIO {
     }
 
     @Override
-    public void setState(SwerveModuleState state, Optional<Double> acellerationMeterPerSecPerSec) {
-        double driveAcell = 
-            driveAcellLimiter.calculate(
-                acellerationMeterPerSecPerSec.isPresent() ? 
-                    acellerationMeterPerSecPerSec.get().doubleValue() : 
-                    0
-            );
-        Logger.recordOutput("SwerveDrive/module" + moduleID + "/jerLimAccelerationsMPSSq", driveAcell);
-
+    public void setState(SwerveModuleState state) {
         driveMotor.setControl(driveMotorRequest.withVelocity(
-            RebelUtil.constrain(
-                state.speedMetersPerSecond,
-                -generalConfig.getDriveMaxVelocityMetersPerSec(),
-                generalConfig.getDriveMaxVelocityMetersPerSec()
-            ) * Math.cos(RebelUtil.subtractRotations(lastSteerAngleRad, lastSteerSetpoint).getRadians())
-            ).withAcceleration(
-                driveAcell
+                RebelUtil.constrain(
+                    state.speedMetersPerSecond,
+                    -generalConfig.getDriveMaxVelocityMetersPerSec(),
+                    generalConfig.getDriveMaxVelocityMetersPerSec()
+                ) * state.angle.minus(lastSteerAngleRad).getCos()
             )
         );
         

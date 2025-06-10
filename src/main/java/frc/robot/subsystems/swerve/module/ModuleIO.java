@@ -32,6 +32,6 @@ public interface ModuleIO {
     }
 
     public default void updateInputs(ModuleIOInputs inputs) {}
-    public default void setState(SwerveModuleState state, Optional<Double> feedForwardTorqueCurrent) {}
+    public default void setState(SwerveModuleState state) {}
     public default void setDriveVoltage(double baseUnitMagnitude) {}
 }
