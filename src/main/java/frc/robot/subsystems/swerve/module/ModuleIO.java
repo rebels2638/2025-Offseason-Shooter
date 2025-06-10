@@ -33,4 +33,10 @@ public interface ModuleIO {
 
     public default void updateInputs(ModuleIOInputs inputs) {}
     public default void setState(SwerveModuleState state) {}
+
+    // Set the steer motor torque current (in Nm) and optionally the drive velocity (in m/s)
+    public default void setSteerTorqueCurrentFOC(double torqueCurrentFOC, double driveVelocityMetersPerSec) {}
+
+    // Set the drive motor torque current (in Nm) and optionally the current steer angle
+    public default void setDriveTorqueCurrentFOC(double torqueCurrentFOC, Rotation2d steerAngle) {}
 }

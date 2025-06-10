@@ -1,5 +1,10 @@
 package frc.robot.subsystems.swerve;
 
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.VoltsPerMeterPerSecond;
+
 import java.util.Optional;
 
 import org.littletonrobotics.junction.Logger;
@@ -10,9 +15,16 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.VelocityUnit;
+import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.units.measure.Velocity;
+import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.RobotState;
 import frc.robot.constants.Constants;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigBase;
@@ -82,6 +94,9 @@ public class SwerveDrive extends SubsystemBase {
     private final SwerveModuleGeneralConfigBase moduleGeneralConfig;
     private final SwerveDrivetrainConfigBase drivetrainConfig;
     private SwerveDriveKinematics kinematics;
+
+    private final SysIdRoutine driveCharacterizationSysIdRoutine;
+    private final SysIdRoutine steerCharacterizationSysIdRoutine;
 
     @SuppressWarnings("static-access")
     private SwerveDrive() {
@@ -169,6 +184,39 @@ public class SwerveDrive extends SubsystemBase {
             drivetrainConfig.getFrontRightPositionMeters(),
             drivetrainConfig.getBackLeftPositionMeters(),
             drivetrainConfig.getBackRightPositionMeters()
+        );
+
+        // Create the SysId routine - this is going to be in torque current foc units not voltage
+        driveCharacterizationSysIdRoutine = new SysIdRoutine(
+            new SysIdRoutine.Config(
+                Volts.of(1).per(Second), Volts.of(7), Seconds.of(10), // Use default config
+                (state) -> Logger.recordOutput("DriveCharacterizationSysIdRoutineState", state.toString())
+            ),
+            new SysIdRoutine.Mechanism(
+                (torqueCurrentFOC) -> {
+                    for (ModuleIO module : modules) {
+                        module.setDriveTorqueCurrentFOC(torqueCurrentFOC.in(Volts), new Rotation2d(0));
+                    }
+                },
+                null, // No log consumer, since data is recorded by AdvantageKit
+                this
+            )
+        );
+
+        steerCharacterizationSysIdRoutine = new SysIdRoutine(
+            new SysIdRoutine.Config(
+                Volts.of(1).per(Second), Volts.of(7), Seconds.of(10), // Use default config
+                (state) -> Logger.recordOutput("SteerCharacterizationSysIdRoutineState", state.toString())
+            ),
+            new SysIdRoutine.Mechanism(
+                (torqueCurrentFOC) -> {
+                    for (ModuleIO module : modules) {
+                        module.setSteerTorqueCurrentFOC(torqueCurrentFOC.in(Volts), 0);
+                    }
+                },
+                null, // No log consumer, since data is recorded by AdvantageKit
+                this
+            )
         );
 
         CommandScheduler.getInstance().registerSubsystem(this);
@@ -308,5 +356,21 @@ public class SwerveDrive extends SubsystemBase {
 
     public void resetGyro(Rotation2d yaw) {
         gyroIO.resetGyro(yaw);
+    }
+
+    public Command getDynamicDriveCharacterizationSysIdRoutine(Direction direction) {
+        return driveCharacterizationSysIdRoutine.dynamic(direction);
+    }
+
+    public Command getDynamicSteerCharacterizationSysIdRoutine(Direction direction) {
+        return steerCharacterizationSysIdRoutine.dynamic(direction);
+    }
+
+    public Command getQuasistaticDriveCharacterizationSysIdRoutine(Direction direction) {
+        return driveCharacterizationSysIdRoutine.quasistatic(direction);
+    }
+
+    public Command getQuasistaticSteerCharacterizationSysIdRoutine(Direction direction) {
+        return steerCharacterizationSysIdRoutine.quasistatic(direction);
     }
 }

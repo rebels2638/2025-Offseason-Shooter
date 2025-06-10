@@ -16,6 +16,7 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -66,6 +67,8 @@ public class ModuleIOTalonFX implements ModuleIO {
 
     private final VelocityTorqueCurrentFOC driveMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
     private final MotionMagicExpoTorqueCurrentFOC steerMotorRequest = new MotionMagicExpoTorqueCurrentFOC(0).withSlot(0);
+    private final TorqueCurrentFOC torqueCurrentFOCRequest = new TorqueCurrentFOC(0);
+
     private final SlewRateLimiter driveAcelLimiter;
     private final SwerveModuleGeneralConfigBase generalConfig;
     private final int moduleID;
@@ -380,4 +383,34 @@ public class ModuleIOTalonFX implements ModuleIO {
         lastSteerSetpoint = state.angle;
     }
 
+    @Override
+    public void setSteerTorqueCurrentFOC(double torqueCurrentFOC, double driveVelocityMetersPerSec) {
+        // Set steer motor with torque FOC, optionally using drive velocity for feedforward if needed
+        steerMotor.setControl(
+            torqueCurrentFOCRequest.withOutput(torqueCurrentFOC)
+        );
+
+        driveMotor.setControl(driveMotorRequest.withVelocity(
+                RebelUtil.constrain(
+                    driveVelocityMetersPerSec,
+                    -generalConfig.getDriveMaxVelocityMetersPerSec(),
+                    generalConfig.getDriveMaxVelocityMetersPerSec()
+                )
+            )
+        );
+    }
+
+    @Override
+    public void setDriveTorqueCurrentFOC(double torqueCurrentFOC, Rotation2d steerAngle) {
+        // Set drive motor with torque FOC, optionally using steer angle for feedforward if needed
+        driveMotor.setControl(
+            torqueCurrentFOCRequest.withOutput(torqueCurrentFOC)
+        );
+
+        steerMotor.setControl(
+            steerMotorRequest.withPosition(
+                steerAngle.getRotations()
+            )
+        );
+    }
 }

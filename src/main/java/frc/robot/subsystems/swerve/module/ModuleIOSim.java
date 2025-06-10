@@ -242,4 +242,16 @@ public class ModuleIOSim implements ModuleIO {
         driveSim.setInputVoltage(driveInputVoltage);
         steerSim.setInputVoltage(steerInputVoltage);
     }
+
+    @Override
+    public void setSteerTorqueCurrentFOC(double torqueCurrentFOC, double driveVelocityMetersPerSec) {
+        // In sim, treat torqueCurrentFOC as voltage for simplicity
+        steerSim.setInputVoltage(torqueCurrentFOC);
+    }
+
+    @Override
+    public void setDriveTorqueCurrentFOC(double torqueCurrentFOC, Rotation2d steerAngle) {
+        // In sim, treat torqueCurrentFOC as voltage for simplicity
+        driveSim.setInputVoltage(torqueCurrentFOC);
+    }
 }
