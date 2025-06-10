@@ -380,8 +380,4 @@ public class ModuleIOTalonFX implements ModuleIO {
         lastSteerSetpoint = state.angle;
     }
 
-    @Override
-    public void setDriveVoltage(double baseUnitMagnitude) {
-    }
-
 }

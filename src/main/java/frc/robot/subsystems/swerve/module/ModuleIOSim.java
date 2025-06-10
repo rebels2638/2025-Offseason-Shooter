@@ -242,10 +242,4 @@ public class ModuleIOSim implements ModuleIO {
         driveSim.setInputVoltage(driveInputVoltage);
         steerSim.setInputVoltage(steerInputVoltage);
     }
-
-    @Override
-    public void setDriveVoltage(double driveInputVoltage) {
-        driveSim.setInputVoltage(driveInputVoltage);
-
-    }
 }
