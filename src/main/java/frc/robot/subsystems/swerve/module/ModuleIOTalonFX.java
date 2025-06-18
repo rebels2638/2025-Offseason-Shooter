@@ -37,6 +37,7 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Temperature;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import frc.robot.constants.swerve.moduleConfigs.SwerveModuleGeneralConfigBase;
 import frc.robot.constants.swerve.moduleConfigs.SwerveModuleSpecificConfigBase;
 import frc.robot.lib.util.RebelUtil;
@@ -90,7 +91,8 @@ public class ModuleIOTalonFX implements ModuleIO {
                                             "Swerve Encoder Disconnected", "Swerve Steer CANCODER Disconnected");
 
     private Rotation2d lastSteerAngleRad = new Rotation2d();
-    private Rotation2d lastSteerSetpoint = new Rotation2d();
+    private SwerveModuleState lastRequestedState = new SwerveModuleState();
+    private double lastRequestedStateTime = Timer.getFPGATimestamp();
 
     public ModuleIOTalonFX(SwerveModuleGeneralConfigBase generalConfig, SwerveModuleSpecificConfigBase specificConfig, int moduleID) {
         this.generalConfig = generalConfig;
@@ -371,7 +373,7 @@ public class ModuleIOTalonFX implements ModuleIO {
                     -generalConfig.getDriveMaxVelocityMetersPerSec(),
                     generalConfig.getDriveMaxVelocityMetersPerSec()
                 ) * state.angle.minus(lastSteerAngleRad).getCos()
-            )
+            ).withAcceleration((state.speedMetersPerSecond - lastRequestedState.speedMetersPerSecond) / (Timer.getFPGATimestamp() - lastRequestedStateTime))
         );
         
         steerMotor.setControl(
@@ -380,7 +382,8 @@ public class ModuleIOTalonFX implements ModuleIO {
             )
         );
 
-        lastSteerSetpoint = state.angle;
+        lastRequestedState = state;
+        lastRequestedStateTime = Timer.getFPGATimestamp();
     }
 
     @Override

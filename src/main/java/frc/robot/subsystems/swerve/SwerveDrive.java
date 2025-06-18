@@ -179,7 +179,7 @@ public class SwerveDrive extends SubsystemBase {
         // Create the SysId routine - this is going to be in torque current foc units not voltage
         driveCharacterizationSysIdRoutine = new SysIdRoutine(
             new SysIdRoutine.Config(
-                Volts.of(1).per(Second), Volts.of(7), Seconds.of(5), // Use default config
+                Volts.of(1.5).per(Second), Volts.of(12), Seconds.of(15), // Use default config
                 (state) -> Logger.recordOutput("DriveCharacterizationSysIdRoutineState", state.toString())
             ),
             new SysIdRoutine.Mechanism(

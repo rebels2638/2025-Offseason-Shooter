@@ -39,53 +39,47 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getDriveStatorCurrentLimit() {
-        return 60.0;
+        return 20.0;
     }
 
     @Override
     public double getDrivePeakForwardTorqueCurrent() {
-        return 60.0;
+        return 20.0;
     }
 
     @Override
     public double getDrivePeakReverseTorqueCurrent() {
-        return -60.0;
+        return -20.0;
     }
 
     @Override
     public double getDriveKS() {
-        return 3.8; // 3.7-3.8 <4
+        return 2.0014;
     }
 
     @Override
     public double getDriveKV() {
-        return 2;
-        // return 0.0;
-
+        return 1.2872;
     }
 
     @Override
     public double getDriveKA() {
-        // return 10;
-        return 9.8; // 9.8
-        // return 0;
+        return 2.8087;
     }
 
     @Override
     public double getDriveKP() {
-        return 70;//70
-        // return 0;
+        return 100.32;
     }
 
     @Override
     public double getDriveKI() {
-        return 0; //.5
+        return 0;
     }
 
     @Override
     public double getDriveKD() {
-        return 1.5;//1.5
-        // return 0;
+        return 0;
     }
 
     @Override
@@ -110,7 +104,7 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public boolean getIsDriveNeutralModeBrake() {
-        return false;
+        return true;
     }
 
     @Override
@@ -155,7 +149,7 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getSteerKS() {
-        return 4.5;
+        return 1.172;
     }
 
     @Override
@@ -170,7 +164,7 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getSteerKP() {
-        return 500;
+        return 90;//80
     }
 
     @Override
@@ -180,17 +174,17 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getSteerKD() {
-        return 10.5;
+        return 14.592;
     }
 
     @Override
     public double getSteerMotionMagicExpoKA() {
-        return 0.2;
+        return 0.0803;
     }
 
     @Override
     public double getSteerMotionMagicExpoKV() {
-        return 2;
+        return 0.0389;
     }
 
     @Override
@@ -200,7 +194,7 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public boolean getIsSteerNeutralModeBrake() {
-        return false;
+        return true;
     }
 
     @Override
