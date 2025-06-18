@@ -110,7 +110,7 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public boolean getIsDriveNeutralModeBrake() {
-        return true;
+        return false;
     }
 
     @Override
@@ -200,7 +200,7 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public boolean getIsSteerNeutralModeBrake() {
-        return true;
+        return false;
     }
 
     @Override
