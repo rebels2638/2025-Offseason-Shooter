@@ -26,7 +26,7 @@ public class SwerveModuleSpecificBLConfigComp extends SwerveModuleSpecificConfig
 
     @Override
     public boolean getIsDriveInverted() {
-        return false;
+        return true;
     }
 
     @Override
