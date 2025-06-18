@@ -51,6 +51,6 @@ public class SwerveModuleSpecificBLConfigComp extends SwerveModuleSpecificConfig
 
     @Override
     public double getCancoderOffsetRotations() {
-        return 0.0674;
+        return 0.3820;
     }
 }
