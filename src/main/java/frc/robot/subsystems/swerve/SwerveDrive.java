@@ -3,10 +3,6 @@ package frc.robot.subsystems.swerve;
 import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
-import static edu.wpi.first.units.Units.VoltsPerMeterPerSecond;
-
-import java.util.Optional;
-
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -14,11 +10,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.VelocityUnit;
-import edu.wpi.first.units.measure.Time;
-import edu.wpi.first.units.measure.Velocity;
-import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -41,7 +32,6 @@ import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleGeneralConfigP
 import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleSpecificBLConfigProto;
 import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleSpecificFRConfigProto;
 import frc.robot.constants.swerve.moduleConfigs.sim.SwerveModuleGeneralConfigSim;
-import frc.robot.lib.util.RebelUtil;
 import frc.robot.subsystems.swerve.gyro.GyroIO;
 import frc.robot.subsystems.swerve.gyro.GyroIOInputsAutoLogged;
 import frc.robot.subsystems.swerve.gyro.GyroIONavX;
@@ -189,7 +179,7 @@ public class SwerveDrive extends SubsystemBase {
         // Create the SysId routine - this is going to be in torque current foc units not voltage
         driveCharacterizationSysIdRoutine = new SysIdRoutine(
             new SysIdRoutine.Config(
-                Volts.of(1).per(Second), Volts.of(7), Seconds.of(10), // Use default config
+                Volts.of(1).per(Second), Volts.of(7), Seconds.of(5), // Use default config
                 (state) -> Logger.recordOutput("DriveCharacterizationSysIdRoutineState", state.toString())
             ),
             new SysIdRoutine.Mechanism(

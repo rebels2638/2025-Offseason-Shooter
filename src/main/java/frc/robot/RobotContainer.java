@@ -1,6 +1,19 @@
 package frc.robot;
 
+import java.util.HashMap;
+
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.util.sendable.SendableBuilder;
+import edu.wpi.first.wpilibj.Notifier;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.AbsoluteFieldDrive;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.swerve.SwerveDrive;
@@ -20,6 +33,7 @@ public class RobotContainer {
     private final XboxController xboxDriver;
     private final XboxController xboxOperator;
 
+    private final LoggedDashboardChooser<Command> sysidChooser = new LoggedDashboardChooser<>("/Auto/SYSIDChooser");
 
     private RobotContainer() {
         this.xboxTester = new XboxController(1);
@@ -31,9 +45,14 @@ public class RobotContainer {
 
         swerveDrive = SwerveDrive.getInstance();
         swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
+
+        sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineForward", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kForward));
+        sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kReverse));
+        sysidChooser.addOption("QuasistaticDriveCharacterizationSysIdRoutineForward", swerveDrive.getQuasistaticDriveCharacterizationSysIdRoutine(Direction.kForward));
+        sysidChooser.addOption("QuasistaticDriveCharacterizationSysIdRoutineReverse", swerveDrive.getQuasistaticDriveCharacterizationSysIdRoutine(Direction.kReverse));
     }
 
     public Command getAutonomousCommand() {
-        return null;
+        return sysidChooser.get();
     }
 }
