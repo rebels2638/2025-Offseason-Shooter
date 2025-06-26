@@ -127,7 +127,7 @@ public class ModuleIOSim implements ModuleIO {
         steerSim.update(dt);
         driveSim.update(dt);
 
-        inputs.timestamp = Timer.getTimestamp();
+        inputs.fpgaTimestampSeconds = Timer.getTimestamp();
 
         inputs.driveVelocityMetersPerSec = driveSim.getAngularVelocityRPM() *
                 2 * Math.PI * config.getDriveWheelRadiusMeters();
@@ -135,8 +135,7 @@ public class ModuleIOSim implements ModuleIO {
 
         inputs.drivePositionMeters += inputs.driveVelocityMetersPerSec * dt;
 
-        inputs.driveCurrentDrawAmps = driveSim.getCurrentDrawAmps();
-        inputs.driveAppliedVolts = driveSim.getInputVoltage();
+        inputs.driveTorqueCurrent = driveSim.getCurrentDrawAmps();
         inputs.driveTemperatureFahrenheit = 60; // random number
 
         inputs.steerPosition = new Rotation2d(
@@ -155,8 +154,7 @@ public class ModuleIOSim implements ModuleIO {
         // Accumulate into continuous angle
         currentUnwrappedAngleRad += angleDelta;
 
-        inputs.steerCurrentDrawAmps = steerSim.getCurrentDrawAmps();
-        inputs.steerAppliedVolts = steerSim.getInputVoltage();
+        inputs.steerTorqueCurrent = steerSim.getCurrentDrawAmps();
         inputs.steerTemperatureFahrenheit = 60; // random number
 
         currentSteerState = new State(inputs.steerPosition.getRadians(), inputs.steerVelocityRadPerSec);

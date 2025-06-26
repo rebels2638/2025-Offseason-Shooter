@@ -229,7 +229,7 @@ public class SwerveDrive extends SubsystemBase {
             for (int i = 0; i < 4; i++) {
                 modules[i].updateInputs(moduleInputs[i]);
                 Logger.processInputs("SwerveDrive/module" + i, moduleInputs[i]);
-                odometryTimestamp = Math.max(odometryTimestamp, moduleInputs[i].timestamp);
+                odometryTimestamp = Math.max(odometryTimestamp, moduleInputs[i].fpgaTimestampSeconds);
             }
         } finally {
             Phoenix6Odometry.getInstance().stateLock.readLock().unlock();
