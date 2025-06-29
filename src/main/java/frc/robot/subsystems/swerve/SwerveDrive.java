@@ -3,6 +3,10 @@ package frc.robot.subsystems.swerve;
 import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -51,8 +55,11 @@ public class SwerveDrive extends SubsystemBase {
         return instance;
     }
 
-    private ModuleIO[] modules;
+    public static final double ODOMETRY_FREQUENCY = 250;
 
+    public static final Lock odometryLock = new ReentrantLock();
+
+    private ModuleIO[] modules;
     private ModuleIOInputsAutoLogged[] moduleInputs = {
             new ModuleIOInputsAutoLogged(),
             new ModuleIOInputsAutoLogged(),
@@ -62,12 +69,6 @@ public class SwerveDrive extends SubsystemBase {
 
     private final GyroIO gyroIO;
     private GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
-
-    private boolean isTranslationSlowdownEnabled = false;
-    private boolean isRotationSlowdownEnabled = false;
-
-    private double translationCoefficient = 1;
-    private double rotationCoefficient = 1;
 
     private SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
     private SwerveModuleState[] moduleStates = { // has to be set to a value so not null
@@ -103,7 +104,7 @@ public class SwerveDrive extends SubsystemBase {
                 };
                 
                 gyroIO = new GyroIOPigeon2();
-                Phoenix6Odometry.getInstance().start();
+                PhoenixOdometryThread.getInstance().start();
 
                 break;
 
@@ -119,7 +120,7 @@ public class SwerveDrive extends SubsystemBase {
                 };
                 
                 gyroIO = new GyroIONavX();
-                Phoenix6Odometry.getInstance().start();
+                PhoenixOdometryThread.getInstance().start();
                 break;
 
             case SIM:
@@ -163,7 +164,7 @@ public class SwerveDrive extends SubsystemBase {
                 };
                 
                 gyroIO = new GyroIOPigeon2();
-                Phoenix6Odometry.getInstance().start();
+                PhoenixOdometryThread.getInstance().start();
 
                 break;
                 
@@ -220,7 +221,7 @@ public class SwerveDrive extends SubsystemBase {
         double odometryTimestamp = 0.0;
         // Thread safe reading of the gyro and swerve inputs.
         // The read lock is released only after inputs are written via the write lock
-        Phoenix6Odometry.getInstance().stateLock.readLock().lock();
+        odometryLock.lock();
         try {
             Logger.recordOutput("SwerveDrive/stateLockAcquired", true);
             gyroIO.updateInputs(gyroInputs);
@@ -232,20 +233,23 @@ public class SwerveDrive extends SubsystemBase {
                 odometryTimestamp = Math.max(odometryTimestamp, moduleInputs[i].fpgaTimestampSeconds);
             }
         } finally {
-            Phoenix6Odometry.getInstance().stateLock.readLock().unlock();
+            odometryLock.unlock();
         }
 
         if (odometryTimestamp == 0.0) {
             odometryTimestamp = Timer.getFPGATimestamp();
         }
 
+
+        double[] sampleTimestamps = moduleInputs[0].odometryTimestampsSeconds; // odom thread updates all signals at the same time
+        for (int i = 0; i < sampleTimestamps.length; i++) {
+
+        }
+        =p
         for (int i = 0; i < 4; i++) {
             modulePositions[i] = new SwerveModulePosition(moduleInputs[i].drivePositionMeters, moduleInputs[i].steerPosition);
             moduleStates[i] = new SwerveModuleState(moduleInputs[i].driveVelocityMetersPerSec, moduleInputs[i].steerPosition);
         }
-
-        Logger.recordOutput("SwerveDrive/measuredModuleStates", moduleStates);
-        Logger.recordOutput("SwerveDrive/measuredModulePositions", modulePositions);
 
         RobotState.getInstance()
             .addOdometryObservation(
@@ -264,18 +268,11 @@ public class SwerveDrive extends SubsystemBase {
                     odometryTimestamp
                 )
             );
+
+
+        Logger.recordOutput("SwerveDrive/measuredModuleStates", moduleStates);
+        Logger.recordOutput("SwerveDrive/measuredModulePositions", modulePositions);
         
-
-        // TODO: WANT TO UPDATE MODULES IN PERIODIC IN ORDER TO TO ENSURE THAT COMMANDS DO NOT DOUBLE SCHEDULE SWERVE (EDGE CASE)
-        if (isTranslationSlowdownEnabled) {
-            desiredRobotRelativeSpeeds.vxMetersPerSecond *= this.translationCoefficient;
-            desiredRobotRelativeSpeeds.vyMetersPerSecond *= this.translationCoefficient;
-        }
-
-        if (isRotationSlowdownEnabled) {
-            desiredRobotRelativeSpeeds.omegaRadiansPerSecond *= this.rotationCoefficient;
-        }
-
         desiredRobotRelativeSpeeds = compensateRobotRelativeSpeeds(desiredRobotRelativeSpeeds);
         Logger.recordOutput("SwerveDrive/compensatedRobotRelativeSpeeds", desiredRobotRelativeSpeeds);
 
@@ -297,8 +294,6 @@ public class SwerveDrive extends SubsystemBase {
 
         Logger.recordOutput("SwerveDrive/optimizedModuleStates", moduleSetpoints);
 
-        Logger.recordOutput("SwerveDrive/translationCoefficient", translationCoefficient);
-        Logger.recordOutput("SwerveDrive/rotationCoefficient", rotationCoefficient);
         Logger.recordOutput("SwerveDrive/CurrentCommand", this.getCurrentCommand() == null ? "" : this.getCurrentCommand().toString());
     }
 
@@ -330,18 +325,6 @@ public class SwerveDrive extends SubsystemBase {
 
         speeds = ChassisSpeeds.fromFieldRelativeSpeeds(speeds, RobotState.getInstance().getEstimatedPose().getRotation());
         driveRobotRelative(speeds);
-    }
-
-    public void setSlowdownCoeffs(double transCoeff, double rotCoeff) {
-        this.translationCoefficient = transCoeff;
-        this.rotationCoefficient = rotCoeff;
-        isTranslationSlowdownEnabled = true;
-        isRotationSlowdownEnabled = true;
-    }
-
-    public void disableSlowdownCoeffs() {
-        isTranslationSlowdownEnabled = false;
-        isRotationSlowdownEnabled = false;
     }
 
     public void resetGyro(Rotation2d yaw) {

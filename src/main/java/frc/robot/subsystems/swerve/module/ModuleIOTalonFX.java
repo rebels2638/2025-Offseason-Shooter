@@ -7,6 +7,8 @@ import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.Rotation;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import java.util.Queue;
+
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
@@ -32,26 +34,33 @@ import edu.wpi.first.wpilibj.Timer;
 import frc.robot.constants.swerve.moduleConfigs.SwerveModuleGeneralConfigBase;
 import frc.robot.constants.swerve.moduleConfigs.SwerveModuleSpecificConfigBase;
 import frc.robot.lib.util.RebelUtil;
-import frc.robot.subsystems.swerve.Phoenix6Odometry;
+import frc.robot.subsystems.swerve.PhoenixOdometryThread;
 import frc.robot.lib.util.PhoenixUtil;
+import frc.robot.subsystems.swerve.SwerveDrive;
 
 public class ModuleIOTalonFX implements ModuleIO {
     private final TalonFX driveMotor;
     private final TalonFX steerMotor;
     private final CANcoder steerEncoder;
 
+    private final Queue<Double> timestampQueue;
+    private final Queue<Double> drivePositionQueue;
+    private final Queue<Double>  steerPositionQueue;
+
     private final StatusSignal<Angle> drivePositionStatusSignal;
     private final StatusSignal<AngularVelocity> driveVelocityStatusSignal;
+
+    private final StatusSignal<Angle> steerPositionStatusSignal;
+    private final StatusSignal<AngularVelocity> steerVelocityStatusSignal;
+
+    private final StatusSignal<Angle> steerEncoderPositionStatusSignal;
+    private final StatusSignal<Angle> steerEncoderAbsolutePosition;
 
     private final StatusSignal<Current> driveTorqueCurrent;
     private final StatusSignal<Temperature> driveTemperature;
 
-    private final StatusSignal<Angle> steerPositionStatusSignal;
-    private final StatusSignal<AngularVelocity> steerVelocityStatusSignal;
     private final StatusSignal<Current> steerTorqueCurrent;
     private final StatusSignal<Temperature> steerTemperature;
-    private final StatusSignal<Angle> steerEncoderPositionStatusSignal;
-    private final StatusSignal<Angle> steerEncoderAbsolutePosition;
 
     private final VelocityTorqueCurrentFOC driveMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
     private final MotionMagicExpoTorqueCurrentFOC steerMotorRequest = new MotionMagicExpoTorqueCurrentFOC(0).withSlot(0);
@@ -190,6 +199,10 @@ public class ModuleIOTalonFX implements ModuleIO {
         steerPositionStatusSignal = steerMotor.getPosition().clone();
         steerVelocityStatusSignal = steerMotor.getVelocity().clone();
 
+        timestampQueue = PhoenixOdometryThread.getInstance().makeTimestampQueue();
+        drivePositionQueue = PhoenixOdometryThread.getInstance().registerSignal(drivePositionStatusSignal.clone());
+        steerPositionQueue = PhoenixOdometryThread.getInstance().registerSignal(steerPositionStatusSignal.clone());
+
         BaseStatusSignal.setUpdateFrequencyForAll(
             100,
             driveTorqueCurrent,
@@ -203,7 +216,7 @@ public class ModuleIOTalonFX implements ModuleIO {
         );
 
         BaseStatusSignal.setUpdateFrequencyForAll(
-            250, 
+            SwerveDrive.ODOMETRY_FREQUENCY, 
             drivePositionStatusSignal, 
             steerPositionStatusSignal,
 
@@ -211,11 +224,6 @@ public class ModuleIOTalonFX implements ModuleIO {
             steerVelocityStatusSignal
         );
 
-        Phoenix6Odometry.getInstance().registerSignal(driveMotor, drivePositionStatusSignal);
-        Phoenix6Odometry.getInstance().registerSignal(steerMotor, steerPositionStatusSignal);
-
-        Phoenix6Odometry.getInstance().registerSignal(steerMotor, driveVelocityStatusSignal);
-        Phoenix6Odometry.getInstance().registerSignal(steerMotor, steerVelocityStatusSignal);
 
         driveMotor.optimizeBusUtilization();
         steerMotor.optimizeBusUtilization();
@@ -235,8 +243,6 @@ public class ModuleIOTalonFX implements ModuleIO {
             steerEncoderPositionStatusSignal
         );
 
-        inputs.fpgaTimestampSeconds = HALUtil.getFPGATime() / 1.0e6;
-
         inputs.drivePositionMeters = BaseStatusSignal.getLatencyCompensatedValue(drivePositionStatusSignal, driveVelocityStatusSignal).in(Rotation);
         inputs.driveVelocityMetersPerSec = driveVelocityStatusSignal.getValue().in(RotationsPerSecond);
 
@@ -251,6 +257,14 @@ public class ModuleIOTalonFX implements ModuleIO {
 
         inputs.steerTorqueCurrent = steerTorqueCurrent.getValue().in(Amps);
         inputs.steerTemperatureFahrenheit = steerTemperature.getValue().in(Fahrenheit);
+
+        inputs.odometryTimestampsSeconds = timestampQueue.stream().mapToDouble(Double::doubleValue).toArray();
+        inputs.odometryDrivePositionsMeters = drivePositionQueue.stream().mapToDouble(Double::doubleValue).toArray();
+        inputs.odometrySteerPositions = steerPositionQueue.stream().map((Double value) -> Rotation2d.fromRotations(value)).toArray(Rotation2d[]::new);
+
+        timestampQueue.clear();
+        drivePositionQueue.clear();
+        steerPositionQueue.clear();
 
         lastSteerAngleRad = new Rotation2d(inputs.steerPosition.getRadians());
     }

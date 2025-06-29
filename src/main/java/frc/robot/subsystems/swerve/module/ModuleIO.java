@@ -8,8 +8,6 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 public interface ModuleIO {
     @AutoLog
     class ModuleIOInputs {
-        public double fpgaTimestampSeconds = 0;
-
         public double drivePositionMeters = 0;
         public double driveVelocityMetersPerSec = 0;
 
@@ -24,6 +22,10 @@ public interface ModuleIO {
 
         public double steerTorqueCurrent = 0;
         public double steerTemperatureFahrenheit = 0;
+
+        public double[] odometryTimestampsSeconds = new double[] {};
+        public double[] odometryDrivePositionsMeters = new double[] {};
+        public Rotation2d[] odometrySteerPositions = new Rotation2d[] {};
     }
 
     public default void updateInputs(ModuleIOInputs inputs) {}

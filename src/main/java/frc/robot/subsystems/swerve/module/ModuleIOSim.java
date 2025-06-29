@@ -127,8 +127,6 @@ public class ModuleIOSim implements ModuleIO {
         steerSim.update(dt);
         driveSim.update(dt);
 
-        inputs.fpgaTimestampSeconds = Timer.getTimestamp();
-
         inputs.driveVelocityMetersPerSec = driveSim.getAngularVelocityRPM() *
                 2 * Math.PI * config.getDriveWheelRadiusMeters();
         previousDriveVelo = inputs.driveVelocityMetersPerSec;
