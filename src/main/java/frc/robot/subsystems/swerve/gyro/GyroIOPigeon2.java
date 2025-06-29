@@ -12,17 +12,15 @@ import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.hardware.Pigeon2;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.LinearAcceleration;
-import edu.wpi.first.wpilibj.DriverStation;
-import frc.robot.lib.util.Elastic;
+import java.util.Queue;
 import frc.robot.lib.util.PhoenixUtil;
-import frc.robot.subsystems.swerve.Phoenix6Odometry;
+import frc.robot.subsystems.swerve.PhoenixOdometryThread;
 
 public class GyroIOPigeon2 implements GyroIO {
     private final Pigeon2 gyro;
@@ -39,16 +37,10 @@ public class GyroIOPigeon2 implements GyroIO {
     private final StatusSignal<LinearAcceleration> accelerationXSignal;
     private final StatusSignal<LinearAcceleration> accelerationYSignal;
 
-    private final Phoenix6Odometry odom;
-
-    private final Elastic.Notification gyroDisconnectAlert = new Elastic.Notification(Elastic.Notification.NotificationLevel.ERROR,
-                                "Gyro Disconnected", "Pigeon2 Disconnected, Gyro may not be functioning");
-
-
-    private final Debouncer connectedDebouncer = new Debouncer(0.25, Debouncer.DebounceType.kBoth);
+    private final Queue<Double> odometryTimestampQueue;
+    private final Queue<Double> yawPositionQueue;
 
     public GyroIOPigeon2() {
-        odom = Phoenix6Odometry.getInstance();
         gyro = new Pigeon2(2, "drivetrain");
         Pigeon2Configuration config = new Pigeon2Configuration();
         config.MountPose.MountPoseYaw = 88.42582702636719;
@@ -81,59 +73,34 @@ public class GyroIOPigeon2 implements GyroIO {
                 accelerationXSignal,
                 accelerationYSignal);
 
-        odom.registerSignal(gyro, yawSignal);
-        odom.registerSignal(gyro, yawVelocitySignal);
-        odom.registerSignal(gyro, rollSignal);
-        odom.registerSignal(gyro, rollVelocitySignal);
-        odom.registerSignal(gyro, pitchSignal);
-        odom.registerSignal(gyro, pitchVelocitySignal);
-        odom.registerSignal(gyro, accelerationXSignal);
-        odom.registerSignal(gyro, accelerationYSignal);
+        odometryTimestampQueue = PhoenixOdometryThread.getInstance().makeTimestampQueue();
+        yawPositionQueue = PhoenixOdometryThread.getInstance().registerSignal(yawSignal.clone());
 
         gyro.optimizeBusUtilization();
     }
 
     @Override
     public synchronized void updateInputs(GyroIOInputs inputs) {
-        inputs.isConnected = 
-            connectedDebouncer.calculate(
-                BaseStatusSignal.
-                    refreshAll(
-                        yawSignal,
-                        yawVelocitySignal,
-                        rollSignal,
-                        rollVelocitySignal,
-                        pitchSignal,
-                        pitchVelocitySignal,
-                        accelerationXSignal,
-                        accelerationYSignal
-                    ).isOK()
-            );
-            
-
-        // TODO: CHECK FOR FEILD VS GYRO RELATIVE VALUES
-        inputs.orientation = new Rotation2d[] {
-            new Rotation2d(MathUtil.angleModulus(BaseStatusSignal.getLatencyCompensatedValue(rollSignal, rollVelocitySignal).in(Radians))),
-            new Rotation2d(MathUtil.angleModulus(BaseStatusSignal.getLatencyCompensatedValue(pitchSignal, pitchVelocitySignal).in(Radians))),
-            new Rotation2d(MathUtil.angleModulus(BaseStatusSignal.getLatencyCompensatedValue(yawSignal, yawVelocitySignal).in(Radians)))
-        };
-        inputs.rates = new Rotation2d[] {
-            new Rotation2d(rollVelocitySignal.getValue().in(RadiansPerSecond)),
-            new Rotation2d(pitchVelocitySignal.getValue().in(RadiansPerSecond)),
-            new Rotation2d(yawVelocitySignal.getValue().in(RadiansPerSecond))
-        };
-
-        Logger.recordOutput("SKIBIDIFUCK", inputs.rates[2]);
-
-        inputs.fieldRelativeAccelerationMetersPerSecSec = new Translation2d(
-            accelerationXSignal.getValue().in(MetersPerSecondPerSecond), 
-            accelerationYSignal.getValue().in(MetersPerSecondPerSecond)
+        BaseStatusSignal.refreshAll(
+            yawSignal,
+            yawVelocitySignal,
+            rollSignal,
+            rollVelocitySignal,
+            pitchSignal,
+            pitchVelocitySignal,
+            accelerationXSignal,
+            accelerationYSignal
         );
+        inputs.isConnected = true;
 
-        if (!inputs.isConnected) {
-            Elastic.sendNotification(gyroDisconnectAlert.withDisplayMilliseconds(10000));
-            DriverStation.reportError("Roller CANRange Disconnected", true);
-        }
+        inputs.yawPosition = new Rotation2d(MathUtil.angleModulus(BaseStatusSignal.getLatencyCompensatedValue(yawSignal, yawVelocitySignal).in(Radians)));
+        inputs.yawVelocityRadPerSec = yawVelocitySignal.getValue().in(RadiansPerSecond);
+
+        inputs.odometryTimestampsSeconds = odometryTimestampQueue.stream().mapToDouble(Double::doubleValue).toArray();
+        inputs.odometryYawPositions = yawPositionQueue.stream().map((Double value) -> Rotation2d.fromDegrees(value)).toArray(Rotation2d[]::new);
+
+        odometryTimestampQueue.clear();
+        yawPositionQueue.clear();
     }
 
     @Override

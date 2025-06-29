@@ -1,27 +1,15 @@
 package frc.robot.subsystems.swerve.module;
 
-import java.io.Console;
-import java.util.Optional;
-
-import org.littletonrobotics.junction.Logger;
-
-import edu.wpi.first.hal.HALUtil;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 import frc.robot.constants.swerve.moduleConfigs.SwerveModuleGeneralConfigBase;
-import frc.robot.lib.util.RebelUtil;
 
 public class ModuleIOSim implements ModuleIO {
     private final DCMotor driveMotorModel = DCMotor.getKrakenX60Foc(1);
@@ -43,7 +31,6 @@ public class ModuleIOSim implements ModuleIO {
     private PIDController steerFeedback = new PIDController(0.2, 0.0, 0.02);
 
     private SimpleMotorFeedforward driveFeedforward = new SimpleMotorFeedforward(0.5, 1.2, 0.1);
-    private SimpleMotorFeedforward steerFeedforward = new SimpleMotorFeedforward(0.3, 0.8, 0.05);
 
     private boolean isSteerClosedLoop = true;
     private boolean isDriveClosedLoop = true;
@@ -68,7 +55,7 @@ public class ModuleIOSim implements ModuleIO {
                 MathUtil.clamp(
                     driveFeedforward.calculate(lastDesiredState.speedMetersPerSecond) +
                     driveFeedback.calculate(
-                        driveSim.getAngularVelocityRadPerSec() * 0.0485614385 // wheel radius in meters, 
+                        driveSim.getAngularVelocityRadPerSec() * 0.0485614385, // wheel radius in meters, 
                         lastDesiredState.speedMetersPerSecond
                     ),
                     -12,
@@ -77,14 +64,37 @@ public class ModuleIOSim implements ModuleIO {
             );
         }
 
+        if (isSteerClosedLoop) {
+            steerSim.setInputVoltage(
+                MathUtil.clamp(
+                    steerFeedback.calculate(
+                        steerSim.getAngularPositionRad(),
+                        lastDesiredState.angle.getRadians()
+                    ),
+                    -12,
+                    12
+                )
+            );
+        }
 
         steerSim.update(dt);
         driveSim.update(dt);
-
-        inputs.fpgaTimestampSeconds = Timer.getTimestamp();
-
         
+        inputs.drivePositionMeters = driveSim.getAngularPositionRad() * 0.0485614385; // wheel radius in meters
+        inputs.driveVelocityMetersPerSec = driveSim.getAngularVelocityRadPerSec() * 0.0485614385;
 
+        inputs.steerPosition = new Rotation2d(steerSim.getAngularPosition());
+        inputs.steerVelocityRadPerSec = steerSim.getAngularVelocityRadPerSec();
+
+        inputs.steerEncoderAbsolutePosition = inputs.steerPosition;
+        inputs.steerEncoderPosition = inputs.steerPosition;
+
+        inputs.driveTorqueCurrent = driveSim.getCurrentDrawAmps();
+        inputs.steerTorqueCurrent = steerSim.getCurrentDrawAmps();
+
+        inputs.odometryTimestampsSeconds = new double[] {Timer.getTimestamp()};
+        inputs.odometryDrivePositionsMeters = new double[] {inputs.drivePositionMeters};
+        inputs.odometrySteerPositions = new Rotation2d[] {inputs.steerPosition};
     }
 
     @Override

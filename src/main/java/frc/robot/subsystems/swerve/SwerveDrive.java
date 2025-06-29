@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.RobotState;
+import frc.robot.RobotState.OdometryObservation;
 import frc.robot.constants.Constants;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigBase;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigComp;
@@ -38,7 +39,6 @@ import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleSpecificFRConf
 import frc.robot.constants.swerve.moduleConfigs.sim.SwerveModuleGeneralConfigSim;
 import frc.robot.subsystems.swerve.gyro.GyroIO;
 import frc.robot.subsystems.swerve.gyro.GyroIOInputsAutoLogged;
-import frc.robot.subsystems.swerve.gyro.GyroIONavX;
 import frc.robot.subsystems.swerve.gyro.GyroIOPigeon2;
 import frc.robot.subsystems.swerve.module.ModuleIO;
 import frc.robot.subsystems.swerve.module.ModuleIOInputsAutoLogged;
@@ -69,14 +69,6 @@ public class SwerveDrive extends SubsystemBase {
 
     private final GyroIO gyroIO;
     private GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
-
-    private SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
-    private SwerveModuleState[] moduleStates = { // has to be set to a value so not null
-        new SwerveModuleState(),
-        new SwerveModuleState(),
-        new SwerveModuleState(),
-        new SwerveModuleState()
-    };
 
     private ChassisSpeeds desiredRobotRelativeSpeeds = new ChassisSpeeds();
 
@@ -119,7 +111,7 @@ public class SwerveDrive extends SubsystemBase {
                     new ModuleIOTalonFX(moduleGeneralConfig, SwerveModuleSpecificBLConfigProto.getInstance())
                 };
                 
-                gyroIO = new GyroIONavX();
+                gyroIO = new GyroIOPigeon2();
                 PhoenixOdometryThread.getInstance().start();
                 break;
 
@@ -218,7 +210,6 @@ public class SwerveDrive extends SubsystemBase {
         double dt = Timer.getTimestamp() - prevLoopTime; 
         prevLoopTime = Timer.getTimestamp();
 
-        double odometryTimestamp = 0.0;
         // Thread safe reading of the gyro and swerve inputs.
         // The read lock is released only after inputs are written via the write lock
         odometryLock.lock();
@@ -230,45 +221,42 @@ public class SwerveDrive extends SubsystemBase {
             for (int i = 0; i < 4; i++) {
                 modules[i].updateInputs(moduleInputs[i]);
                 Logger.processInputs("SwerveDrive/module" + i, moduleInputs[i]);
-                odometryTimestamp = Math.max(odometryTimestamp, moduleInputs[i].fpgaTimestampSeconds);
             }
         } finally {
             odometryLock.unlock();
         }
 
-        if (odometryTimestamp == 0.0) {
-            odometryTimestamp = Timer.getFPGATimestamp();
-        }
 
+        SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
+        SwerveModuleState[] moduleStates = new SwerveModuleState[4];
 
-        double[] sampleTimestamps = moduleInputs[0].odometryTimestampsSeconds; // odom thread updates all signals at the same time
-        for (int i = 0; i < sampleTimestamps.length; i++) {
-
-        }
-        =p
         for (int i = 0; i < 4; i++) {
-            modulePositions[i] = new SwerveModulePosition(moduleInputs[i].drivePositionMeters, moduleInputs[i].steerPosition);
-            moduleStates[i] = new SwerveModuleState(moduleInputs[i].driveVelocityMetersPerSec, moduleInputs[i].steerPosition);
+            moduleStates[i] = new SwerveModuleState(
+                moduleInputs[i].driveVelocityMetersPerSec,
+                moduleInputs[i].steerPosition
+            );
         }
 
-        RobotState.getInstance()
-            .addOdometryObservation(
-                new RobotState.OdometryObservation(
-                    modulePositions.clone(),
-                    moduleStates.clone(),
-                    gyroInputs.isConnected ? 
-                        gyroInputs.orientation :
-                        null,
-                    gyroInputs.isConnected ? 
-                        gyroInputs.rates :
-                        null,
-                    gyroInputs.isConnected ? 
-                        gyroInputs.fieldRelativeAccelerationMetersPerSecSec :
-                        null, 
-                    odometryTimestamp
+        double[] odometryTimestampsSeconds = gyroInputs.odometryTimestampsSeconds;
+        for (int i = 0; i < odometryTimestampsSeconds.length; i++) {
+            for (int j = 0; j < 4; j++) {
+                modulePositions[j] = new SwerveModulePosition(
+                    moduleInputs[j].odometryDrivePositionsMeters[i],
+                    moduleInputs[j].odometrySteerPositions[i]
+                );
+            }
+            
+            RobotState.getInstance().addOdometryObservation(
+                new OdometryObservation(
+                    odometryTimestampsSeconds[i],
+                    gyroInputs.isConnected,
+                    modulePositions,
+                    moduleStates,
+                    gyroInputs.odometryYawPositions[i],
+                    gyroInputs.yawVelocityRadPerSec
                 )
             );
-
+        }
 
         Logger.recordOutput("SwerveDrive/measuredModuleStates", moduleStates);
         Logger.recordOutput("SwerveDrive/measuredModulePositions", modulePositions);
