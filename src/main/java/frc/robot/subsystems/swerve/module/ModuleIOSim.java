@@ -27,10 +27,10 @@ public class ModuleIOSim implements ModuleIO {
         );
 
 
-    private PIDController driveFeedback = new PIDController(0.1, 0.0, 0.01);
-    private PIDController steerFeedback = new PIDController(0.2, 0.0, 0.02);
+    private PIDController driveFeedback = new PIDController(0, 0.0, 0.0);
+    private PIDController steerFeedback = new PIDController(25, 0.0, 0.0);
 
-    private SimpleMotorFeedforward driveFeedforward = new SimpleMotorFeedforward(0.5, 1.2, 0.1);
+    private SimpleMotorFeedforward driveFeedforward = new SimpleMotorFeedforward(0.0, 2.44, 0.1);
 
     private boolean isSteerClosedLoop = true;
     private boolean isDriveClosedLoop = true;
@@ -54,10 +54,7 @@ public class ModuleIOSim implements ModuleIO {
             driveSim.setInputVoltage(
                 MathUtil.clamp(
                     driveFeedforward.calculate(lastDesiredState.speedMetersPerSecond) +
-                    driveFeedback.calculate(
-                        driveSim.getAngularVelocityRadPerSec() * 0.0485614385, // wheel radius in meters, 
-                        lastDesiredState.speedMetersPerSecond
-                    ),
+                    driveFeedback.calculate(driveSim.getAngularVelocityRadPerSec() * 0.0485614385), // wheel radius in meters
                     -12,
                     12
                 )
@@ -67,10 +64,7 @@ public class ModuleIOSim implements ModuleIO {
         if (isSteerClosedLoop) {
             steerSim.setInputVoltage(
                 MathUtil.clamp(
-                    steerFeedback.calculate(
-                        steerSim.getAngularPositionRad(),
-                        lastDesiredState.angle.getRadians()
-                    ),
+                    steerFeedback.calculate(steerSim.getAngularPositionRad()),
                     -12,
                     12
                 )

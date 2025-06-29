@@ -201,8 +201,6 @@ public class SwerveDrive extends SubsystemBase {
                 this
             )
         );
-
-        CommandScheduler.getInstance().registerSubsystem(this);
     }
 
     @Override
@@ -237,7 +235,7 @@ public class SwerveDrive extends SubsystemBase {
             );
         }
 
-        double[] odometryTimestampsSeconds = gyroInputs.odometryTimestampsSeconds;
+        double[] odometryTimestampsSeconds = moduleInputs[0].odometryTimestampsSeconds;
         for (int i = 0; i < odometryTimestampsSeconds.length; i++) {
             for (int j = 0; j < 4; j++) {
                 modulePositions[j] = new SwerveModulePosition(
@@ -252,8 +250,8 @@ public class SwerveDrive extends SubsystemBase {
                     gyroInputs.isConnected,
                     modulePositions,
                     moduleStates,
-                    gyroInputs.odometryYawPositions[i],
-                    gyroInputs.yawVelocityRadPerSec
+                    gyroInputs.isConnected ? gyroInputs.odometryYawPositions[i] : new Rotation2d(),
+                    gyroInputs.isConnected ? gyroInputs.yawVelocityRadPerSec : 0
                 )
             );
         }

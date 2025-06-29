@@ -19,8 +19,8 @@ public class RobotContainer {
         return instance;
     }
 
-    private final RobotState robotState = RobotState.getInstance(); // we just initialize it here to save time during first reference in subsystems
     private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
+    private final RobotState robotState = RobotState.getInstance(); // we just initialize it here to save time during first reference in subsystems
 
     private final XboxController xboxTester;
     private final XboxController xboxDriver;
