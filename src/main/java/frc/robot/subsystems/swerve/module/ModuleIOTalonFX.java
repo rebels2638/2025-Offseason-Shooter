@@ -224,7 +224,6 @@ public class ModuleIOTalonFX implements ModuleIO {
             steerVelocityStatusSignal
         );
 
-
         driveMotor.optimizeBusUtilization();
         steerMotor.optimizeBusUtilization();
         steerEncoder.optimizeBusUtilization();

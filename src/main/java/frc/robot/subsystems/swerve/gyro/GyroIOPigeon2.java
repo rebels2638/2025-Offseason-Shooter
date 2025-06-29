@@ -1,10 +1,7 @@
 package frc.robot.subsystems.swerve.gyro;
 
-import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
-
-import org.littletonrobotics.junction.Logger;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
@@ -13,29 +10,18 @@ import com.ctre.phoenix6.hardware.Pigeon2;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.LinearAcceleration;
 import java.util.Queue;
 import frc.robot.lib.util.PhoenixUtil;
 import frc.robot.subsystems.swerve.PhoenixOdometryThread;
+import frc.robot.subsystems.swerve.SwerveDrive;
 
 public class GyroIOPigeon2 implements GyroIO {
     private final Pigeon2 gyro;
 
     private final StatusSignal<Angle> yawSignal;
     private final StatusSignal<AngularVelocity> yawVelocitySignal;
-
-    private final StatusSignal<Angle> rollSignal;
-    private final StatusSignal<AngularVelocity> rollVelocitySignal;
-
-    private final StatusSignal<Angle> pitchSignal;
-    private final StatusSignal<AngularVelocity> pitchVelocitySignal;
-
-    private final StatusSignal<LinearAcceleration> accelerationXSignal;
-    private final StatusSignal<LinearAcceleration> accelerationYSignal;
 
     private final Queue<Double> odometryTimestampQueue;
     private final Queue<Double> yawPositionQueue;
@@ -53,25 +39,11 @@ public class GyroIOPigeon2 implements GyroIO {
         yawSignal = gyro.getYaw().clone();
         yawVelocitySignal = gyro.getAngularVelocityZWorld().clone();
 
-        rollSignal = gyro.getRoll().clone();
-        rollVelocitySignal = gyro.getAngularVelocityXWorld().clone();
-
-        pitchSignal = gyro.getPitch().clone();
-        pitchVelocitySignal = gyro.getAngularVelocityYWorld().clone();
-
-        accelerationXSignal = gyro.getAccelerationX().clone();
-        accelerationYSignal = gyro.getAccelerationY().clone();
-
         BaseStatusSignal.setUpdateFrequencyForAll(
-                70,
-                yawSignal,
-                yawVelocitySignal,
-                rollSignal,
-                rollVelocitySignal,
-                pitchSignal,
-                pitchVelocitySignal,
-                accelerationXSignal,
-                accelerationYSignal);
+            SwerveDrive.ODOMETRY_FREQUENCY,
+            yawSignal,
+            yawVelocitySignal
+        );
 
         odometryTimestampQueue = PhoenixOdometryThread.getInstance().makeTimestampQueue();
         yawPositionQueue = PhoenixOdometryThread.getInstance().registerSignal(yawSignal.clone());
@@ -81,16 +53,8 @@ public class GyroIOPigeon2 implements GyroIO {
 
     @Override
     public synchronized void updateInputs(GyroIOInputs inputs) {
-        BaseStatusSignal.refreshAll(
-            yawSignal,
-            yawVelocitySignal,
-            rollSignal,
-            rollVelocitySignal,
-            pitchSignal,
-            pitchVelocitySignal,
-            accelerationXSignal,
-            accelerationYSignal
-        );
+        BaseStatusSignal.refreshAll(yawVelocitySignal);
+
         inputs.isConnected = true;
 
         inputs.yawPosition = new Rotation2d(MathUtil.angleModulus(BaseStatusSignal.getLatencyCompensatedValue(yawSignal, yawVelocitySignal).in(Radians)));
