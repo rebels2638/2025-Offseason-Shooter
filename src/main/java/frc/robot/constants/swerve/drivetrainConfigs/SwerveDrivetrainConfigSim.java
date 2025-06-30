@@ -53,7 +53,7 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxTranslationalAccelerationMetersPerSecSec() {
-        return 5.4;
+        return 15;
     }
 
     @Override
