@@ -22,8 +22,8 @@ public class FollowPath extends Command {
     private SwerveDrive swerve = SwerveDrive.getInstance();
     private RobotState robotState = RobotState.getInstance();
 
-    private final SlewRateLimiter translationalVelocityLimiter = new SlewRateLimiter(15); // m/s^2
-    private final SlewRateLimiter rotationalVelocityLimiter = new SlewRateLimiter(5); // rad/s^2
+    private final SlewRateLimiter translationalSlewRateLimiter = new SlewRateLimiter(15); // m/s^2
+    private final SlewRateLimiter rotationalSlewRateLimiter = new SlewRateLimiter(5); // rad/s^2
     private final double maxTranslationalVelocity = 4.5; // m/s
     private final double maxRotationalVelocity = 6; // rad/s
 
@@ -74,7 +74,7 @@ public class FollowPath extends Command {
         }
         // b-line straight to intermediate 
         if (currentWaypointIndex < waypoints.size()-1) {
-            translationVelocity = translationalVelocityLimiter.calculate(
+            translationVelocity = translationalSlewRateLimiter.calculate(
                 waypoints.get(currentWaypointIndex).velocity.isPresent() ? waypoints.get(currentWaypointIndex).velocity.get() : maxTranslationalVelocity
             );
         }
@@ -82,7 +82,7 @@ public class FollowPath extends Command {
         else {
             double distanceToTarget = Math.hypot(currentPose.getX() - targetTranslation.getX(), currentPose.getY() - targetTranslation.getY());
             translationVelocity = 
-                translationalVelocityLimiter.calculate(
+                translationalSlewRateLimiter.calculate(
                     MathUtil.clamp(
                         translationController.calculate(0, distanceToTarget),
                         -maxTranslationalVelocity,
@@ -103,7 +103,7 @@ public class FollowPath extends Command {
             }
         }
         double rotationVelocity = 
-            rotationalVelocityLimiter.calculate(
+            rotationalSlewRateLimiter.calculate(
                 MathUtil.clamp(
                     rotationController.calculate(currentPose.getRotation().getRadians(), targetRotation.getRadians()),
                     -maxRotationalVelocity,
@@ -132,6 +132,4 @@ public class FollowPath extends Command {
     public boolean isFinished() {
         return currentWaypointIndex == waypoints.size()-1 && translationController.atSetpoint() && rotationController.atSetpoint();
     }
-
-
 }
