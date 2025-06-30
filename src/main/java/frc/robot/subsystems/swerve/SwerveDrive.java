@@ -275,20 +275,19 @@ public class SwerveDrive extends SubsystemBase {
         Logger.recordOutput("SwerveDrive/obtainableRobotRelativeSpeeds", obtainableRobotRelativeSpeeds);
 
         SwerveModuleState[] moduleSetpoints = kinematics.toSwerveModuleStates(obtainableRobotRelativeSpeeds);
+
         SwerveDriveKinematics.desaturateWheelSpeeds(
             moduleSetpoints, 
-            obtainableRobotRelativeSpeeds, 
-            drivetrainConfig.getMaxModuleVelocity(),
-            drivetrainConfig.getMaxTranslationalVelocityMetersPerSec(),
-            drivetrainConfig.getMaxAngularVelocityRadiansPerSec()
+            drivetrainConfig.getMaxModuleVelocity()
         );
+        Logger.recordOutput("SwerveDrive/desaturatedModuleSetpoints", moduleSetpoints);
 
         for (int i = 0; i < 4; i++) {
             moduleSetpoints[i].optimize(moduleStates[i].angle);
             modules[i].setState(moduleSetpoints[i]);
         }
+        Logger.recordOutput("SwerveDrive/optimizedModuleSetpoints", moduleSetpoints);
 
-        Logger.recordOutput("SwerveDrive/optimizedModuleStates", moduleSetpoints);
 
         Logger.recordOutput("SwerveDrive/CurrentCommand", this.getCurrentCommand() == null ? "" : this.getCurrentCommand().toString());
     }
