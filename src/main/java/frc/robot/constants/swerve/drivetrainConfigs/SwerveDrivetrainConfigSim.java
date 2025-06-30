@@ -48,17 +48,17 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxTranslationalVelocityMetersPerSec() {
-        return 4.5;
+        return getMaxModuleVelocity();
     }
 
     @Override
     public double getMaxTranslationalAccelerationMetersPerSecSec() {
-        return 7;
+        return 5.4;
     }
 
     @Override
     public double getMaxAngularVelocityRadiansPerSec() {
-        return 3.7;
+        return getMaxModuleVelocity() / Math.hypot(getFrontLeftPositionMeters().getX(), getFrontLeftPositionMeters().getY()); 
     }
 
     @Override

@@ -25,7 +25,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
     
     @Override
     public double getMaxTranslationalVelocityMetersPerSec() {
-        return 4.5;
+        return getMaxModuleVelocity();
     }
 
     @Override
@@ -35,7 +35,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxAngularVelocityRadiansPerSec() {
-        return 6.28; // 3.7
+        return getMaxModuleVelocity() / Math.hypot(getFrontLeftPositionMeters().getX(), getFrontLeftPositionMeters().getY()); 
     }
 
     @Override
