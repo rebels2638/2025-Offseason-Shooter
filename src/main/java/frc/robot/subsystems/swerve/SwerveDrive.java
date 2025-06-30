@@ -17,7 +17,6 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
@@ -324,10 +323,7 @@ public class SwerveDrive extends SubsystemBase {
         return new ChassisSpeeds(
             lastFieldRelativeSpeeds.vxMetersPerSecond + Math.cos(theta) * obtainableAcceleration * dt,
             lastFieldRelativeSpeeds.vyMetersPerSecond + Math.sin(theta) * obtainableAcceleration * dt,
-            Math.abs(obtainableOmegaAcceleration) < Math.abs(desiredOmegaAcceleration) ? // we use the previous omega to reduce jitter
-                desiredFieldRelativeSpeeds.omegaRadiansPerSecond : 
-                lastFieldRelativeSpeeds.omegaRadiansPerSecond + obtainableOmegaAcceleration
-            
+            lastFieldRelativeSpeeds.omegaRadiansPerSecond + obtainableOmegaAcceleration * dt
         );
     }
 
