@@ -56,11 +56,21 @@ public class RobotContainer {
 
     public Command getAutonomousCommand() {
         // return sysidChooser.get();
+
+        // return new FollowPath(
+        //     List.of(
+        //         new Waypoint(new Translation2d(5,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.of(Double.valueOf(2))),
+        //         new Waypoint(new Translation2d(5,5), Optional.of(Rotation2d.fromDegrees(270)), Optional.of(Double.valueOf(2))),
+        //         new Waypoint(new Translation2d(0,5), Optional.of(Rotation2d.fromDegrees(0)), Optional.of(Double.valueOf(2))),
+        //         new Waypoint(new Translation2d(0,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty())
+        //     )
+        // );
+
         return new FollowPath(
             List.of(
-                new Waypoint(new Translation2d(5,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.of(Double.valueOf(2))),
-                new Waypoint(new Translation2d(5,5), Optional.of(Rotation2d.fromDegrees(270)), Optional.of(Double.valueOf(2))),
-                new Waypoint(new Translation2d(0,5), Optional.of(Rotation2d.fromDegrees(0)), Optional.of(Double.valueOf(2))),
+                new Waypoint(new Translation2d(5,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty()),
+                new Waypoint(new Translation2d(5,5), Optional.of(Rotation2d.fromDegrees(270)), Optional.empty()),
+                new Waypoint(new Translation2d(0,5), Optional.of(Rotation2d.fromDegrees(0)), Optional.empty()),
                 new Waypoint(new Translation2d(0,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty())
             )
         );

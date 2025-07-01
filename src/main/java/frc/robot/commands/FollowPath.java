@@ -1,5 +1,6 @@
 package frc.robot.commands;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,9 +37,11 @@ public class FollowPath extends Command {
     private Rotation2d targetRotation = new Rotation2d();
     private Translation2d targetTranslation = new Translation2d();
 
-    private final double intermediateHandoffRadius = 0.15; // meters
+    private final double intermediateHandoffRadius = 0.23; // meters
     private final double translationEndTolerance = 0.05; // meters
     private final double rotationEndTolerance = Math.toRadians(5); // radians
+
+    private ArrayList<Translation2d> robotTranslations = new ArrayList<>();
 
     public FollowPath(List<Waypoint> waypoints) {
         this.waypoints = waypoints;
@@ -58,6 +61,14 @@ public class FollowPath extends Command {
 
         rotationController.reset();
         translationController.reset();
+
+        Translation2d[] translationWaypoints = new Translation2d[waypoints.size()];
+        for (int i = 0; i < waypoints.size(); i++) {
+            translationWaypoints[i] = waypoints.get(i).translation;
+        }
+        Logger.recordOutput("FollowPath/translationWaypoints", translationWaypoints);
+
+        robotTranslations = new ArrayList<>();
     }
 
     @Override
@@ -119,13 +130,14 @@ public class FollowPath extends Command {
 
         swerve.driveFieldRelative(speeds);
 
+        robotTranslations.add(currentPose.getTranslation());
+
+        Logger.recordOutput("FollowPath/robotTranslations", robotTranslations.toArray(Translation2d[]::new));
         Logger.recordOutput("FollowPath/targetTranslation", targetTranslation);
         Logger.recordOutput("FollowPath/targetRotation", targetRotation);
         Logger.recordOutput("FollowPath/combinedTargetPose", new Pose2d(targetTranslation, targetRotation));
         Logger.recordOutput("FollowPath/setSpeeds", speeds);
         Logger.recordOutput("FollowPath/pidRot", rotationController.calculate(currentPose.getRotation().getRadians(), targetRotation.getRadians()));
-
-
     }
 
     @Override
