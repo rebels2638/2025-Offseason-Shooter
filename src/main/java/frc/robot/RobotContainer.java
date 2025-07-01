@@ -1,5 +1,6 @@
 package frc.robot;
 
+import java.io.File;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +16,8 @@ import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.swerve.SwerveDrive;
 import frc.robot.lib.auto.FollowPath;
 import frc.robot.lib.auto.FollowPath.Waypoint;
+import frc.robot.lib.auto.JsonUtils;
+
 
 public class RobotContainer {
     public static RobotContainer instance = null;
@@ -66,13 +69,17 @@ public class RobotContainer {
         //     )
         // );
 
+        // return new FollowPath(
+        //     List.of(
+        //         new Waypoint(new Translation2d(5,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty()),
+        //         new Waypoint(new Translation2d(5,5), Optional.of(Rotation2d.fromDegrees(270)), Optional.empty()),
+        //         new Waypoint(new Translation2d(0,5), Optional.of(Rotation2d.fromDegrees(0)), Optional.empty()),
+        //         new Waypoint(new Translation2d(0,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty())
+        //     )
+        // );
+
         return new FollowPath(
-            List.of(
-                new Waypoint(new Translation2d(5,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty()),
-                new Waypoint(new Translation2d(5,5), Optional.of(Rotation2d.fromDegrees(270)), Optional.empty()),
-                new Waypoint(new Translation2d(0,5), Optional.of(Rotation2d.fromDegrees(0)), Optional.empty()),
-                new Waypoint(new Translation2d(0,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty())
-            )
+            JsonUtils.loadWaypoints(new File("src/main/deploy/autos/Test1.json"))
         );
     }
 }

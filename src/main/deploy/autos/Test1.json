@@ -1,0 +1,9 @@
+[
+    { "x": 0, "y": 0, "rotation": 0, "velocity": null},
+    { "x": 4, "y": 2, "rotation": 90, "velocity": null},
+    { "x": 9, "y": 5, "rotation": 90, "velocity": 2 },
+    { "x": 10, "y": 3, "rotation": 45, "velocity": 1 },
+    { "x": -4, "y": -2, "rotation": 0, "velocity": 2 }
+    
+]
+  
