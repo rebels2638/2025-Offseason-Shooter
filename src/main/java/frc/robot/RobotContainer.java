@@ -11,10 +11,10 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.AbsoluteFieldDrive;
-import frc.robot.commands.FollowPath;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.swerve.SwerveDrive;
-import frc.robot.commands.FollowPath.Waypoint;
+import frc.robot.lib.auto.FollowPath;
+import frc.robot.lib.auto.FollowPath.Waypoint;
 
 public class RobotContainer {
     public static RobotContainer instance = null;
