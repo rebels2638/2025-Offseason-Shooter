@@ -84,7 +84,7 @@ public class FollowPath extends Command {
             targetTranslation = waypoints.get(currentWaypointIndex).translation;
         }
         // b-line straight to intermediate 
-        if (currentWaypointIndex < waypoints.size()-1) {
+        if (currentWaypointIndex < waypoints.size()-1 || waypoints.get(currentWaypointIndex).velocity.isPresent()) {
             translationVelocity = translationalSlewRateLimiter.calculate(
                 waypoints.get(currentWaypointIndex).velocity.isPresent() ? waypoints.get(currentWaypointIndex).velocity.get() : maxTranslationalVelocity
             );
