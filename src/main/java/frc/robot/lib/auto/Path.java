@@ -142,4 +142,12 @@ public class Path {
         }
         return rotationTargets;
     }
+
+    public List<Boolean> getTranslationTargetWaypointOverlap() {
+        List<Boolean> overlap = new ArrayList<>();
+        for (PathElement element : pathElements) {
+            overlap.add(element instanceof Waypoint || element instanceof TranslationTarget);
+        }
+        return overlap;
+    } 
 }

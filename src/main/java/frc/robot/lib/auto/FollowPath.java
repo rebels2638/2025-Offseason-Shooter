@@ -23,10 +23,14 @@ public class FollowPath extends Command {
     private RobotState robotState = RobotState.getInstance();
     private Pose2d currentPose = new Pose2d();
 
-    private final SlewRateLimiter translationalSlewRateLimiter = new SlewRateLimiter(15); // m/s^2
-    private final SlewRateLimiter rotationalSlewRateLimiter = new SlewRateLimiter(5); // rad/s^2
-    private double maxTranslationalVelocity = 4.5; // m/s
-    private double maxRotationalVelocity = 6; // rad/s
+    private final double defaultMaxTranslationalVelocity = 4.5; // m/s
+    private final double defaultMaxRotationalVelocity = 6; // rad/s
+    private double currentMaxTranslationalVelocity = defaultMaxTranslationalVelocity;
+    private double currentMaxRotationalVelocity = defaultMaxRotationalVelocity;
+    private final double defaultMaxTranslationalAcceleration = 15;// m/s^2
+    private final double defaultMaxRotationalAcceleration = 5; // rad/s^2
+    private final SlewRateLimiter translationalSlewRateLimiter = new SlewRateLimiter(defaultMaxTranslationalAcceleration); // m/s^2
+    private final SlewRateLimiter rotationalSlewRateLimiter = new SlewRateLimiter(defaultMaxRotationalAcceleration); // rad/s^2
 
     private final PIDController translationController = new PIDController(4, 0, 0);
     private final PIDController rotationController = new PIDController(3, 0, 0.3);
@@ -37,6 +41,7 @@ public class FollowPath extends Command {
     private final List<TranslationTarget> translationPathElements;
     private final List<Rotation2d> rotationTargets;
     private final List<RotationTarget> rotationPathElements;
+    private final List<Boolean> translationTargetWaypointOverlap;
 
     private int currentTranslationTargetIndex = 0;
     private int currentRotationTargetIndex = 0;
@@ -44,7 +49,9 @@ public class FollowPath extends Command {
     private Rotation2d targetRotation = new Rotation2d();
     private Translation2d targetTranslation = new Translation2d();
 
-    private double intermediateHandoffRadius = 0.23; // meters
+    private final double defaultIntermediateHandoffRadius = 0.23; // meters
+    private double currentIntermediateHandoffRadius = defaultIntermediateHandoffRadius; // meters
+
     private final double translationEndTolerance = 0.05; // meters
     private final double rotationEndTolerance = Math.toRadians(5); // radians
 
@@ -56,6 +63,7 @@ public class FollowPath extends Command {
         this.translationPathElements = path.getTranslationPathElements();
         this.rotationTargets = path.getRotationTargets();
         this.rotationPathElements = path.getRotationPathElements();
+        this.translationTargetWaypointOverlap = path.getTranslationTargetWaypointOverlap();
 
         translationController.setTolerance(translationEndTolerance);
         rotationController.setTolerance(rotationEndTolerance);
@@ -81,7 +89,7 @@ public class FollowPath extends Command {
         translationalSlewRateLimiter.reset(Math.hypot(robotState.getFieldRelativeSpeeds().vxMetersPerSecond, robotState.getFieldRelativeSpeeds().vyMetersPerSecond));
         rotationalSlewRateLimiter.reset(robotState.getFieldRelativeSpeeds().omegaRadiansPerSecond);
 
-        Logger.recordOutput("FollowPath/translationWaypoints", (Translation2d[]) path.getTranslationTargets().toArray());
+        Logger.recordOutput("FollowPath/translationWaypoints", path.getTranslationTargets().toArray(new Translation2d[0]));
 
         robotTranslations = new ArrayList<>();
     }
@@ -97,29 +105,40 @@ public class FollowPath extends Command {
         translationClosedLoop = false;
 
         // handoff to next waypoint if it is intermediate and close
-        if (Math.hypot(currentPose.getX() - targetTranslation.getX(), currentPose.getY() - targetTranslation.getY()) <= intermediateHandoffRadius && currentTranslationTargetIndex < translationTargets.size()-1) {
+        if (Math.hypot(currentPose.getX() - targetTranslation.getX(), currentPose.getY() - targetTranslation.getY()) <= currentIntermediateHandoffRadius && currentTranslationTargetIndex < translationTargets.size()-1) {
             currentTranslationTargetIndex++;
             targetTranslation = translationTargets.get(currentTranslationTargetIndex);
             targetTranslationPathElement = translationPathElements.get(currentTranslationTargetIndex);
         }
+        
         if (targetTranslationPathElement.maxAccelerationMetersSPerSec2().isPresent()) {
             translationalSlewRateLimiter.setRateLimit(targetTranslationPathElement.maxAccelerationMetersSPerSec2().get().doubleValue());
         }
+        else {
+            translationalSlewRateLimiter.setRateLimit(defaultMaxTranslationalAcceleration);
+        }
         if (targetTranslationPathElement.maxVelocityMetersPerSec().isPresent()) {
-            maxTranslationalVelocity = targetTranslationPathElement.maxVelocityMetersPerSec().get().doubleValue();
+            currentMaxTranslationalVelocity = targetTranslationPathElement.maxVelocityMetersPerSec().get().doubleValue();
+        }
+        else {
+            currentMaxTranslationalVelocity = defaultMaxTranslationalVelocity;
         }
         if (targetTranslationPathElement.intermediateHandoffRadiusMeters().isPresent()) {
-            intermediateHandoffRadius = targetTranslationPathElement.intermediateHandoffRadiusMeters().get().doubleValue();
+            currentIntermediateHandoffRadius = targetTranslationPathElement.intermediateHandoffRadiusMeters().get().doubleValue();
         }
+        else {
+            currentIntermediateHandoffRadius = defaultIntermediateHandoffRadius;
+        }
+        
         // b-line straight to intermediate 
         if (currentTranslationTargetIndex < translationTargets.size()-1 || (targetTranslationPathElement.finalVelocityMetersPerSec().isPresent() && targetTranslationPathElement.finalVelocityMetersPerSec().get().doubleValue() != 0.0)) {
             translationalVelocity = translationalSlewRateLimiter.calculate(
                 MathUtil.clamp(
                     targetTranslationPathElement.finalVelocityMetersPerSec().isPresent() ? 
                         targetTranslationPathElement.finalVelocityMetersPerSec().get().doubleValue() : 
-                        maxTranslationalVelocity,
-                    -maxTranslationalVelocity,
-                    maxTranslationalVelocity
+                        currentMaxTranslationalVelocity,
+                    -currentMaxTranslationalVelocity,
+                    currentMaxTranslationalVelocity
                 )
             );
         }
@@ -129,9 +148,9 @@ public class FollowPath extends Command {
             translationalVelocity = 
                 translationalSlewRateLimiter.calculate(
                     MathUtil.clamp(
-                        translationController.calculate(0, distanceToTarget),
-                        -maxTranslationalVelocity,
-                        maxTranslationalVelocity
+                        -translationController.calculate(distanceToTarget, 0),
+                        -currentMaxTranslationalVelocity,
+                        currentMaxTranslationalVelocity
                     )
                 );
             translationClosedLoop = true;
@@ -146,23 +165,32 @@ public class FollowPath extends Command {
         targetRotation = rotationTargets.get(currentRotationTargetIndex);
         RotationTarget targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);
 
-        if (currentPose.getTranslation().getDistance(targetTranslation) < currentPose.getTranslation().getDistance(targetRotationPathElement.translation()) && currentRotationTargetIndex < rotationTargets.size()-1) {
+        if ((currentPose.getTranslation().getDistance(targetTranslation) < targetRotationPathElement.translation().getDistance(targetTranslation) && currentRotationTargetIndex < rotationTargets.size()-1) || 
+            (currentTranslationTargetIndex > 0 && translationTargetWaypointOverlap.get(currentTranslationTargetIndex-1) && currentRotationTargetIndex < rotationTargets.size()-1)) { // no longer targeting waypoint
             currentRotationTargetIndex++;
             targetRotation = rotationTargets.get(currentRotationTargetIndex);
             targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);
         }
+
         if (targetRotationPathElement.maxAccelerationRadSPerSec2().isPresent()) {
             rotationalSlewRateLimiter.setRateLimit(targetRotationPathElement.maxAccelerationRadSPerSec2().get().doubleValue());
         }
-        if (targetRotationPathElement.maxVelocityRadPerSec().isPresent()) {
-            maxRotationalVelocity = targetRotationPathElement.maxVelocityRadPerSec().get().doubleValue();
+        else {
+            rotationalSlewRateLimiter.setRateLimit(defaultMaxRotationalAcceleration);
         }
+        if (targetRotationPathElement.maxVelocityRadPerSec().isPresent()) {
+            currentMaxRotationalVelocity = targetRotationPathElement.maxVelocityRadPerSec().get().doubleValue();
+        }
+        else {
+            currentMaxRotationalVelocity = defaultMaxRotationalVelocity;
+        }
+
         rotationalVelocity = 
             rotationalSlewRateLimiter.calculate(
                 MathUtil.clamp(
                     rotationController.calculate(currentPose.getRotation().getRadians(), targetRotation.getRadians()),
-                    -maxRotationalVelocity,
-                    maxRotationalVelocity
+                    -currentMaxRotationalVelocity,
+                    currentMaxRotationalVelocity
                 )
             );
         
@@ -182,14 +210,15 @@ public class FollowPath extends Command {
         Logger.recordOutput("FollowPath/targetRotation", targetRotation);
         Logger.recordOutput("FollowPath/combinedTargetPose", new Pose2d(targetTranslation, targetRotation));
         Logger.recordOutput("FollowPath/setSpeeds", speeds);
-        Logger.recordOutput("FollowPath/pidRot", rotationController.calculate(currentPose.getRotation().getRadians(), targetRotation.getRadians()));
     }
 
     @Override
     public boolean isFinished() {
         return 
-            ((currentTranslationTargetIndex == translationTargets.size()-1 && translationController.atSetpoint() && translationClosedLoop) || // zero final end velo
-            (currentTranslationTargetIndex == translationTargets.size()-1 && !translationClosedLoop && currentPose.getTranslation().getDistance(targetTranslation) <= intermediateHandoffRadius)) && // non-zero final end velo
-            currentRotationTargetIndex == rotationTargets.size()-1 && rotationController.atSetpoint();
+            (currentTranslationTargetIndex == translationTargets.size()-1 && translationController.atSetpoint() && translationClosedLoop && 
+            currentRotationTargetIndex == rotationTargets.size()-1 && rotationController.atSetpoint()) || // zero final end velo
+            (currentTranslationTargetIndex == translationTargets.size()-1 && !translationClosedLoop && 
+            currentPose.getTranslation().getDistance(targetTranslation) <= currentIntermediateHandoffRadius); // non-zero final end velo. 
+            // assume that there will be a proceeding command that further aligns the robot, so accuracy is not as important as speed / timing
     }
 }
