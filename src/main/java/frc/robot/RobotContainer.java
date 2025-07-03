@@ -15,8 +15,7 @@ import frc.robot.commands.AbsoluteFieldDrive;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.swerve.SwerveDrive;
 import frc.robot.lib.auto.FollowPath;
-import frc.robot.lib.auto.FollowPath.Waypoint;
-import frc.robot.lib.auto.JsonUtils;
+import frc.robot.lib.auto.Path;
 
 
 public class RobotContainer {
@@ -78,8 +77,9 @@ public class RobotContainer {
         //     )
         // );
 
-        return new FollowPath(
-            JsonUtils.loadWaypoints(new File("src/main/deploy/autos/Test1.json"))
-        );
+        // return new FollowPath(
+        //     JsonUtils.loadWaypoints(new File("src/main/deploy/autos/Test1.json"))
+        // );
+        return null;
     }
 }
