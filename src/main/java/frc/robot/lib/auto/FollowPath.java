@@ -57,6 +57,8 @@ public class FollowPath extends Command {
 
     private ArrayList<Translation2d> robotTranslations = new ArrayList<>();
 
+    private double cyclesSinceLog = 0;
+
     public FollowPath(Path path) {
         this.path = path;
         this.translationTargets = path.getTranslationTargets();
@@ -161,31 +163,32 @@ public class FollowPath extends Command {
         );
 
         // rotational velo
-        double rotationalVelocity;
-        targetRotation = rotationTargets.get(currentRotationTargetIndex);
-        RotationTarget targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);
-
-        if ((currentPose.getTranslation().getDistance(targetTranslation) < targetRotationPathElement.translation().getDistance(targetTranslation) && currentRotationTargetIndex < rotationTargets.size()-1) || 
-            (currentTranslationTargetIndex > 0 && translationTargetWaypointOverlap.get(currentTranslationTargetIndex-1) && currentRotationTargetIndex < rotationTargets.size()-1)) { // no longer targeting waypoint
-            currentRotationTargetIndex++;
+        if (rotationTargets.size() > 0) {
             targetRotation = rotationTargets.get(currentRotationTargetIndex);
-            targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);
+            RotationTarget targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);
+    
+            if ((currentPose.getTranslation().getDistance(targetTranslation) < targetRotationPathElement.translation().getDistance(targetTranslation) && currentRotationTargetIndex < rotationTargets.size()-1) || 
+                (currentTranslationTargetIndex > 0 && translationTargetWaypointOverlap.get(currentTranslationTargetIndex-1) && currentRotationTargetIndex < rotationTargets.size()-1)) { // no longer targeting waypoint
+                currentRotationTargetIndex++;
+                targetRotation = rotationTargets.get(currentRotationTargetIndex);
+                targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);
+            }
+    
+            if (targetRotationPathElement.maxAccelerationRadSPerSec2().isPresent()) {
+                rotationalSlewRateLimiter.setRateLimit(targetRotationPathElement.maxAccelerationRadSPerSec2().get().doubleValue());
+            }
+            else {
+                rotationalSlewRateLimiter.setRateLimit(defaultMaxRotationalAcceleration);
+            }
+            if (targetRotationPathElement.maxVelocityRadPerSec().isPresent()) {
+                currentMaxRotationalVelocity = targetRotationPathElement.maxVelocityRadPerSec().get().doubleValue();
+            }
+            else {
+                currentMaxRotationalVelocity = defaultMaxRotationalVelocity;
+            }
         }
 
-        if (targetRotationPathElement.maxAccelerationRadSPerSec2().isPresent()) {
-            rotationalSlewRateLimiter.setRateLimit(targetRotationPathElement.maxAccelerationRadSPerSec2().get().doubleValue());
-        }
-        else {
-            rotationalSlewRateLimiter.setRateLimit(defaultMaxRotationalAcceleration);
-        }
-        if (targetRotationPathElement.maxVelocityRadPerSec().isPresent()) {
-            currentMaxRotationalVelocity = targetRotationPathElement.maxVelocityRadPerSec().get().doubleValue();
-        }
-        else {
-            currentMaxRotationalVelocity = defaultMaxRotationalVelocity;
-        }
-
-        rotationalVelocity = 
+        double rotationalVelocity = 
             rotationalSlewRateLimiter.calculate(
                 MathUtil.clamp(
                     rotationController.calculate(currentPose.getRotation().getRadians(), targetRotation.getRadians()),
@@ -203,7 +206,9 @@ public class FollowPath extends Command {
 
         swerve.driveFieldRelative(speeds);
 
-        robotTranslations.add(currentPose.getTranslation());
+        if (cyclesSinceLog++ % 5 == 0) {
+            robotTranslations.add(currentPose.getTranslation());
+        }
 
         Logger.recordOutput("FollowPath/robotTranslations", robotTranslations.toArray(Translation2d[]::new));
         Logger.recordOutput("FollowPath/targetTranslation", targetTranslation);

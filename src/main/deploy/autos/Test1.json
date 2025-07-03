@@ -1,9 +1,158 @@
 [
-    { "x": 0, "y": 0, "rotation": 0, "velocity": null},
-    { "x": 4, "y": 2, "rotation": 90, "velocity": null},
-    { "x": 9, "y": 5, "rotation": 90, "velocity": 2 },
-    { "x": 10, "y": 3, "rotation": 45, "velocity": 1 },
-    { "x": -4, "y": -2, "rotation": 0, "velocity": 2 }
-    
+  {
+    "type": "waypoint",
+    "translationTarget": {
+      "xMeters": 0.0,
+      "yMeters": 0.0
+    },
+    "rotationTarget": {
+      "radians": 0.0,
+      "xMeters": 0.0,
+      "yMeters": 0.0
+    }
+  },
+  {
+    "type": "translation",
+    "xMeters": -0.88,
+    "yMeters": 2.12,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "translation",
+    "xMeters": -3.0,
+    "yMeters": 3.0,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "translation",
+    "xMeters": -5.12,
+    "yMeters": 2.12,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "waypoint",
+    "translationTarget": {
+      "xMeters": -6.0,
+      "yMeters": 0.0
+    },
+    "rotationTarget": {
+      "radians": -1.5708,
+      "xMeters": -6.0,
+      "yMeters": 0.0,
+      "maxVelocityRadPerSec": 2.0,
+      "maxAccelerationRadSPerSec2": 4.0
+    }
+  },
+  {
+    "type": "translation",
+    "xMeters": -5.12,
+    "yMeters": -2.12,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "translation",
+    "xMeters": -3.0,
+    "yMeters": -3.0,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "translation",
+    "xMeters": -0.88,
+    "yMeters": -2.12,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "waypoint",
+    "translationTarget": {
+      "xMeters": 0.0,
+      "yMeters": 0.0,
+      "finalVelocityMetersPerSec": 3.0
+    },
+    "rotationTarget": {
+      "radians": 1.5708,
+      "xMeters": 0.0,
+      "yMeters": 0.0,
+      "maxVelocityRadPerSec": 2.0,
+      "maxAccelerationRadSPerSec2": 4.0
+    }
+  },
+  {
+    "type": "translation",
+    "xMeters": 0.88,
+    "yMeters": 2.12,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "translation",
+    "xMeters": 3.0,
+    "yMeters": 3.0,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "translation",
+    "xMeters": 5.12,
+    "yMeters": 2.12,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "waypoint",
+    "translationTarget": {
+      "xMeters": 6.0,
+      "yMeters": 0.0,
+      "finalVelocityMetersPerSec": 5.0
+    },
+    "rotationTarget": {
+      "radians": 1.5708,
+      "xMeters": 6.0,
+      "yMeters": 0.0,
+      "maxVelocityRadPerSec": 2.0,
+      "maxAccelerationRadSPerSec2": 4.0
+    }
+  },
+  {
+    "type": "translation",
+    "xMeters": 5.12,
+    "yMeters": -2.12,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "translation",
+    "xMeters": 3.0,
+    "yMeters": -3.0,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "translation",
+    "xMeters": 0.88,
+    "yMeters": -2.12,
+    "maxVelocityMetersPerSec": 6.0,
+    "maxAccelerationMetersSPerSec2": 8.0
+  },
+  {
+    "type": "waypoint",
+    "translationTarget": {
+      "xMeters": 0.0,
+      "yMeters": 0.0,
+      "finalVelocityMetersPerSec": 0.0,
+      "intermediateHandoffRadiusMeters": 0.5
+    },
+    "rotationTarget": {
+      "radians": 0.0,
+      "xMeters": 0.0,
+      "yMeters": 0.0,
+      "maxVelocityRadPerSec": 2.0,
+      "maxAccelerationRadSPerSec2": 4.0
+    }
+  }
 ]
-  
