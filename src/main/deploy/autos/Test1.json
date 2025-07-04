@@ -1,158 +1,34 @@
 [
   {
     "type": "waypoint",
-    "translationTarget": {
-      "xMeters": 0.0,
-      "yMeters": 0.0
-    },
-    "rotationTarget": {
-      "radians": 0.0,
-      "xMeters": 0.0,
-      "yMeters": 0.0
-    }
-  },
-  {
-    "type": "translation",
-    "xMeters": -0.88,
-    "yMeters": 2.12,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
-  },
-  {
-    "type": "translation",
-    "xMeters": -3.0,
-    "yMeters": 3.0,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
-  },
-  {
-    "type": "translation",
-    "xMeters": -5.12,
-    "yMeters": 2.12,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
+    "xMeters" : 7.011,
+    "yMeters" : 6.2,
+    "rotationDegrees" : 180
   },
   {
     "type": "waypoint",
-    "translationTarget": {
-      "xMeters": -6.0,
-      "yMeters": 0.0
-    },
-    "rotationTarget": {
-      "radians": -1.5708,
-      "xMeters": -6.0,
-      "yMeters": 0.0,
-      "maxVelocityRadPerSec": 2.0,
-      "maxAccelerationRadSPerSec2": 4.0
-    }
-  },
-  {
-    "type": "translation",
-    "xMeters": -5.12,
-    "yMeters": -2.12,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
-  },
-  {
-    "type": "translation",
-    "xMeters": -3.0,
-    "yMeters": -3.0,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
-  },
-  {
-    "type": "translation",
-    "xMeters": -0.88,
-    "yMeters": -2.12,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
+    "xMeters" : 3.723,
+    "yMeters" : 6.09,
+    "rotationDegrees" : 90
   },
   {
     "type": "waypoint",
-    "translationTarget": {
-      "xMeters": 0.0,
-      "yMeters": 0.0,
-      "finalVelocityMetersPerSec": 3.0
-    },
-    "rotationTarget": {
-      "radians": 1.5708,
-      "xMeters": 0.0,
-      "yMeters": 0.0,
-      "maxVelocityRadPerSec": 2.0,
-      "maxAccelerationRadSPerSec2": 4.0
-    }
-  },
-  {
-    "type": "translation",
-    "xMeters": 0.88,
-    "yMeters": 2.12,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
-  },
-  {
-    "type": "translation",
-    "xMeters": 3.0,
-    "yMeters": 3.0,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
-  },
-  {
-    "type": "translation",
-    "xMeters": 5.12,
-    "yMeters": 2.12,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
+    "xMeters" : 2.7,
+    "yMeters" : 5.6,
+    "rotationDegrees" : 0
   },
   {
     "type": "waypoint",
-    "translationTarget": {
-      "xMeters": 6.0,
-      "yMeters": 0.0,
-      "finalVelocityMetersPerSec": 5.0
-    },
-    "rotationTarget": {
-      "radians": 1.5708,
-      "xMeters": 6.0,
-      "yMeters": 0.0,
-      "maxVelocityRadPerSec": 2.0,
-      "maxAccelerationRadSPerSec2": 4.0
-    }
-  },
-  {
-    "type": "translation",
-    "xMeters": 5.12,
-    "yMeters": -2.12,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
-  },
-  {
-    "type": "translation",
-    "xMeters": 3.0,
-    "yMeters": -3.0,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
-  },
-  {
-    "type": "translation",
-    "xMeters": 0.88,
-    "yMeters": -2.12,
-    "maxVelocityMetersPerSec": 6.0,
-    "maxAccelerationMetersSPerSec2": 8.0
+    "xMeters" : 3.1,
+    "yMeters" : 4.3,
+    "rotationDegrees" : -90,
+    "maxVelocityMetersPerSec" : 2
   },
   {
     "type": "waypoint",
-    "translationTarget": {
-      "xMeters": 0.0,
-      "yMeters": 0.0,
-      "finalVelocityMetersPerSec": 0.0,
-      "intermediateHandoffRadiusMeters": 0.5
-    },
-    "rotationTarget": {
-      "radians": 0.0,
-      "xMeters": 0.0,
-      "yMeters": 0.0,
-      "maxVelocityRadPerSec": 2.0,
-      "maxAccelerationRadSPerSec2": 4.0
-    }
+    "xMeters" : 3.174,
+    "yMeters" : 4.199,
+    "rotationDegrees" : 180,
+    "maxVelocityMetersPerSec" : 1
   }
 ]

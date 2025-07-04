@@ -163,12 +163,14 @@ public class FollowPath extends Command {
         );
 
         // rotational velo
-        if (rotationTargets.size() > 0) {
+        if (rotationTargets.size() > 0 && currentRotationTargetIndex < rotationTargets.size()-1) {
             targetRotation = rotationTargets.get(currentRotationTargetIndex);
             RotationTarget targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);
     
-            if ((currentPose.getTranslation().getDistance(targetTranslation) < targetRotationPathElement.translation().getDistance(targetTranslation) && currentRotationTargetIndex < rotationTargets.size()-1) || 
-                (currentTranslationTargetIndex > 0 && translationTargetWaypointOverlap.get(currentTranslationTargetIndex-1) && currentRotationTargetIndex < rotationTargets.size()-1)) { // no longer targeting waypoint
+            if ((currentPose.getTranslation().getDistance(rotationPathElements.get(currentRotationTargetIndex+1).translation())
+                < targetRotationPathElement.translation().getDistance(rotationPathElements.get(currentRotationTargetIndex+1).translation())) ||
+                translationClosedLoop && translationController.atSetpoint() && rotationController.atSetpoint()) { // in case robot is stationary 
+                    // and cant switch last targets after translation targets are exhausted
                 currentRotationTargetIndex++;
                 targetRotation = rotationTargets.get(currentRotationTargetIndex);
                 targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);

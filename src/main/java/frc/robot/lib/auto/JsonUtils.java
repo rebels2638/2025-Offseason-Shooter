@@ -29,13 +29,32 @@ public class JsonUtils {
     private static sealed interface PathElementDTO permits WaypointDTO, TranslationElementDTO, RotationElementDTO {}
 
     private static final record WaypointDTO(
-        TranslationTargetDTO translationTarget,
-        RotationTargetDTO rotationTarget
+        double xMeters,
+        double yMeters, 
+        Double finalVelocityMetersPerSec, 
+        Double maxVelocityMetersPerSec, 
+        Double maxAccelerationMetersSPerSec2,
+        Double intermediateHandoffRadiusMeters,
+
+        double rotationDegrees,
+        Double maxVelocityDegPerSec,
+        Double maxAccelerationDegSPerSec2
     ) implements PathElementDTO {
         Waypoint toWaypoint() {
             return new Waypoint(
-                translationTarget.toTranslationTarget(),
-                rotationTarget.toRotationTarget()
+                new TranslationTarget(
+                    new Translation2d(xMeters, yMeters), 
+                    Optional.ofNullable(finalVelocityMetersPerSec), 
+                    Optional.ofNullable(maxVelocityMetersPerSec), 
+                    Optional.ofNullable(maxAccelerationMetersSPerSec2), 
+                    Optional.ofNullable(intermediateHandoffRadiusMeters)
+                ),
+                new RotationTarget(
+                    Rotation2d.fromDegrees(rotationDegrees), 
+                    new Translation2d(xMeters, yMeters), 
+                    Optional.ofNullable(maxVelocityDegPerSec == null ? null : Double.valueOf(Math.toRadians(maxVelocityDegPerSec))),
+                    Optional.ofNullable(maxAccelerationDegSPerSec2 == null ? null : Double.valueOf(Math.toRadians(maxAccelerationDegSPerSec2)))
+                )
             );
         }
     } 
@@ -60,58 +79,21 @@ public class JsonUtils {
     }
 
     private static final record RotationElementDTO(
-        double radians,
+        double rotationDegrees,
         double xMeters,
         double yMeters,
-        Double maxVelocityRadPerSec,
-        Double maxAccelerationRadSPerSec2
+        Double maxVelocityDegPerSec,
+        Double maxAccelerationDegSPerSec2
     ) implements PathElementDTO {
         RotationTarget toRotationTarget() {
             return new RotationTarget(
-                Rotation2d.fromRadians(radians),
-                new Translation2d(xMeters, yMeters),
-                Optional.ofNullable(maxVelocityRadPerSec),
-                Optional.ofNullable(maxAccelerationRadSPerSec2)
+                Rotation2d.fromDegrees(rotationDegrees), 
+                new Translation2d(xMeters, yMeters), 
+                Optional.ofNullable(maxVelocityDegPerSec == null ? null : Double.valueOf(Math.toRadians(maxVelocityDegPerSec))),
+                Optional.ofNullable(maxAccelerationDegSPerSec2 == null ? null : Double.valueOf(Math.toRadians(maxAccelerationDegSPerSec2)))
             );
         }
     }
-
-    private static final record TranslationTargetDTO(
-        double xMeters,
-        double yMeters, 
-        Double finalVelocityMetersPerSec, 
-        Double maxVelocityMetersPerSec, 
-        Double maxAccelerationMetersSPerSec2,
-        Double intermediateHandoffRadiusMeters
-    ) {
-        TranslationTarget toTranslationTarget() {
-            return new TranslationTarget(
-                new Translation2d(xMeters, yMeters),
-                Optional.ofNullable(finalVelocityMetersPerSec),
-                Optional.ofNullable(maxVelocityMetersPerSec),
-                Optional.ofNullable(maxAccelerationMetersSPerSec2),
-                Optional.ofNullable(intermediateHandoffRadiusMeters)
-            );
-        }
-    }
-
-    private static final record RotationTargetDTO(
-        double radians,
-        double xMeters,
-        double yMeters,
-        Double maxVelocityRadPerSec,
-        Double maxAccelerationRadSPerSec2
-    ) {
-        RotationTarget toRotationTarget() {
-            return new RotationTarget(
-                Rotation2d.fromRadians(radians),
-                new Translation2d(xMeters, yMeters),
-                Optional.ofNullable(maxVelocityRadPerSec),
-                Optional.ofNullable(maxAccelerationRadSPerSec2)
-            );
-        }
-    }
-
 
     public static <T> T loadFromFile(File file, TypeReference<T> type) {
         try {

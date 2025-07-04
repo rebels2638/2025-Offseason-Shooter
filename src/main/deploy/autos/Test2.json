@@ -1,0 +1,37 @@
+[
+  {
+    "type": "translation",
+    "xMeters" : 7.011,
+    "yMeters" : 6.2
+  },
+  {
+    "type": "translation",
+    "xMeters" : 3.723,
+    "yMeters" : 6.09
+  },
+  {
+    "type": "translation",
+    "xMeters" : 2.7,
+    "yMeters" : 5.6
+  },
+  {
+    "type": "translation",
+    "xMeters" : 3.1,
+    "yMeters" : 4.3,
+    "maxVelocityMetersPerSec" : 2
+  },
+  {
+    "type": "waypoint",
+    "xMeters" : 3.174,
+    "yMeters" : 4.199,
+    "maxVelocityMetersPerSec" : 1,
+    "rotationDegrees" : 180
+
+  },
+  {
+    "type": "rotation",
+    "rotationDegrees" : 0,
+    "xMeters" : 4,
+    "yMeters" : 4.199
+  }
+]
