@@ -150,4 +150,45 @@ public class Path {
         }
         return overlap;
     } 
+
+    public int indexOf(PathElement element) {
+        for (int i = 0; i < pathElements.size(); i++) {
+            if (pathElements.get(i).equals(element)) {
+                return i;
+            }
+        }
+        return -1; // Element not found
+    }
+    
+    public int indexOfRotationTarget(RotationTarget rt) {
+        for (int i = 0; i < pathElements.size(); i++) {
+            PathElement e = pathElements.get(i);
+            if (e instanceof RotationTarget r && r.equals(rt)) return i;
+            if (e instanceof Waypoint w && w.rotationTarget().equals(rt)) return i;
+        }
+        return -1;
+    }
+
+    public int indexOfTranslationTarget(TranslationTarget tt) {
+        for (int i = 0; i < pathElements.size(); i++) {
+            PathElement e = pathElements.get(i);
+            if (e instanceof TranslationTarget t && t.equals(tt)) return i;
+            if (e instanceof Waypoint w && w.translationTarget().equals(tt)) return i;
+        }
+        return -1;
+    }
+
+    public List<Translation2d> getAllPathElementTranslations() {
+        List<Translation2d> translations = new ArrayList<>();
+        for (PathElement element : pathElements) {
+            if (element instanceof TranslationTarget translationTarget) {
+                translations.add(translationTarget.translation);
+            } else if (element instanceof Waypoint waypoint) {
+                translations.add(waypoint.translationTarget.translation);
+            } else if (element instanceof RotationTarget rotationTarget) {
+                translations.add(rotationTarget.translation);
+            }
+        }
+        return translations;
+    }
 }

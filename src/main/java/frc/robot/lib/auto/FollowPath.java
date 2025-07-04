@@ -14,6 +14,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.RobotState;
 import frc.robot.lib.auto.Path.TranslationTarget;
+import frc.robot.lib.auto.Path.Waypoint;
 import frc.robot.lib.auto.Path.RotationTarget;
 import frc.robot.subsystems.swerve.SwerveDrive;
 
@@ -42,6 +43,7 @@ public class FollowPath extends Command {
     private final List<Rotation2d> rotationTargets;
     private final List<RotationTarget> rotationPathElements;
     private final List<Boolean> translationTargetWaypointOverlap;
+    private final List<Translation2d> allPathElementTranslations;
 
     private int currentTranslationTargetIndex = 0;
     private int currentRotationTargetIndex = 0;
@@ -66,6 +68,7 @@ public class FollowPath extends Command {
         this.rotationTargets = path.getRotationTargets();
         this.rotationPathElements = path.getRotationPathElements();
         this.translationTargetWaypointOverlap = path.getTranslationTargetWaypointOverlap();
+        this.allPathElementTranslations = path.getAllPathElementTranslations();
 
         translationController.setTolerance(translationEndTolerance);
         rotationController.setTolerance(rotationEndTolerance);
@@ -166,9 +169,45 @@ public class FollowPath extends Command {
         if (rotationTargets.size() > 0 && currentRotationTargetIndex < rotationTargets.size()-1) {
             targetRotation = rotationTargets.get(currentRotationTargetIndex);
             RotationTarget targetRotationPathElement = rotationPathElements.get(currentRotationTargetIndex);
-    
-            if ((currentPose.getTranslation().getDistance(rotationPathElements.get(currentRotationTargetIndex+1).translation())
-                < targetRotationPathElement.translation().getDistance(rotationPathElements.get(currentRotationTargetIndex+1).translation())) ||
+            
+            double robotDistToNextTarget = 0;
+            Translation2d prevTranslation = currentPose.getTranslation();
+            for (int i = path.indexOfRotationTarget(targetRotationPathElement)+1; i < path.getPathElements().size(); i++) {
+                if (path.getPathElements().get(i) instanceof Waypoint waypoint) {
+                    robotDistToNextTarget += prevTranslation.getDistance(waypoint.translationTarget().translation());
+                    break;
+                }
+                else if (path.getPathElements().get(i) instanceof TranslationTarget translationTarget) {
+                    robotDistToNextTarget += prevTranslation.getDistance(translationTarget.translation());
+                    prevTranslation = translationTarget.translation();
+                }
+                else if (path.getPathElements().get(i) instanceof RotationTarget rotationTarget) {
+                    robotDistToNextTarget += prevTranslation.getDistance(rotationTarget.translation());
+                    break;
+                }
+            }
+
+            double currentTargetDistToNextTarget = 0;
+            prevTranslation = targetRotationPathElement.translation();
+            for (int i = path.indexOfRotationTarget(targetRotationPathElement)+1; i < path.getPathElements().size(); i++) {
+                if (path.getPathElements().get(i) instanceof Waypoint waypoint) {
+                    currentTargetDistToNextTarget += prevTranslation.getDistance(waypoint.translationTarget().translation());
+                    break;
+                }
+                else if (path.getPathElements().get(i) instanceof TranslationTarget translationTarget) {
+                    currentTargetDistToNextTarget += prevTranslation.getDistance(translationTarget.translation());
+                    prevTranslation = translationTarget.translation();
+                }
+                else if (path.getPathElements().get(i) instanceof RotationTarget rotationTarget) {
+                    currentTargetDistToNextTarget += prevTranslation.getDistance(rotationTarget.translation());
+                    break;
+                }
+            }
+            Logger.recordOutput("FollowPath/currentTargetDistToNextTarget", currentTargetDistToNextTarget);
+            Logger.recordOutput("FollowPath/robotDistToNextTarget", robotDistToNextTarget);
+
+            
+            if ((robotDistToNextTarget < currentTargetDistToNextTarget) ||
                 translationClosedLoop && translationController.atSetpoint() && rotationController.atSetpoint()) { // in case robot is stationary 
                     // and cant switch last targets after translation targets are exhausted
                 currentRotationTargetIndex++;
