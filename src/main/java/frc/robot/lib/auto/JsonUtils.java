@@ -1,9 +1,12 @@
 package frc.robot.lib.auto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -14,86 +17,89 @@ import frc.robot.lib.auto.Path.Waypoint;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class JsonUtils {
-    private static final ObjectMapper mapper = new ObjectMapper();
+    public static final String PROJECT_ROOT = "src/main/deploy/autos";
+
+    private static final ObjectMapper mapper = new ObjectMapper()
+        .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
     @JsonSubTypes({
         @JsonSubTypes.Type(value = WaypointDTO.class, name = "waypoint"),
-        @JsonSubTypes.Type(value = TranslationElementDTO.class, name = "translation"),
-        @JsonSubTypes.Type(value = RotationElementDTO.class, name = "rotation")
+        @JsonSubTypes.Type(value = TranslationTargetDTO.class, name = "translation"),
+        @JsonSubTypes.Type(value = RotationTargetDTO.class, name = "rotation")
     })
-    private static sealed interface PathElementDTO permits WaypointDTO, TranslationElementDTO, RotationElementDTO {}
+    private static sealed interface PathElementDTO permits WaypointDTO, TranslationTargetDTO, RotationTargetDTO {}
 
     private static final record WaypointDTO(
-        double xMeters,
-        double yMeters, 
-        Double finalVelocityMetersPerSec, 
-        Double maxVelocityMetersPerSec, 
-        Double maxAccelerationMetersSPerSec2,
-        Double intermediateHandoffRadiusMeters,
-
-        double rotationDegrees,
-        Double maxVelocityDegPerSec,
-        Double maxAccelerationDegSPerSec2
+        TranslationTargetDTO translationTarget,
+        RotationTargetDTO rotationTarget
     ) implements PathElementDTO {
         Waypoint toWaypoint() {
             return new Waypoint(
-                new TranslationTarget(
-                    new Translation2d(xMeters, yMeters), 
-                    Optional.ofNullable(finalVelocityMetersPerSec), 
-                    Optional.ofNullable(maxVelocityMetersPerSec), 
-                    Optional.ofNullable(maxAccelerationMetersSPerSec2), 
-                    Optional.ofNullable(intermediateHandoffRadiusMeters)
-                ),
-                new RotationTarget(
-                    Rotation2d.fromDegrees(rotationDegrees), 
-                    new Translation2d(xMeters, yMeters), 
-                    Optional.ofNullable(maxVelocityDegPerSec == null ? null : Double.valueOf(Math.toRadians(maxVelocityDegPerSec))),
-                    Optional.ofNullable(maxAccelerationDegSPerSec2 == null ? null : Double.valueOf(Math.toRadians(maxAccelerationDegSPerSec2)))
-                )
+                translationTarget.toTranslationTarget(),
+                new RotationTarget(rotationTarget.toRotation2d(), 0.5, Boolean.TRUE.equals(rotationTarget.profiledRotation()))
             );
         }
     } 
 
-    private static final record TranslationElementDTO(
+    private static final record TranslationTargetDTO(
         double xMeters,
-        double yMeters, 
-        Double finalVelocityMetersPerSec, 
-        Double maxVelocityMetersPerSec, 
-        Double maxAccelerationMetersSPerSec2,
+        double yMeters,
         Double intermediateHandoffRadiusMeters
     ) implements PathElementDTO {
         TranslationTarget toTranslationTarget() {
             return new TranslationTarget(
                 new Translation2d(xMeters, yMeters),
-                Optional.ofNullable(finalVelocityMetersPerSec),
-                Optional.ofNullable(maxVelocityMetersPerSec),
-                Optional.ofNullable(maxAccelerationMetersSPerSec2),
                 Optional.ofNullable(intermediateHandoffRadiusMeters)
             );
         }
     }
 
-    private static final record RotationElementDTO(
-        double rotationDegrees,
-        double xMeters,
-        double yMeters,
-        Double maxVelocityDegPerSec,
-        Double maxAccelerationDegSPerSec2
+    private static final record RotationTargetDTO(
+        double rotationRadians,
+        Double tRatio,
+        Boolean profiledRotation
     ) implements PathElementDTO {
         RotationTarget toRotationTarget() {
             return new RotationTarget(
-                Rotation2d.fromDegrees(rotationDegrees), 
-                new Translation2d(xMeters, yMeters), 
-                Optional.ofNullable(maxVelocityDegPerSec == null ? null : Double.valueOf(Math.toRadians(maxVelocityDegPerSec))),
-                Optional.ofNullable(maxAccelerationDegSPerSec2 == null ? null : Double.valueOf(Math.toRadians(maxAccelerationDegSPerSec2)))
+                Rotation2d.fromRadians(rotationRadians),
+                tRatio == null ? 0.5 : tRatio.doubleValue(),
+                Boolean.TRUE.equals(profiledRotation)
             );
         }
     }
+
+    private static final record RangedConstraintDTO(
+        double value,
+        int startOrdinal,
+        int endOrdinal
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static final record AutosPathDTO(
+        Map<String, List<RangedConstraintDTO>> rangedConstraints,
+        List<PathElementDTO> pathElements
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static final record AutosConfigDTO(
+        double robotLengthMeters,
+        double robotWidthMeters,
+        double defaultMaxVelocityMetersPerSec,
+        double defaultMaxAccelerationMetersPerSec2,
+        double defaultMaxVelocityDegPerSec,
+        double defaultMaxAccelerationDegPerSec2,
+        double defaultEndTranslationToleranceMeters,
+        double defaultEndRotationToleranceDeg,
+        double defaultIntermediateHandoffRadiusMeters
+    ) {}
 
     public static <T> T loadFromFile(File file, TypeReference<T> type) {
         try {
@@ -111,14 +117,79 @@ public class JsonUtils {
         }
     }
 
-    public static List<PathElement> loadPathElements(File file) {
-        return loadFromFile(file, new TypeReference<List<PathElementDTO>>() {}).stream().map(
-            dto -> {
-                if (dto instanceof WaypointDTO w) return (PathElement) w.toWaypoint();
-                if (dto instanceof TranslationElementDTO t) return (PathElement) t.toTranslationTarget();
-                if (dto instanceof RotationElementDTO r) return (PathElement) r.toRotationTarget();
-                throw new IllegalArgumentException("Unknown PathElementDTO type: " + dto.getClass().getName());
+    public static List<PathElement> loadPathElements(File autosPathFile) {
+        AutosPathDTO dto = loadFromFile(autosPathFile, new TypeReference<AutosPathDTO>() {});
+        List<PathElement> out = new ArrayList<>();
+        for (PathElementDTO e : dto.pathElements()) {
+            if (e instanceof WaypointDTO w) out.add(w.toWaypoint());
+            else if (e instanceof TranslationTargetDTO t) out.add(t.toTranslationTarget());
+            else if (e instanceof RotationTargetDTO r) out.add(r.toRotationTarget());
+            else throw new IllegalArgumentException("Unknown PathElementDTO type: " + e.getClass().getName());
+        }
+        return out;
+    }
+
+    public static Path.DefaultGlobalConstraints loadGlobalConstraints(File autosDir) {
+        File config = new File(autosDir, "config.json");
+        AutosConfigDTO cfg = loadFromFile(config, new TypeReference<AutosConfigDTO>() {});
+        return new Path.DefaultGlobalConstraints(
+            cfg.defaultMaxVelocityMetersPerSec(),
+            cfg.defaultMaxAccelerationMetersPerSec2(),
+            cfg.defaultMaxVelocityDegPerSec(),
+            cfg.defaultMaxAccelerationDegPerSec2(),
+            cfg.defaultEndTranslationToleranceMeters(),
+            cfg.defaultEndRotationToleranceDeg(),
+            cfg.defaultIntermediateHandoffRadiusMeters()
+        );
+    }
+
+    public static Path.PathConstraints loadPathConstraints(File autosPathFile) {
+        AutosPathDTO dto = loadFromFile(autosPathFile, new TypeReference<AutosPathDTO>() {});
+        Path.PathConstraints constraints = new Path.PathConstraints();
+        Map<String, List<RangedConstraintDTO>> rc = dto.rangedConstraints();
+        if (rc != null) {
+            List<RangedConstraintDTO> v;
+            v = rc.get("max_velocity_meters_per_sec");
+            if (v != null && !v.isEmpty()) {
+                Path.RangedConstraint[] arr = v.stream()
+                    .map(dto -> new Path.RangedConstraint(dto.value(), dto.startOrdinal(), dto.endOrdinal()))
+                    .toArray(Path.RangedConstraint[]::new);
+                constraints.setMaxVelocityMetersPerSec(Optional.of(arr));
             }
-        ).toList();
+            v = rc.get("max_acceleration_meters_per_sec2");
+            if (v != null && !v.isEmpty()) {
+                Path.RangedConstraint[] arr = v.stream()
+                    .map(dto -> new Path.RangedConstraint(dto.value(), dto.startOrdinal(), dto.endOrdinal()))
+                    .toArray(Path.RangedConstraint[]::new);
+                constraints.setMaxAccelerationMetersPerSec2(Optional.of(arr));
+            }
+            v = rc.get("max_velocity_deg_per_sec");
+            if (v != null && !v.isEmpty()) {
+                Path.RangedConstraint[] arr = v.stream()
+                    .map(dto -> new Path.RangedConstraint(dto.value(), dto.startOrdinal(), dto.endOrdinal()))
+                    .toArray(Path.RangedConstraint[]::new);
+                constraints.setMaxVelocityDegPerSec(Optional.of(arr));
+            }
+            v = rc.get("max_acceleration_deg_per_sec2");
+            if (v != null && !v.isEmpty()) {
+                Path.RangedConstraint[] arr = v.stream()
+                    .map(dto -> new Path.RangedConstraint(dto.value(), dto.startOrdinal(), dto.endOrdinal()))
+                    .toArray(Path.RangedConstraint[]::new);
+                constraints.setMaxAccelerationDegPerSec2(Optional.of(arr));
+            }
+        }
+        return constraints;
+    }
+
+    public static Path loadPath(File autosDir, String pathFileName) {
+        File pathFile = new File(new File(autosDir, "paths"), pathFileName);
+        List<PathElement> elements = loadPathElements(pathFile);
+        Path.PathConstraints constraints = loadPathConstraints(pathFile);
+        Path.DefaultGlobalConstraints globals = loadGlobalConstraints(autosDir);
+        return new Path(elements, constraints, globals);
+    }
+
+    public static Path loadPath(String pathFileName) {
+        return loadPath(new File(PROJECT_ROOT), pathFileName);
     }
 }
