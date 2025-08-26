@@ -37,6 +37,7 @@ import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleGeneralConfigP
 import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleSpecificBLConfigProto;
 import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleSpecificFRConfigProto;
 import frc.robot.constants.swerve.moduleConfigs.sim.SwerveModuleGeneralConfigSim;
+import frc.robot.lib.auto.ChassisRateLimiter;
 import frc.robot.subsystems.swerve.gyro.GyroIO;
 import frc.robot.subsystems.swerve.gyro.GyroIOInputsAutoLogged;
 import frc.robot.subsystems.swerve.gyro.GyroIOPigeon2;
@@ -267,7 +268,13 @@ public class SwerveDrive extends SubsystemBase {
         Logger.recordOutput("SwerveDrive/desiredRobotRelativeSpeeds", desiredRobotRelativeSpeeds);
         
         // Limit acceleration to prevent sudden changes in speed
-        obtainableFieldRelativeSpeeds = limitAcceleration(desiredFieldRelativeSpeeds, obtainableFieldRelativeSpeeds, dt);
+        obtainableFieldRelativeSpeeds = ChassisRateLimiter.limit(
+            desiredFieldRelativeSpeeds, 
+            obtainableFieldRelativeSpeeds, 
+            dt, 
+            drivetrainConfig.getMaxTranslationalAccelerationMetersPerSecSec(), 
+            drivetrainConfig.getMaxAngularAccelerationRadiansPerSecSec()
+        );
         Logger.recordOutput("SwerveDrive/obtainableFieldRelativeSpeeds", obtainableFieldRelativeSpeeds);
 
         ChassisSpeeds obtainableRobotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(obtainableFieldRelativeSpeeds, RobotState.getInstance().getEstimatedPose().getRotation());
@@ -289,42 +296,6 @@ public class SwerveDrive extends SubsystemBase {
 
 
         Logger.recordOutput("SwerveDrive/CurrentCommand", this.getCurrentCommand() == null ? "" : this.getCurrentCommand().toString());
-    }
-
-    private ChassisSpeeds limitAcceleration(ChassisSpeeds desiredFieldRelativeSpeeds, ChassisSpeeds lastFieldRelativeSpeeds, double dt) {
-        double desiredAcceleration = Math.hypot(
-            desiredFieldRelativeSpeeds.vxMetersPerSecond - lastFieldRelativeSpeeds.vxMetersPerSecond,
-            desiredFieldRelativeSpeeds.vyMetersPerSecond - lastFieldRelativeSpeeds.vyMetersPerSecond
-        ) / dt;
-        Logger.recordOutput("SwerveDrive/desiredAcceleration", desiredAcceleration);
-
-        double obtainableAcceleration = MathUtil.clamp(
-            desiredAcceleration,
-            0,
-            drivetrainConfig.getMaxTranslationalAccelerationMetersPerSecSec()
-        );
-        Logger.recordOutput("SwerveDrive/obtainableAcceleration", obtainableAcceleration);
-
-        double theta = Math.atan2(
-            desiredFieldRelativeSpeeds.vyMetersPerSecond - lastFieldRelativeSpeeds.vyMetersPerSecond,
-            desiredFieldRelativeSpeeds.vxMetersPerSecond - lastFieldRelativeSpeeds.vxMetersPerSecond
-        );
-
-        double desiredOmegaAcceleration = (desiredFieldRelativeSpeeds.omegaRadiansPerSecond - lastFieldRelativeSpeeds.omegaRadiansPerSecond) / dt;
-        Logger.recordOutput("SwerveDrive/desiredOmegaAcceleration", desiredOmegaAcceleration);
-
-        double obtainableOmegaAcceleration = MathUtil.clamp(
-            desiredOmegaAcceleration,
-            -drivetrainConfig.getMaxAngularAccelerationRadiansPerSecSec(),
-            drivetrainConfig.getMaxAngularAccelerationRadiansPerSecSec()
-        );
-        Logger.recordOutput("SwerveDrive/obtainableOmegaAcceleration", obtainableOmegaAcceleration);
-
-        return new ChassisSpeeds(
-            lastFieldRelativeSpeeds.vxMetersPerSecond + Math.cos(theta) * obtainableAcceleration * dt,
-            lastFieldRelativeSpeeds.vyMetersPerSecond + Math.sin(theta) * obtainableAcceleration * dt,
-            lastFieldRelativeSpeeds.omegaRadiansPerSecond + obtainableOmegaAcceleration * dt
-        );
     }
 
     private ChassisSpeeds compensateRobotRelativeSpeeds(ChassisSpeeds speeds) {
