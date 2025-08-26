@@ -44,7 +44,7 @@ public class JsonUtils {
         Waypoint toWaypoint() {
             return new Waypoint(
                 translationTarget.toTranslationTarget(),
-                new RotationTarget(rotationTarget.toRotation2d(), 0.5, Boolean.TRUE.equals(rotationTarget.profiledRotation()))
+                new RotationTarget(Rotation2d.fromRadians(rotationTarget.rotationRadians()), 0.5, Boolean.TRUE.equals(rotationTarget.profiledRotation()))
             );
         }
     } 
@@ -151,31 +151,31 @@ public class JsonUtils {
             List<RangedConstraintDTO> v;
             v = rc.get("max_velocity_meters_per_sec");
             if (v != null && !v.isEmpty()) {
-                Path.RangedConstraint[] arr = v.stream()
-                    .map(dto -> new Path.RangedConstraint(dto.value(), dto.startOrdinal(), dto.endOrdinal()))
-                    .toArray(Path.RangedConstraint[]::new);
-                constraints.setMaxVelocityMetersPerSec(Optional.of(arr));
+                ArrayList<Path.RangedConstraint> list = v.stream()
+                    .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                constraints.setMaxVelocityMetersPerSec(Optional.of(list));
             }
             v = rc.get("max_acceleration_meters_per_sec2");
             if (v != null && !v.isEmpty()) {
-                Path.RangedConstraint[] arr = v.stream()
-                    .map(dto -> new Path.RangedConstraint(dto.value(), dto.startOrdinal(), dto.endOrdinal()))
-                    .toArray(Path.RangedConstraint[]::new);
-                constraints.setMaxAccelerationMetersPerSec2(Optional.of(arr));
+                ArrayList<Path.RangedConstraint> list = v.stream()
+                    .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                constraints.setMaxAccelerationMetersPerSec2(Optional.of(list));
             }
             v = rc.get("max_velocity_deg_per_sec");
             if (v != null && !v.isEmpty()) {
-                Path.RangedConstraint[] arr = v.stream()
-                    .map(dto -> new Path.RangedConstraint(dto.value(), dto.startOrdinal(), dto.endOrdinal()))
-                    .toArray(Path.RangedConstraint[]::new);
-                constraints.setMaxVelocityDegPerSec(Optional.of(arr));
+                ArrayList<Path.RangedConstraint> list = v.stream()
+                    .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                constraints.setMaxVelocityDegPerSec(Optional.of(list));
             }
             v = rc.get("max_acceleration_deg_per_sec2");
             if (v != null && !v.isEmpty()) {
-                Path.RangedConstraint[] arr = v.stream()
-                    .map(dto -> new Path.RangedConstraint(dto.value(), dto.startOrdinal(), dto.endOrdinal()))
-                    .toArray(Path.RangedConstraint[]::new);
-                constraints.setMaxAccelerationDegPerSec2(Optional.of(arr));
+                ArrayList<Path.RangedConstraint> list = v.stream()
+                    .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                constraints.setMaxAccelerationDegPerSec2(Optional.of(list));
             }
         }
         return constraints;

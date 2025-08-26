@@ -3,13 +3,32 @@ package frc.robot.lib.auto;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
 public class Path {
     public sealed interface PathElement permits Waypoint, TranslationTarget, RotationTarget {}
+    public sealed interface PathElementConstraint permits WaypointConstraint, TranslationTargetConstraint, RotationTargetConstraint {}
+    public static record WaypointConstraint(
+        double maxVelocityMetersPerSec,
+        double maxAccelerationMetersPerSec2,
+        double maxVelocityDegPerSec,
+        double maxAccelerationDegPerSec2
+    ) implements PathElementConstraint {}
+    public static record TranslationTargetConstraint(
+        double maxVelocityMetersPerSec,
+        double maxAccelerationMetersPerSec2
+    ) implements PathElementConstraint {}
+    public static record RotationTargetConstraint(
+        double maxVelocityDegPerSec,
+        double maxAccelerationDegPerSec2
+    ) implements PathElementConstraint {}
+
     public static record Waypoint(
         TranslationTarget translationTarget,
         RotationTarget rotationTarget
@@ -60,6 +79,18 @@ public class Path {
             this.intermediateHandoffRadiusMeters = intermediateHandoffRadiusMeters;
         }
 
+        public DefaultGlobalConstraints copy() {
+            return new DefaultGlobalConstraints(
+                maxVelocityMetersPerSec,
+                maxAccelerationMetersPerSec2,
+                maxVelocityDegPerSec,
+                maxAccelerationDegPerSec2,
+                endTranslationToleranceMeters,
+                endRotationToleranceDeg,
+                intermediateHandoffRadiusMeters
+            );
+        }
+
         public double getMaxVelocityMetersPerSec() { return maxVelocityMetersPerSec; }
         public double getMaxAccelerationMetersPerSec2() { return maxAccelerationMetersPerSec2; }
         public double getMaxVelocityDegPerSec() { return maxVelocityDegPerSec; }
@@ -70,26 +101,26 @@ public class Path {
     }
     
     public static final class PathConstraints {
-        private Optional<RangedConstraint[]> maxVelocityMetersPerSec = Optional.empty();
-        private Optional<RangedConstraint[]> maxAccelerationMetersPerSec2 = Optional.empty();
-        private Optional<RangedConstraint[]> maxVelocityDegPerSec = Optional.empty();
-        private Optional<RangedConstraint[]> maxAccelerationDegPerSec2 = Optional.empty();
+        private Optional<ArrayList<RangedConstraint>> maxVelocityMetersPerSec = Optional.empty();
+        private Optional<ArrayList<RangedConstraint>> maxAccelerationMetersPerSec2 = Optional.empty();
+        private Optional<ArrayList<RangedConstraint>> maxVelocityDegPerSec = Optional.empty();
+        private Optional<ArrayList<RangedConstraint>> maxAccelerationDegPerSec2 = Optional.empty();
         private Optional<Double> endTranslationToleranceMeters = Optional.empty();
         private Optional<Double> endRotationToleranceDeg = Optional.empty();
 
         public PathConstraints() {}
 
-        public Optional<RangedConstraint[]> getMaxVelocityMetersPerSec() { return maxVelocityMetersPerSec.map(arr -> arr.clone()); }
-        public void setMaxVelocityMetersPerSec(Optional<RangedConstraint[]> v) { this.maxVelocityMetersPerSec = v.map(arr -> arr.clone()); }
+        public Optional<ArrayList<RangedConstraint>> getMaxVelocityMetersPerSec() { return maxVelocityMetersPerSec.map(list -> new ArrayList<>(list)); }
+        public void setMaxVelocityMetersPerSec(Optional<ArrayList<RangedConstraint>> v) { this.maxVelocityMetersPerSec = v.map(list -> new ArrayList<>(list)); }
 
-        public Optional<RangedConstraint[]> getMaxAccelerationMetersPerSec2() { return maxAccelerationMetersPerSec2.map(arr -> arr.clone()); }
-        public void setMaxAccelerationMetersPerSec2(Optional<RangedConstraint[]> v) { this.maxAccelerationMetersPerSec2 = v.map(arr -> arr.clone()); }
+        public Optional<ArrayList<RangedConstraint>> getMaxAccelerationMetersPerSec2() { return maxAccelerationMetersPerSec2.map(list -> new ArrayList<>(list)); }
+        public void setMaxAccelerationMetersPerSec2(Optional<ArrayList<RangedConstraint>> v) { this.maxAccelerationMetersPerSec2 = v.map(list -> new ArrayList<>(list)); }
 
-        public Optional<RangedConstraint[]> getMaxVelocityDegPerSec() { return maxVelocityDegPerSec.map(arr -> arr.clone()); }
-        public void setMaxVelocityDegPerSec(Optional<RangedConstraint[]> v) { this.maxVelocityDegPerSec = v.map(arr -> arr.clone()); }
+        public Optional<ArrayList<RangedConstraint>> getMaxVelocityDegPerSec() { return maxVelocityDegPerSec.map(list -> new ArrayList<>(list)); }
+        public void setMaxVelocityDegPerSec(Optional<ArrayList<RangedConstraint>> v) { this.maxVelocityDegPerSec = v.map(list -> new ArrayList<>(list)); }
 
-        public Optional<RangedConstraint[]> getMaxAccelerationDegPerSec2() { return maxAccelerationDegPerSec2.map(arr -> arr.clone()); }
-        public void setMaxAccelerationDegPerSec2(Optional<RangedConstraint[]> v) { this.maxAccelerationDegPerSec2 = v.map(arr -> arr.clone()); }
+        public Optional<ArrayList<RangedConstraint>> getMaxAccelerationDegPerSec2() { return maxAccelerationDegPerSec2.map(list -> new ArrayList<>(list)); }
+        public void setMaxAccelerationDegPerSec2(Optional<ArrayList<RangedConstraint>> v) { this.maxAccelerationDegPerSec2 = v.map(list -> new ArrayList<>(list)); }
 
         public Optional<Double> getEndTranslationToleranceMeters() { return endTranslationToleranceMeters; }
         public void setEndTranslationToleranceMeters(Optional<Double> v) { this.endTranslationToleranceMeters = v; }
@@ -111,60 +142,95 @@ public class Path {
 
 
     private List<PathElement> pathElements;
-    private PathConstraints constraints;
-    private DefaultGlobalConstraints globalConstraints;
+    private PathConstraints pathConstraints;
+    private static DefaultGlobalConstraints defaultGlobalConstraints = null;
     
-    public Path(List<PathElement> pathElements, PathConstraints constraints, DefaultGlobalConstraints globalConstraints) {
-        this.pathElements = pathElements == null ? new ArrayList<>() : new ArrayList<>(pathElements);
-        this.constraints = constraints == null ? new PathConstraints() : constraints.copy();
-        this.globalConstraints = globalConstraints == null ? new DefaultGlobalConstraints(0,0,0,0,0,0,0) : new DefaultGlobalConstraints(
-            globalConstraints.getMaxVelocityMetersPerSec(),
-            globalConstraints.getMaxAccelerationMetersPerSec2(),
-            globalConstraints.getMaxVelocityDegPerSec(),
-            globalConstraints.getMaxAccelerationDegPerSec2(),
-            globalConstraints.getEndTranslationToleranceMeters(),
-            globalConstraints.getEndRotationToleranceDeg(),
-            globalConstraints.getIntermediateHandoffRadiusMeters()
-        );
+    public Path(List<PathElement> pathElements, PathConstraints constraints, DefaultGlobalConstraints defaultGlobalConstraints) {
+        if (pathElements == null) {
+            throw new IllegalArgumentException("pathElements cannot be null");
+        }
+        if (constraints == null) {
+            throw new IllegalArgumentException("constraints cannot be null");
+        }
+        if (defaultGlobalConstraints == null) {
+            throw new IllegalArgumentException("defaultGlobalConstraints must be set before creating a path and defaultGlobalConstraints cannot be null");
+        }
+        
+        this.pathElements = new ArrayList<>(pathElements);
+        this.pathConstraints = constraints.copy();
+        Path.defaultGlobalConstraints = defaultGlobalConstraints.copy();
+        
+        // Validate that first and last elements are both either waypoints or translation targets
+        validatePathEndpoints();
+    }
+
+    public Path(List<PathElement> pathElements, PathConstraints constraints) {
+        this(pathElements, constraints, Path.defaultGlobalConstraints);
     }
 
     public Path(File autosDir, String pathFileName) {
         Path loaded = JsonUtils.loadPath(autosDir, pathFileName);
-        this.pathElements = new ArrayList<>(loaded.pathElements);
-        this.constraints = loaded.constraints.copy();
-        this.globalConstraints = new DefaultGlobalConstraints(
-            loaded.globalConstraints.getMaxVelocityMetersPerSec(),
-            loaded.globalConstraints.getMaxAccelerationMetersPerSec2(),
-            loaded.globalConstraints.getMaxVelocityDegPerSec(),
-            loaded.globalConstraints.getMaxAccelerationDegPerSec2(),
-            loaded.globalConstraints.getEndTranslationToleranceMeters(),
-            loaded.globalConstraints.getEndRotationToleranceDeg(),
-            loaded.globalConstraints.getIntermediateHandoffRadiusMeters()
-        );
+        this.pathElements = loaded.pathElements;
+        this.pathConstraints = loaded.pathConstraints;
+        // globals are static and already copied
+
+        // Validate that first and last elements are both either waypoints or translation targets
+        validatePathEndpoints();
     }
 
     public Path(String pathFileName) {
         this(new File(JsonUtils.PROJECT_ROOT), pathFileName);
     }
 
-    public Path() {
-        this(new ArrayList<>(), new PathConstraints(), new DefaultGlobalConstraints(0,0,0,0,0,0,0));
+    /**
+     * Validates that the first and last path elements are both either waypoints or translation targets.
+     * If the path has only 1 element, it must be a waypoint or translation target.
+     * @throws IllegalArgumentException if the validation fails
+     */
+    private void validatePathEndpoints() {
+        if (pathElements.size() < 2) {
+            throw new IllegalArgumentException("Path must have at least 1 element");
+        }
+        
+        PathElement first = pathElements.get(0);
+        PathElement last = pathElements.get(pathElements.size() - 1);
+        
+        boolean firstIsValid = first instanceof Waypoint || first instanceof TranslationTarget;
+        boolean lastIsValid = last instanceof Waypoint || last instanceof TranslationTarget;
+        
+        if (!firstIsValid || !lastIsValid) {
+            throw new IllegalArgumentException(
+                "First and last path elements must both be either Waypoints or TranslationTargets. " +
+                "First element is: " + first.getClass().getSimpleName() + ", " +
+                "Last element is: " + last.getClass().getSimpleName()
+            );
+        }
     }
 
     public DefaultGlobalConstraints getDefaultGlobalConstraints() {
-        return new DefaultGlobalConstraints(
-            globalConstraints.getMaxVelocityMetersPerSec(),
-            globalConstraints.getMaxAccelerationMetersPerSec2(),
-            globalConstraints.getMaxVelocityDegPerSec(),
-            globalConstraints.getMaxAccelerationDegPerSec2(),
-            globalConstraints.getEndTranslationToleranceMeters(),
-            globalConstraints.getEndRotationToleranceDeg(),
-            globalConstraints.getIntermediateHandoffRadiusMeters()
-        );
+        return defaultGlobalConstraints.copy();
+    }
+    public void setDefaultGlobalConstraints(DefaultGlobalConstraints defaultGlobalConstraints) {
+        if (defaultGlobalConstraints == null) {
+            throw new IllegalArgumentException("defaultGlobalConstraints cannot be null");
+        }
+        Path.defaultGlobalConstraints = defaultGlobalConstraints.copy();
     }
 
-    public PathConstraints getPathConstraints() { return constraints.copy(); }
-    public void setPathConstraints(PathConstraints pathConstraints) { this.constraints = pathConstraints == null ? new PathConstraints() : pathConstraints.copy(); }
+    public PathConstraints getPathConstraints() { return pathConstraints.copy(); }
+    public void setPathConstraints(PathConstraints pathConstraints) { 
+        if (pathConstraints == null) {
+            throw new IllegalArgumentException("pathConstraints cannot be null");
+        }
+        this.pathConstraints = pathConstraints.copy(); 
+    }
+
+    public double getEndTranslationToleranceMeters() {
+        return pathConstraints.getEndTranslationToleranceMeters().orElse(defaultGlobalConstraints.getEndTranslationToleranceMeters());
+    }
+    public double getEndRotationToleranceDeg() {
+        return pathConstraints.getEndRotationToleranceDeg().orElse(defaultGlobalConstraints.getEndRotationToleranceDeg());
+    }
 
     public Path addPathElement(PathElement pathElement) {
         pathElements.add(pathElement);
@@ -204,9 +270,254 @@ public class Path {
         this.pathElements = reordered;
         return this;
     }
+
     public List<PathElement> getPathElements() { return new ArrayList<>(pathElements); }
 
-    public void setPathElements(List<PathElement> pathElements) { this.pathElements = pathElements == null ? new ArrayList<>() : new ArrayList<>(pathElements); }
+    public void setPathElements(List<PathElement> pathElements) { 
+        if (pathElements == null) {
+            throw new IllegalArgumentException("pathElements cannot be null");
+        }
+        this.pathElements = new ArrayList<>(pathElements); 
+    }
 
-    // Removed redundant getConstraints/setConstraints to avoid confusion; use getPathConstraints/setPathConstraints instead.
+    public List<Pair<PathElement, PathElementConstraint>> getPathElementsWithConstraints() {
+        List<Pair<PathElement, PathElementConstraint>> elementsWithConstraints = new ArrayList<>();
+        int translationOrdinal = 0;
+        int rotationOrdinal = 0;
+        for (PathElement element : pathElements) {
+            if (element instanceof Waypoint) {
+                double maxVelocityMetersPerSec = -1;
+                double maxAccelerationMetersPerSec2 = -1;
+                double maxVelocityDegPerSec = -1;
+                double maxAccelerationDegPerSec2 = -1;
+                if (pathConstraints.getMaxVelocityMetersPerSec().isPresent()) {
+                    for (RangedConstraint constraint : pathConstraints.getMaxVelocityMetersPerSec().get()) {
+                        if (constraint.startOrdinal() <= translationOrdinal && constraint.endOrdinal() >= translationOrdinal) {
+                            maxVelocityMetersPerSec = constraint.value();
+                            break;
+                        }
+                    }
+                }
+                if (pathConstraints.getMaxAccelerationMetersPerSec2().isPresent()) {
+                    for (RangedConstraint constraint : pathConstraints.getMaxAccelerationMetersPerSec2().get()) {
+                        if (constraint.startOrdinal() <= translationOrdinal && constraint.endOrdinal() >= translationOrdinal) {
+                            maxAccelerationMetersPerSec2 = constraint.value();
+                            break;
+                        }
+                    }
+                }
+                if (pathConstraints.getMaxVelocityDegPerSec().isPresent()) {
+                    for (RangedConstraint constraint : pathConstraints.getMaxVelocityDegPerSec().get()) {
+                        if (constraint.startOrdinal() <= rotationOrdinal && constraint.endOrdinal() >= rotationOrdinal) {
+                            maxVelocityDegPerSec = constraint.value();
+                            break;
+                        }
+                    }
+                }
+                if (pathConstraints.getMaxAccelerationDegPerSec2().isPresent()) {
+                    for (RangedConstraint constraint : pathConstraints.getMaxAccelerationDegPerSec2().get()) {
+                        if (constraint.startOrdinal() <= rotationOrdinal && constraint.endOrdinal() >= rotationOrdinal) {
+                            maxAccelerationDegPerSec2 = constraint.value();
+                            break;
+                        }
+                    }
+                }
+                maxVelocityMetersPerSec = maxVelocityMetersPerSec == -1 ? 
+                    defaultGlobalConstraints.getMaxVelocityMetersPerSec() : maxVelocityMetersPerSec;
+                maxAccelerationMetersPerSec2 = maxAccelerationMetersPerSec2 == -1 ? 
+                    defaultGlobalConstraints.getMaxAccelerationMetersPerSec2() : maxAccelerationMetersPerSec2;
+                maxVelocityDegPerSec = maxVelocityDegPerSec == -1 ? 
+                    defaultGlobalConstraints.getMaxVelocityDegPerSec() : maxVelocityDegPerSec;
+                maxAccelerationDegPerSec2 = maxAccelerationDegPerSec2 == -1 ? 
+                    defaultGlobalConstraints.getMaxAccelerationDegPerSec2() : maxAccelerationDegPerSec2;
+
+                elementsWithConstraints.add(
+                    new Pair<>(
+                        element, 
+                        new WaypointConstraint(
+                            maxVelocityMetersPerSec, 
+                            maxAccelerationMetersPerSec2, 
+                            maxVelocityDegPerSec, 
+                            maxAccelerationDegPerSec2
+                        )
+                    )
+                );
+                translationOrdinal++;
+                rotationOrdinal++;
+            }
+            else if (element instanceof TranslationTarget) {
+                double maxVelocityMetersPerSec = -1;
+                double maxAccelerationMetersPerSec2 = -1;
+                if (pathConstraints.getMaxVelocityMetersPerSec().isPresent()) {
+                    for (RangedConstraint constraint : pathConstraints.getMaxVelocityMetersPerSec().get()) {
+                        if (constraint.startOrdinal() <= translationOrdinal && constraint.endOrdinal() >= translationOrdinal) {
+                            maxVelocityMetersPerSec = constraint.value();
+                            break;
+                        }
+                    }
+                }
+                if (pathConstraints.getMaxAccelerationMetersPerSec2().isPresent()) {
+                    for (RangedConstraint constraint : pathConstraints.getMaxAccelerationMetersPerSec2().get()) {
+                        if (constraint.startOrdinal() <= translationOrdinal && constraint.endOrdinal() >= translationOrdinal) {
+                            maxAccelerationMetersPerSec2 = constraint.value();
+                            break;
+                        }
+                    }
+                }
+                maxVelocityMetersPerSec = maxVelocityMetersPerSec == -1 ? 
+                    defaultGlobalConstraints.getMaxVelocityMetersPerSec() : maxVelocityMetersPerSec;
+                maxAccelerationMetersPerSec2 = maxAccelerationMetersPerSec2 == -1 ? 
+                    defaultGlobalConstraints.getMaxAccelerationMetersPerSec2() : maxAccelerationMetersPerSec2;
+
+                elementsWithConstraints.add(
+                    new Pair<>(
+                        element, 
+                        new TranslationTargetConstraint(
+                            maxVelocityMetersPerSec, 
+                            maxAccelerationMetersPerSec2
+                        )
+                    )
+                );
+                translationOrdinal++;
+            }
+            else if (element instanceof RotationTarget) {
+                double maxVelocityDegPerSec = -1;
+                double maxAccelerationDegPerSec2 = -1;
+                if (pathConstraints.getMaxVelocityDegPerSec().isPresent()) {
+                    for (RangedConstraint constraint : pathConstraints.getMaxVelocityDegPerSec().get()) {
+                        if (constraint.startOrdinal() <= rotationOrdinal && constraint.endOrdinal() >= rotationOrdinal) {
+                            maxVelocityDegPerSec = constraint.value();
+                            break;
+                        }
+                    }
+                }
+                if (pathConstraints.getMaxAccelerationDegPerSec2().isPresent()) {
+                    for (RangedConstraint constraint : pathConstraints.getMaxAccelerationDegPerSec2().get()) {
+                        if (constraint.startOrdinal() <= rotationOrdinal && constraint.endOrdinal() >= rotationOrdinal) {
+                            maxAccelerationDegPerSec2 = constraint.value();
+                            break;
+                        }
+                    }
+                }
+                maxVelocityDegPerSec = maxVelocityDegPerSec == -1 ? 
+                    defaultGlobalConstraints.getMaxVelocityDegPerSec() : maxVelocityDegPerSec;
+                maxAccelerationDegPerSec2 = maxAccelerationDegPerSec2 == -1 ? 
+                    defaultGlobalConstraints.getMaxAccelerationDegPerSec2() : maxAccelerationDegPerSec2;
+                elementsWithConstraints.add(new Pair<>(element, new RotationTargetConstraint(maxVelocityDegPerSec, maxAccelerationDegPerSec2)));
+
+                rotationOrdinal++;
+            }
+        }
+
+        return elementsWithConstraints;
+    }
+
+    public List<Pair<PathElement, PathElementConstraint>> getPathElementsWithConstraintsNoWaypoints() {
+        List<Pair<PathElement, PathElementConstraint>> elementsWithConstraints = getPathElementsWithConstraints();
+        List<Pair<PathElement, PathElementConstraint>> out = new ArrayList<>();
+        for (int i = 0; i < elementsWithConstraints.size(); i++) {
+            PathElement element = elementsWithConstraints.get(i).getFirst();
+            PathElementConstraint constraint = elementsWithConstraints.get(i).getSecond();
+            if (element instanceof Waypoint) {
+                TranslationTarget translationTarget = ((Waypoint)element).translationTarget();
+                TranslationTargetConstraint translationTargetConstraint = new TranslationTargetConstraint(
+                    ((WaypointConstraint)constraint).maxVelocityMetersPerSec(), 
+                    ((WaypointConstraint)constraint).maxAccelerationMetersPerSec2()
+                );
+                RotationTarget rotationTarget = ((Waypoint)element).rotationTarget();
+                RotationTargetConstraint rotationTargetConstraint = new RotationTargetConstraint(
+                    ((WaypointConstraint)constraint).maxVelocityDegPerSec(), 
+                    ((WaypointConstraint)constraint).maxAccelerationDegPerSec2()
+                );
+                if (i == 0) {
+                    rotationTarget = new RotationTarget(
+                        rotationTarget.rotation(), 
+                        0, 
+                        rotationTarget.profiledRotation()
+                    );
+
+                    out.add(new Pair<>(
+                        translationTarget, 
+                        translationTargetConstraint
+                    ));
+                    out.add(new Pair<>(
+                        rotationTarget, 
+                        rotationTargetConstraint
+                    ));
+                } else {
+                    rotationTarget = new RotationTarget(
+                        rotationTarget.rotation(), 
+                        1, 
+                        rotationTarget.profiledRotation()
+                    );
+                    out.add(new Pair<>(
+                        rotationTarget, 
+                        rotationTargetConstraint
+                    ));
+                    out.add(new Pair<>(
+                        translationTarget, 
+                        translationTargetConstraint
+                    ));
+                }
+            } else {
+                out.add(elementsWithConstraints.get(i));
+            }
+        }
+        return out;
+    }
+
+    // returns a list of path segments, were each segment is a list of path elements enclosed by translation targets (2 total)
+    // all other elements are rotation targets and waypoints are converted to translation / rotation targets
+    // each element will also have constraints attached to it in the form of a map of constraint name to value
+    // public List<List<Pair<PathElement, Map<String, Double>>>> getPathSegments() {
+    //     List<List<Pair<PathElement, Map<String, Double>>>> segments = new ArrayList<>();
+    //     List<Pair<PathElement, Map<String, Double>>> segment = new ArrayList<>();
+    //     int translationTargetCount = 0;
+    //     for (PathElement element : pathElements) {
+    //         if (element instanceof TranslationTarget || element instanceof Waypoint) {
+    //             if (element instanceof Waypoint) {
+    //                 if (translationTargetCount == 0) {
+    //                     RotationTarget rotationTarget = 
+    //                         new RotationTarget(
+    //                             ((Waypoint) element).rotationTarget().rotation(), 
+    //                             0, 
+    //                             ((Waypoint) element).rotationTarget().profiledRotation()
+    //                         );
+    //                     segment.add(((Waypoint) element).translationTarget());
+    //                     segment.add(rotationTarget);
+    //                 } else {
+    //                     RotationTarget rotationTarget = 
+    //                         new RotationTarget(
+    //                             ((Waypoint) element).rotationTarget().rotation(), 
+    //                             1, 
+    //                             ((Waypoint) element).rotationTarget().profiledRotation()
+    //                         );
+    //                     segment.add(rotationTarget);
+    //                     segment.add(((Waypoint) element).translationTarget());
+    //                 }
+    //             } else {
+    //                 segment.add(element);
+    //             }
+    //             translationTargetCount++;
+    //         } else {
+    //             segment.add(element);
+    //         }
+    //         if (translationTargetCount == 2) {
+    //             segments.add(segment);
+    //             if (!segment.isEmpty()) {
+    //                 PathElement lastTarget = segment.get(segment.size() - 1);
+    //                 segment = new ArrayList<>();
+    //                 segment.add(lastTarget);
+    //             } else {
+    //                 segment = new ArrayList<>();
+    //             }
+    //             translationTargetCount = 0;
+    //         }
+    //     }
+    //     return segments;
+    // }
+
+    public Path copy() {
+        return new Path(new ArrayList<>(pathElements), pathConstraints.copy(), defaultGlobalConstraints.copy());
+    }
 }   
