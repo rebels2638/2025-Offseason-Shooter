@@ -9,8 +9,34 @@ public class ChassisRateLimiter {
         ChassisSpeeds lastFieldRelativeSpeeds, 
         double dt,
         double maxTranslationalAccelerationMetersPerSec2,
-        double maxAngularAccelerationRadiansPerSec2
+        double maxAngularAccelerationRadiansPerSec2,
+        double maxTranslationalVelocityMetersPerSec,
+        double maxAngularVelocityRadiansPerSec
     ) {
+        if (maxTranslationalVelocityMetersPerSec > 0 && maxAngularVelocityRadiansPerSec > 0) {
+            double desiredVelocity = Math.hypot(
+                desiredFieldRelativeSpeeds.vxMetersPerSecond,
+                desiredFieldRelativeSpeeds.vyMetersPerSecond
+            );
+            if (desiredVelocity > maxTranslationalVelocityMetersPerSec) {
+                double scaleFactor = maxTranslationalVelocityMetersPerSec / desiredVelocity;
+                desiredFieldRelativeSpeeds = new ChassisSpeeds(
+                    desiredFieldRelativeSpeeds.vxMetersPerSecond * scaleFactor,
+                    desiredFieldRelativeSpeeds.vyMetersPerSecond * scaleFactor,
+                    desiredFieldRelativeSpeeds.omegaRadiansPerSecond
+                );
+            }
+            desiredFieldRelativeSpeeds.omegaRadiansPerSecond = MathUtil.clamp(
+                desiredFieldRelativeSpeeds.omegaRadiansPerSecond,
+                -maxAngularVelocityRadiansPerSec,
+                maxAngularVelocityRadiansPerSec
+            );
+        }
+
+        if (dt <= 0) {
+            return desiredFieldRelativeSpeeds;
+        }
+        
         double desiredAcceleration = Math.hypot(
             desiredFieldRelativeSpeeds.vxMetersPerSecond - lastFieldRelativeSpeeds.vxMetersPerSecond,
             desiredFieldRelativeSpeeds.vyMetersPerSecond - lastFieldRelativeSpeeds.vyMetersPerSecond
