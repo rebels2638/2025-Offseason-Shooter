@@ -14,9 +14,12 @@ import frc.robot.lib.auto.Path.RotationTargetConstraint;
 import frc.robot.lib.auto.Path.TranslationTarget;
 import frc.robot.lib.auto.Path.TranslationTargetConstraint;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import org.littletonrobotics.junction.Logger;
 
 public class FollowPath extends Command {
     private static PIDController translationController = null;
@@ -51,9 +54,11 @@ public class FollowPath extends Command {
     private ChassisSpeeds lastSpeeds = new ChassisSpeeds();
     private double lastTimestamp = 0;
     private Pose2d startPose = new Pose2d();
-    private double lastRotationRad = 0;
-
+    private double lastRotationRad = 0;    
     private List<Pair<PathElement, PathElementConstraint>> pathElementsWithConstraints;
+
+    private int logCounter = 0;
+    private ArrayList<Translation2d> robotTranslations = new ArrayList<>();
 
     public FollowPath(
         Path path, 
@@ -73,6 +78,8 @@ public class FollowPath extends Command {
         this.robotRelativeSpeedsConsumer = robotRelativeSpeedsConsumer;
         setTranslationController(translationController);
         setRotationController(rotationController);
+        
+        rotationController.enableContinuousInput(-Math.PI, Math.PI);
 
         this.pathElementsWithConstraints = path.getPathElementsWithConstraintsNoWaypoints();
     }
@@ -94,9 +101,22 @@ public class FollowPath extends Command {
         rotationElementIndex = 0;
         translationElementIndex = 0;
         lastTimestamp = Timer.getTimestamp();
-        lastSpeeds = robotRelativeSpeedsSupplier.get();
+        lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), startPose.getRotation());
         startPose = poseSupplier.get();
         lastRotationRad = startPose.getRotation().getRadians();
+
+        rotationController.reset();
+        translationController.reset();
+
+        ArrayList<Translation2d> pathTranslations = new ArrayList<>();
+        robotTranslations.clear();
+        logCounter = 0;
+        for (int i = 0; i < pathElementsWithConstraints.size(); i++) {
+            if (pathElementsWithConstraints.get(i).getFirst() instanceof TranslationTarget) {
+                pathTranslations.add(((TranslationTarget) pathElementsWithConstraints.get(i).getFirst()).translation());
+            }
+        }
+        Logger.recordOutput("FollowPath/pathTranslations", pathTranslations.toArray(Translation2d[]::new));
     }
 
     @Override
@@ -126,7 +146,9 @@ public class FollowPath extends Command {
         // switch to the next rotation element until the t_ratio of the rotation element is greater than the robot t_ratio or until the next rotation element is not in the same segment as the robot
         
         // check if the rotation target is in the previous segment by seeing if there are any translation targets between the current translation target index and the rotation target index
-        while (rotationElementIndex < pathElementsWithConstraints.size() -  2 && !isRotationTRatioGreater()) {
+        while (rotationElementIndex < pathElementsWithConstraints.size() -  2 && 
+                !(pathElementsWithConstraints.get(rotationElementIndex).getFirst() instanceof RotationTarget) &&
+                !isRotationTRatioGreater()) {
             rotationElementIndex++;
         }
 
@@ -168,7 +190,13 @@ public class FollowPath extends Command {
         lastSpeeds = targetSpeeds;
         lastRotationRad = currentPose.getRotation().getRadians();
 
+        targetSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(targetSpeeds, currentPose.getRotation());
         robotRelativeSpeedsConsumer.accept(targetSpeeds);
+
+        if (logCounter++ % 10 == 0) {
+            robotTranslations.add(currentPose.getTranslation());
+            Logger.recordOutput("FollowPath/robotTranslations", robotTranslations.toArray(Translation2d[]::new));
+        }
     }
     
     private double calculateRemainingPathDistance() {
@@ -279,6 +307,7 @@ public class FollowPath extends Command {
     private boolean isRotationTRatioGreater() {
         if (isRotationNextSegment()) { return true; }
         if (isRotationPreviousSegment()) { return false; }
+        if (!(pathElementsWithConstraints.get(rotationElementIndex).getFirst() instanceof RotationTarget)) { return false; }
 
         Pose2d currentPose = poseSupplier.get();
         Translation2d translationA = translationElementIndex > 0 ? ((TranslationTarget) pathElementsWithConstraints.get(translationElementIndex - 1).getFirst()).translation() : startPose.getTranslation();

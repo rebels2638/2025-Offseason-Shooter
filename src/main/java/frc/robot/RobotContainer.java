@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -45,6 +46,8 @@ public class RobotContainer {
 
         swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
         xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
+        FollowPath.setTranslationController(new PIDController(3, 0, 0));
+        FollowPath.setRotationController(new PIDController(2, 0, 0));
 
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineForward", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kForward));
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kReverse));
@@ -60,27 +63,13 @@ public class RobotContainer {
     public Command getAutonomousCommand() {
         // return sysidChooser.get();
 
-        // return new FollowPath(
-        //     List.of(
-        //         new Waypoint(new Translation2d(5,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.of(Double.valueOf(2))),
-        //         new Waypoint(new Translation2d(5,5), Optional.of(Rotation2d.fromDegrees(270)), Optional.of(Double.valueOf(2))),
-        //         new Waypoint(new Translation2d(0,5), Optional.of(Rotation2d.fromDegrees(0)), Optional.of(Double.valueOf(2))),
-        //         new Waypoint(new Translation2d(0,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty())
-        //     )
-        // );
+        return new FollowPath(
+            new Path("wide_turn_test"), 
+            robotState::getEstimatedPose,
+            robotState::getFieldRelativeSpeeds,
+            swerveDrive::driveRobotRelative
+        );
 
-        // return new FollowPath(
-        //     List.of(
-        //         new Waypoint(new Translation2d(5,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty()),
-        //         new Waypoint(new Translation2d(5,5), Optional.of(Rotation2d.fromDegrees(270)), Optional.empty()),
-        //         new Waypoint(new Translation2d(0,5), Optional.of(Rotation2d.fromDegrees(0)), Optional.empty()),
-        //         new Waypoint(new Translation2d(0,0), Optional.of(Rotation2d.fromDegrees(180)), Optional.empty())
-        //     )
-        // );
-
-        // return new FollowPath(
-        //     new Path(JsonUtils.loadPathElements(new File("src/main/deploy/autos/Test2.json")))
-        // );
-        return null;
+        // return null;
     }
 }

@@ -37,14 +37,42 @@ public class JsonUtils {
     })
     private static sealed interface PathElementDTO permits WaypointDTO, TranslationTargetDTO, RotationTargetDTO {}
 
+    // Nested DTOs for waypoint components (no type info needed)
+    private static final record NestedTranslationTargetDTO(
+        double xMeters,
+        double yMeters,
+        Double intermediateHandoffRadiusMeters
+    ) {
+        TranslationTarget toTranslationTarget() {
+            return new TranslationTarget(
+                new Translation2d(xMeters, yMeters),
+                Optional.ofNullable(intermediateHandoffRadiusMeters)
+            );
+        }
+    }
+
+    private static final record NestedRotationTargetDTO(
+        double rotationRadians,
+        Double tRatio,
+        Boolean profiledRotation
+    ) {
+        RotationTarget toRotationTarget() {
+            return new RotationTarget(
+                Rotation2d.fromRadians(rotationRadians),
+                tRatio == null ? 0.5 : tRatio.doubleValue(),
+                Boolean.TRUE.equals(profiledRotation)
+            );
+        }
+    }
+
     private static final record WaypointDTO(
-        TranslationTargetDTO translationTarget,
-        RotationTargetDTO rotationTarget
+        NestedTranslationTargetDTO translationTarget,
+        NestedRotationTargetDTO rotationTarget
     ) implements PathElementDTO {
         Waypoint toWaypoint() {
             return new Waypoint(
                 translationTarget.toTranslationTarget(),
-                new RotationTarget(Rotation2d.fromRadians(rotationTarget.rotationRadians()), 0.5, Boolean.TRUE.equals(rotationTarget.profiledRotation()))
+                rotationTarget.toRotationTarget()
             );
         }
     } 

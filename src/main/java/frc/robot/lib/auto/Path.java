@@ -169,7 +169,7 @@ public class Path {
     }
 
     public Path(File autosDir, String pathFileName) {
-        Path loaded = JsonUtils.loadPath(autosDir, pathFileName);
+        Path loaded = JsonUtils.loadPath(autosDir, pathFileName+".json");
         this.pathElements = loaded.pathElements;
         this.pathConstraints = loaded.pathConstraints;
         // globals are static and already copied
