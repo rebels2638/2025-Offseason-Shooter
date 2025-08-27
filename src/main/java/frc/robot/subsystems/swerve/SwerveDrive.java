@@ -273,7 +273,9 @@ public class SwerveDrive extends SubsystemBase {
             obtainableFieldRelativeSpeeds, 
             dt, 
             drivetrainConfig.getMaxTranslationalAccelerationMetersPerSecSec(), 
-            drivetrainConfig.getMaxAngularAccelerationRadiansPerSecSec()
+            drivetrainConfig.getMaxAngularAccelerationRadiansPerSecSec(),
+            drivetrainConfig.getMaxTranslationalVelocityMetersPerSec(),
+            drivetrainConfig.getMaxAngularVelocityRadiansPerSec()
         );
         Logger.recordOutput("SwerveDrive/obtainableFieldRelativeSpeeds", obtainableFieldRelativeSpeeds);
 

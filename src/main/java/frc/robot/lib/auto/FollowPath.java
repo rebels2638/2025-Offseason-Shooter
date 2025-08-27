@@ -288,6 +288,7 @@ public class FollowPath extends Command {
         double segmentProgress = currentPose.getTranslation().getDistance(translationB) / segmentLength;
         return segmentProgress < ((RotationTarget) pathElementsWithConstraints.get(rotationElementIndex).getFirst()).t_ratio();
     }
+    
     private boolean isRotationPreviousSegment() {
         if (rotationElementIndex > translationElementIndex) { return false; }
         
