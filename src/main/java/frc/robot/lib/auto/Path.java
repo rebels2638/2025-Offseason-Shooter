@@ -466,56 +466,6 @@ public class Path {
         return out;
     }
 
-    // returns a list of path segments, were each segment is a list of path elements enclosed by translation targets (2 total)
-    // all other elements are rotation targets and waypoints are converted to translation / rotation targets
-    // each element will also have constraints attached to it in the form of a map of constraint name to value
-    // public List<List<Pair<PathElement, Map<String, Double>>>> getPathSegments() {
-    //     List<List<Pair<PathElement, Map<String, Double>>>> segments = new ArrayList<>();
-    //     List<Pair<PathElement, Map<String, Double>>> segment = new ArrayList<>();
-    //     int translationTargetCount = 0;
-    //     for (PathElement element : pathElements) {
-    //         if (element instanceof TranslationTarget || element instanceof Waypoint) {
-    //             if (element instanceof Waypoint) {
-    //                 if (translationTargetCount == 0) {
-    //                     RotationTarget rotationTarget = 
-    //                         new RotationTarget(
-    //                             ((Waypoint) element).rotationTarget().rotation(), 
-    //                             0, 
-    //                             ((Waypoint) element).rotationTarget().profiledRotation()
-    //                         );
-    //                     segment.add(((Waypoint) element).translationTarget());
-    //                     segment.add(rotationTarget);
-    //                 } else {
-    //                     RotationTarget rotationTarget = 
-    //                         new RotationTarget(
-    //                             ((Waypoint) element).rotationTarget().rotation(), 
-    //                             1, 
-    //                             ((Waypoint) element).rotationTarget().profiledRotation()
-    //                         );
-    //                     segment.add(rotationTarget);
-    //                     segment.add(((Waypoint) element).translationTarget());
-    //                 }
-    //             } else {
-    //                 segment.add(element);
-    //             }
-    //             translationTargetCount++;
-    //         } else {
-    //             segment.add(element);
-    //         }
-    //         if (translationTargetCount == 2) {
-    //             segments.add(segment);
-    //             if (!segment.isEmpty()) {
-    //                 PathElement lastTarget = segment.get(segment.size() - 1);
-    //                 segment = new ArrayList<>();
-    //                 segment.add(lastTarget);
-    //             } else {
-    //                 segment = new ArrayList<>();
-    //             }
-    //             translationTargetCount = 0;
-    //         }
-    //     }
-    //     return segments;
-    // }
 
     public Path copy() {
         return new Path(new ArrayList<>(pathElements), pathConstraints.copy(), defaultGlobalConstraints.copy());

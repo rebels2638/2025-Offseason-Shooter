@@ -65,6 +65,7 @@ public class RobotContainer {
 
         return new FollowPath(
             new Path("wide_turn_test"), 
+            swerveDrive,
             robotState::getEstimatedPose,
             robotState::getFieldRelativeSpeeds,
             swerveDrive::driveRobotRelative

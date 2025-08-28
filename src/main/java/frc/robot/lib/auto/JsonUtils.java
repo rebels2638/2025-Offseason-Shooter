@@ -112,7 +112,7 @@ public class JsonUtils {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final record AutosPathDTO(
-        Map<String, List<RangedConstraintDTO>> rangedConstraints,
+        Map<String, List<RangedConstraintDTO>> constraints,
         List<PathElementDTO> pathElements
     ) {}
 
@@ -174,7 +174,7 @@ public class JsonUtils {
     public static Path.PathConstraints loadPathConstraints(File autosPathFile) {
         AutosPathDTO dto = loadFromFile(autosPathFile, new TypeReference<AutosPathDTO>() {});
         Path.PathConstraints constraints = new Path.PathConstraints();
-        Map<String, List<RangedConstraintDTO>> rc = dto.rangedConstraints();
+        Map<String, List<RangedConstraintDTO>> rc = dto.constraints();
         if (rc != null) {
             List<RangedConstraintDTO> v;
             v = rc.get("max_velocity_meters_per_sec");

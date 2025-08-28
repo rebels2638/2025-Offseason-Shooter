@@ -3,10 +3,12 @@ package frc.robot.lib.auto;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.lib.auto.Path.PathElement;
 import frc.robot.lib.auto.Path.PathElementConstraint;
 import frc.robot.lib.auto.Path.RotationTarget;
@@ -62,6 +64,7 @@ public class FollowPath extends Command {
 
     public FollowPath(
         Path path, 
+        SubsystemBase driveSubsystem, 
         Supplier<Pose2d> poseSupplier, 
         Supplier<ChassisSpeeds> robotRelativeSpeedsSupplier,
         Consumer<ChassisSpeeds> robotRelativeSpeedsConsumer,
@@ -82,15 +85,18 @@ public class FollowPath extends Command {
         rotationController.enableContinuousInput(-Math.PI, Math.PI);
 
         this.pathElementsWithConstraints = path.getPathElementsWithConstraintsNoWaypoints();
+        
+        addRequirements(driveSubsystem);
     }
 
     public FollowPath(
         Path path, 
+        SubsystemBase driveSubsystem, 
         Supplier<Pose2d> poseSupplier, 
         Supplier<ChassisSpeeds> robotRelativeSpeedsSupplier,
         Consumer<ChassisSpeeds> robotRelativeSpeedsConsumer
     ) {
-        this(path, poseSupplier, robotRelativeSpeedsSupplier, robotRelativeSpeedsConsumer, translationController, rotationController);
+        this(path, driveSubsystem, poseSupplier, robotRelativeSpeedsSupplier, robotRelativeSpeedsConsumer, translationController, rotationController);
     }
 
     @Override
@@ -190,15 +196,26 @@ public class FollowPath extends Command {
         lastSpeeds = targetSpeeds;
         lastRotationRad = currentPose.getRotation().getRadians();
 
-        targetSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(targetSpeeds, currentPose.getRotation());
-        robotRelativeSpeedsConsumer.accept(targetSpeeds);
+        robotRelativeSpeedsConsumer.accept(ChassisSpeeds.fromFieldRelativeSpeeds(targetSpeeds, currentPose.getRotation()));
 
-        if (logCounter++ % 10 == 0) {
+        if (logCounter++ % 3 == 0) {
             robotTranslations.add(currentPose.getTranslation());
             Logger.recordOutput("FollowPath/robotTranslations", robotTranslations.toArray(Translation2d[]::new));
         }
+
+        Logger.recordOutput("FollowPath/calculateRemainingPathDistance", calculateRemainingPathDistance());
+        Logger.recordOutput("FollowPath/straightLineDistToEnd", 
+            currentPose.getTranslation().getDistance(
+                ((TranslationTarget) pathElementsWithConstraints.get(pathElementsWithConstraints.size() - 1).getFirst()).translation()
+            ));
+        Logger.recordOutput("FollowPath/translationElementIndex", translationElementIndex);
+        Logger.recordOutput("FollowPath/rotationElementIndex", rotationElementIndex);
+        Logger.recordOutput("FollowPath/targetRotationElement", currentRotationTarget);
+        Logger.recordOutput("FollowPath/targetRotation", targetRotation);
+
     }
     
+    // initial test confirmed work
     private double calculateRemainingPathDistance() {
         Translation2d previousTranslation = poseSupplier.get().getTranslation();
         double remainingDistance = 0;
@@ -299,8 +316,9 @@ public class FollowPath extends Command {
             translationA.getX() + Math.cos(angle) * tRatio,
             translationA.getY() + Math.sin(angle) * tRatio
         );
-        return pointOnSegment;
 
+        Logger.recordOutput("FollowPath/calculateRotationTargetTranslation", new Pose2d(pointOnSegment, new Rotation2d()));
+        return pointOnSegment;
     }
 
 
