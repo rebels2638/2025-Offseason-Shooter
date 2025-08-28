@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.AbsoluteFieldDrive;
+import frc.robot.constants.Constants;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.swerve.SwerveDrive;
 import frc.robot.lib.auto.FollowPath;
@@ -46,8 +47,8 @@ public class RobotContainer {
 
         swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
         xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
-        FollowPath.setTranslationController(new PIDController(3, 0, 0));
-        FollowPath.setRotationController(new PIDController(2, 0, 0));
+        FollowPath.setTranslationController(new PIDController(5, 0, 0));
+        FollowPath.setRotationController(new PIDController(4, 0, 0));
 
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineForward", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kForward));
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kReverse));
@@ -67,6 +68,8 @@ public class RobotContainer {
             new Path("wide_turn_test"), 
             swerveDrive,
             robotState::getEstimatedPose,
+            robotState::resetPose,
+            Constants::shouldFlipPath,
             robotState::getFieldRelativeSpeeds,
             swerveDrive::driveRobotRelative
         );

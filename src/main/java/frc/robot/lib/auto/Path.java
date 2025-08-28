@@ -12,7 +12,9 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
 public class Path {
-    public sealed interface PathElement permits Waypoint, TranslationTarget, RotationTarget {}
+    public sealed interface PathElement permits Waypoint, TranslationTarget, RotationTarget {
+        public PathElement copy();
+    }
     public sealed interface PathElementConstraint permits WaypointConstraint, TranslationTargetConstraint, RotationTargetConstraint {}
     public static record WaypointConstraint(
         double maxVelocityMetersPerSec,
@@ -32,18 +34,30 @@ public class Path {
     public static record Waypoint(
         TranslationTarget translationTarget,
         RotationTarget rotationTarget
-    ) implements PathElement {}
+    ) implements PathElement {
+        public Waypoint copy() {
+            return new Waypoint(translationTarget.copy(), rotationTarget.copy());
+        }
+    }
 
     public static record TranslationTarget(
         Translation2d translation, 
         Optional<Double> intermediateHandoffRadiusMeters
-    ) implements PathElement {}
+    ) implements PathElement {
+        public TranslationTarget copy() {
+            return new TranslationTarget(translation, intermediateHandoffRadiusMeters);
+        }
+    }
 
     public static record RotationTarget(
         Rotation2d rotation, 
         double t_ratio,
         boolean profiledRotation
-    ) implements PathElement {}
+    ) implements PathElement {
+        public RotationTarget copy() {
+            return new RotationTarget(rotation, t_ratio, profiledRotation);
+        }
+    }
 
     // New constraint model to mirror the provided Python structure
     public static record RangedConstraint(
@@ -144,6 +158,7 @@ public class Path {
     private List<PathElement> pathElements;
     private PathConstraints pathConstraints;
     private static DefaultGlobalConstraints defaultGlobalConstraints = null;
+    private boolean flipped = false;
     
     public Path(List<PathElement> pathElements, PathConstraints constraints, DefaultGlobalConstraints defaultGlobalConstraints) {
         if (pathElements == null) {
@@ -465,9 +480,53 @@ public class Path {
         }
         return out;
     }
+    public void flip() {
+        if (flipped) return;
+
+        for (int i = 0; i < pathElements.size(); i++) {
+            PathElement element = pathElements.get(i);
+            if (element instanceof TranslationTarget) {
+                pathElements.set(i, new TranslationTarget(
+                    FlippingUtil.flipFieldPosition(((TranslationTarget) element).translation()),
+                    ((TranslationTarget) element).intermediateHandoffRadiusMeters()
+                ));
+            } else if (element instanceof RotationTarget) {
+                pathElements.set(i, new RotationTarget(
+                    FlippingUtil.flipFieldRotation(((RotationTarget) element).rotation()),
+                    ((RotationTarget) element).t_ratio(),
+                    ((RotationTarget) element).profiledRotation()
+                ));
+            } else if (element instanceof Waypoint) {
+                pathElements.set(i, new Waypoint(
+                    new TranslationTarget(
+                        FlippingUtil.flipFieldPosition(((Waypoint) element).translationTarget().translation()),
+                        ((Waypoint) element).translationTarget().intermediateHandoffRadiusMeters()
+                    ),
+                    new RotationTarget(
+                        FlippingUtil.flipFieldRotation(((Waypoint) element).rotationTarget().rotation()),
+                        ((Waypoint) element).rotationTarget().t_ratio(),
+                        ((Waypoint) element).rotationTarget().profiledRotation()
+                    )
+                ));
+            }
+        }
+
+        flipped = true;
+    }
+
+    public void undoFlip() {
+        if (!flipped) return;
+        flipped = false;
+        flip();
+        flipped = false;
+    }
 
 
     public Path copy() {
-        return new Path(new ArrayList<>(pathElements), pathConstraints.copy(), defaultGlobalConstraints.copy());
+        List<PathElement> deepCopiedElements = new ArrayList<>(pathElements.size());
+        for (PathElement element : pathElements) {
+            deepCopiedElements.add(element.copy());
+        }
+        return new Path(deepCopiedElements, pathConstraints.copy(), defaultGlobalConstraints.copy());
     }
 }   

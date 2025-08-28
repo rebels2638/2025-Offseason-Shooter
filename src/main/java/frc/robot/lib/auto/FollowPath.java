@@ -50,6 +50,8 @@ public class FollowPath extends Command {
     private final Supplier<Pose2d> poseSupplier;
     private final Supplier<ChassisSpeeds> robotRelativeSpeedsSupplier;
     private final Consumer<ChassisSpeeds> robotRelativeSpeedsConsumer;
+    private final Supplier<Boolean> shouldFlipPathSupplier;
+    private final Consumer<Pose2d> poseResetConsumer;
 
     private int rotationElementIndex = 0;
     private int translationElementIndex = 0;
@@ -59,7 +61,7 @@ public class FollowPath extends Command {
     private double lastRotationElementTargetRad = 0;   
     private int lastTranslationElementIndex = 0;
     private int lastRotationElementIndex = 0;
-    private List<Pair<PathElement, PathElementConstraint>> pathElementsWithConstraints;
+    private List<Pair<PathElement, PathElementConstraint>> pathElementsWithConstraints = new ArrayList<>();
 
     private int logCounter = 0;
     private ArrayList<Translation2d> robotTranslations = new ArrayList<>();
@@ -70,23 +72,25 @@ public class FollowPath extends Command {
         Supplier<Pose2d> poseSupplier, 
         Supplier<ChassisSpeeds> robotRelativeSpeedsSupplier,
         Consumer<ChassisSpeeds> robotRelativeSpeedsConsumer,
+        Supplier<Boolean> shouldFlipPathSupplier,
+        Consumer<Pose2d> poseResetConsumer,
         PIDController translationController, 
         PIDController rotationController
     ) {
         if (translationController == null || rotationController == null) {
-            throw new IllegalArgumentException("Translation and rotation controllers must be provided and must not be null");
+            throw new IllegalArgumentException("Translation and rotation controllers must be provided and must not be null or must be set before calling FollowPath");
         }
 
         this.path = path.copy();
         this.poseSupplier = poseSupplier;
         this.robotRelativeSpeedsSupplier = robotRelativeSpeedsSupplier;
         this.robotRelativeSpeedsConsumer = robotRelativeSpeedsConsumer;
+        this.shouldFlipPathSupplier = shouldFlipPathSupplier;
+        this.poseResetConsumer = poseResetConsumer;
         setTranslationController(translationController);
         setRotationController(rotationController);
         
         rotationController.enableContinuousInput(-Math.PI, Math.PI);
-
-        this.pathElementsWithConstraints = path.getPathElementsWithConstraintsNoWaypoints();
         
         addRequirements(driveSubsystem);
     }
@@ -95,10 +99,12 @@ public class FollowPath extends Command {
         Path path, 
         SubsystemBase driveSubsystem, 
         Supplier<Pose2d> poseSupplier, 
+        Consumer<Pose2d> poseResetConsumer,
+        Supplier<Boolean> shouldFlipPathSupplier,
         Supplier<ChassisSpeeds> robotRelativeSpeedsSupplier,
         Consumer<ChassisSpeeds> robotRelativeSpeedsConsumer
     ) {
-        this(path, driveSubsystem, poseSupplier, robotRelativeSpeedsSupplier, robotRelativeSpeedsConsumer, translationController, rotationController);
+        this(path, driveSubsystem, poseSupplier, robotRelativeSpeedsSupplier, robotRelativeSpeedsConsumer, shouldFlipPathSupplier, poseResetConsumer, translationController, rotationController);
     }
 
     @Override
@@ -106,6 +112,12 @@ public class FollowPath extends Command {
         if (translationController == null || rotationController == null) {
             throw new IllegalArgumentException("Translation and rotation controllers must be provided and must not be null");
         }
+
+        if (shouldFlipPathSupplier.get()) {
+            path.flip();
+        }
+        pathElementsWithConstraints = path.getPathElementsWithConstraintsNoWaypoints();
+
         rotationElementIndex = 0;
         translationElementIndex = 0;
         lastTimestamp = Timer.getTimestamp();
@@ -126,6 +138,19 @@ public class FollowPath extends Command {
             }
         }
         Logger.recordOutput("FollowPath/pathTranslations", pathTranslations.toArray(Translation2d[]::new));
+
+        // find the reset start pose. find the first translation target and use its translation as the start translation and the first rotation target as the start rotation. 
+        // if no rotation target, use the current robot rotation as the start rotation
+        Translation2d resetTranslation = ((TranslationTarget) pathElementsWithConstraints.get(0).getFirst()).translation();
+        Rotation2d resetRotation = startPose.getRotation();
+        for (int i = 0; i < pathElementsWithConstraints.size(); i++) {
+            if (pathElementsWithConstraints.get(i).getFirst() instanceof RotationTarget) {
+                resetRotation = ((RotationTarget) pathElementsWithConstraints.get(i).getFirst()).rotation();
+                break;
+            }
+        }
+        poseResetConsumer.accept(new Pose2d(resetTranslation, resetRotation));
+        
     }
 
     @Override
@@ -370,12 +395,15 @@ public class FollowPath extends Command {
             }
         }
         boolean isLastTranslationElement = translationElementIndex == pathElementsWithConstraints.size() - 1;
-        return isLastRotationElement && isLastTranslationElement && 
+        boolean finished = isLastRotationElement && isLastTranslationElement && 
             currentPose.getTranslation().getDistance(
                 ((TranslationTarget) pathElementsWithConstraints.get(translationElementIndex).getFirst()).translation()
             ) <= path.getEndTranslationToleranceMeters() &&
             currentPose.getRotation().minus(
                 ((RotationTarget) pathElementsWithConstraints.get(rotationElementIndex).getFirst()).rotation()
             ).getDegrees() <= path.getEndRotationToleranceDeg();
+
+        Logger.recordOutput("FollowPath/finished", finished);
+        return finished;
     }
 }
