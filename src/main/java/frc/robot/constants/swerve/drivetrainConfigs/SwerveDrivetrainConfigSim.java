@@ -53,7 +53,7 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxTranslationalAccelerationMetersPerSecSec() {
-        return 15;
+        return 14;
     }
 
     @Override
@@ -63,7 +63,7 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxAngularAccelerationRadiansPerSecSec() {
-        return 12.0;
+        return Math.toRadians(2000);
     }
 
     @Override
@@ -209,17 +209,17 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxAlignmentRotationVeloRadPerSec() {
-        return 3.7;
+        return Math.toRadians(720);
     }
 
     @Override
     public double getMaxAlignmentTranslationalAcelMetersPerSecPerSec() {
-        return 3.5;
+        return 11;
     }
 
     @Override
     public double getMaxAlignmentRotationAcelRadPerSecPerSec() {
-        return 10;
+        return Math.toRadians(2000);
     }
 
     @Override

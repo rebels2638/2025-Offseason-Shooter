@@ -3,10 +3,7 @@ package frc.robot.lib.auto;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -203,10 +200,14 @@ public class Path {
      * @throws IllegalArgumentException if the validation fails
      */
     private void validatePathEndpoints() {
-        if (pathElements.size() < 2) {
-            throw new IllegalArgumentException("Path must have at least 1 element");
+        if (pathElements.size() == 1) {
+            PathElement element = pathElements.get(0);
+            if (element instanceof RotationTarget) {
+                throw new IllegalArgumentException("Path cannot consist of a single rotation target");
+            }
+            return;
         }
-        
+
         PathElement first = pathElements.get(0);
         PathElement last = pathElements.get(pathElements.size() - 1);
         

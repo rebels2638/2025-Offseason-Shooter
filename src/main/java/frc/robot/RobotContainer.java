@@ -1,14 +1,9 @@
 package frc.robot;
 
-import java.io.File;
-import java.util.List;
-import java.util.Optional;
-
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
@@ -17,7 +12,6 @@ import frc.robot.constants.Constants;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.swerve.SwerveDrive;
 import frc.robot.lib.auto.FollowPath;
-import frc.robot.lib.auto.JsonUtils;
 import frc.robot.lib.auto.Path;
 
 
@@ -48,7 +42,7 @@ public class RobotContainer {
         swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
         xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
         FollowPath.setTranslationController(new PIDController(5, 0, 0));
-        FollowPath.setRotationController(new PIDController(4, 0, 0));
+        FollowPath.setRotationController(new PIDController(6, 0, 0));
 
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineForward", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kForward));
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kReverse));
@@ -69,6 +63,7 @@ public class RobotContainer {
             swerveDrive,
             robotState::getEstimatedPose,
             robotState::resetPose,
+            // (Pose2d pose) -> {}, 
             Constants::shouldFlipPath,
             robotState::getFieldRelativeSpeeds,
             swerveDrive::driveRobotRelative

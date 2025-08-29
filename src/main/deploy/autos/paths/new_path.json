@@ -1,0 +1,16 @@
+{
+  "path_elements": [
+    {
+      "type": "translation",
+      "x_meters": 4.480794096978217,
+      "y_meters": 1.6408538299367557,
+      "intermediate_handoff_radius_meters": 0.25
+    },
+    {
+      "type": "translation",
+      "x_meters": 6.787020379479972,
+      "y_meters": 4.104999999999999,
+      "intermediate_handoff_radius_meters": 0.25
+    }
+  ]
+}

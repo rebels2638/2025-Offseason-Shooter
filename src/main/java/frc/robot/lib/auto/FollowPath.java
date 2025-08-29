@@ -1,5 +1,6 @@
 package frc.robot.lib.auto;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -27,23 +28,33 @@ public class FollowPath extends Command {
     private static PIDController translationController = null;
     private static PIDController rotationController = null;
 
-    public static PIDController getTranslationController() { 
-        return new PIDController(translationController.getP(), translationController.getI(), translationController.getD()); 
+    public static PIDController getTranslationController() {
+        return createPIDControllerCopy(translationController);
     }
-    public static PIDController getRotationController() { 
-        return new PIDController(rotationController.getP(), rotationController.getI(), rotationController.getD()); 
+    public static PIDController getRotationController() {
+        return createPIDControllerCopy(rotationController);
     }
-    public static void setTranslationController(PIDController translationController) { 
+    public static void setTranslationController(PIDController translationController) {
         if (translationController == null) {
             throw new IllegalArgumentException("Translation controller must not be null");
         }
-        FollowPath.translationController = new PIDController(translationController.getP(), translationController.getI(), translationController.getD());
+        FollowPath.translationController = createPIDControllerCopy(translationController);
     }
     public static void setRotationController(PIDController rotationController) {
         if (rotationController == null) {
             throw new IllegalArgumentException("Rotation controller must not be null");
         }
-        FollowPath.rotationController = new PIDController(rotationController.getP(), rotationController.getI(), rotationController.getD());
+        FollowPath.rotationController = createPIDControllerCopy(rotationController);
+    }
+
+    private static PIDController createPIDControllerCopy(PIDController source) {
+        return new PIDController(source.getP(), source.getI(), source.getD());
+    }
+
+    private void configureControllers() {
+        translationController.setTolerance(path.getEndTranslationToleranceMeters());
+        rotationController.setTolerance(Math.toRadians(path.getEndRotationToleranceDeg()));
+        rotationController.enableContinuousInput(-Math.PI, Math.PI);
     }
 
     private final Path path;
@@ -58,9 +69,9 @@ public class FollowPath extends Command {
     private ChassisSpeeds lastSpeeds = new ChassisSpeeds();
     private double lastTimestamp = 0;
     private Pose2d startPose = new Pose2d();
-    private double lastRotationElementTargetRad = 0;   
-    private int lastTranslationElementIndex = 0;
-    private int lastRotationElementIndex = 0;
+    private double previousRotationElementTargetRad = 0;   
+    private int previousRotationElementIndex = 0;
+    private Rotation2d currentRotationTargetRad = new Rotation2d();
     private List<Pair<PathElement, PathElementConstraint>> pathElementsWithConstraints = new ArrayList<>();
 
     private int logCounter = 0;
@@ -89,8 +100,7 @@ public class FollowPath extends Command {
         this.poseResetConsumer = poseResetConsumer;
         setTranslationController(translationController);
         setRotationController(rotationController);
-        
-        rotationController.enableContinuousInput(-Math.PI, Math.PI);
+        configureControllers();
         
         addRequirements(driveSubsystem);
     }
@@ -123,11 +133,11 @@ public class FollowPath extends Command {
         lastTimestamp = Timer.getTimestamp();
         lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), startPose.getRotation());
         startPose = poseSupplier.get();
-        lastRotationElementTargetRad = startPose.getRotation().getRadians();
-        lastTranslationElementIndex = translationElementIndex;
-        lastRotationElementIndex = rotationElementIndex;
+        previousRotationElementTargetRad = startPose.getRotation().getRadians();
+        previousRotationElementIndex = rotationElementIndex;
         rotationController.reset();
         translationController.reset();
+        configureControllers();
 
         ArrayList<Translation2d> pathTranslations = new ArrayList<>();
         robotTranslations.clear();
@@ -168,7 +178,6 @@ public class FollowPath extends Command {
             // switch to the next translation element
             for (int i = translationElementIndex + 1; i < pathElementsWithConstraints.size(); i++) {
                 if (pathElementsWithConstraints.get(i).getFirst() instanceof TranslationTarget) {
-                    lastTranslationElementIndex = translationElementIndex;
                     translationElementIndex = i;
                     break;
                 }
@@ -176,24 +185,50 @@ public class FollowPath extends Command {
             currentTranslationTarget = (TranslationTarget) pathElementsWithConstraints.get(translationElementIndex).getFirst();
         }
 
-        // if we are not in the same segment as the current rotation element and we are ahead of the current rotation element in terms of segments, switch to the next rotation element until we are in the same segment
-        // if we are in the same segment as the current rotation element, check to see if we have surpassed the current target rotation t_ratio (progress) and if so, 
-        // switch to the next rotation element until the t_ratio of the rotation element is greater than the robot t_ratio or until the next rotation element is not in the same segment as the robot
-        
-        // check if the rotation target is in the previous segment by seeing if there are any translation targets between the current translation target index and the rotation target index
-        while (rotationElementIndex < pathElementsWithConstraints.size() -  2 && 
-            !((pathElementsWithConstraints.get(rotationElementIndex).getFirst() instanceof RotationTarget) &&
-            isRotationTRatioGreater())) {
+        // Switch rotation targets based on progress along the path
+        // Find the next rotation target that we haven't reached yet
 
-            Logger.recordOutput("FollowPath/rotationElementIndex", rotationElementIndex);
-            rotationElementIndex++;
-        }
-        if (lastRotationElementIndex != rotationElementIndex && pathElementsWithConstraints.get(lastRotationElementIndex).getFirst() instanceof RotationTarget) {
-            lastRotationElementTargetRad = ((RotationTarget) pathElementsWithConstraints.get(lastRotationElementIndex).getFirst()).rotation().getRadians();
-            lastRotationElementIndex = rotationElementIndex;
+        int lastRotationElementIndex = rotationElementIndex;
+        while (rotationElementIndex < pathElementsWithConstraints.size()) {
+            PathElement currentElement = pathElementsWithConstraints.get(rotationElementIndex).getFirst();
+
+            // Skip non-rotation targets
+            if (!(currentElement instanceof RotationTarget)) {
+                rotationElementIndex++;
+                continue;
+            }
+
+            // Check if we should stay at this rotation target or move to the next
+            if (isRotationTRatioGreater()) {
+                // We haven't reached this target's t_ratio yet, so stay here
+                break;
+            } else {
+                // We've passed this target's t_ratio, log and move to next
+                Logger.recordOutput("FollowPath/rotationElementIndex", rotationElementIndex);
+                rotationElementIndex++;
+
+                // If we've reached the end, stop
+                if (rotationElementIndex >= pathElementsWithConstraints.size()) {
+                    break;
+                }
+                // Continue searching for the next valid rotation target
+            }
         }
 
-        Translation2d targetTranslation = ((TranslationTarget) pathElementsWithConstraints.get(translationElementIndex).getFirst()).translation();
+        if (lastRotationElementIndex != rotationElementIndex &&
+            pathElementsWithConstraints.get(lastRotationElementIndex).getFirst() instanceof RotationTarget) {
+            previousRotationElementTargetRad = ((RotationTarget) pathElementsWithConstraints.get(lastRotationElementIndex).getFirst()).rotation().getRadians();
+            previousRotationElementIndex = lastRotationElementIndex;
+        }
+
+        Translation2d targetTranslation = null;
+        if (translationElementIndex < pathElementsWithConstraints.size() &&
+            pathElementsWithConstraints.get(translationElementIndex).getFirst() instanceof TranslationTarget) {
+            targetTranslation = ((TranslationTarget) pathElementsWithConstraints.get(translationElementIndex).getFirst()).translation();
+        } else {
+            // Fallback to current pose if no valid translation target
+            targetTranslation = currentPose.getTranslation();
+        }
         double remainingDistance = calculateRemainingPathDistance();
         double angleToTarget = Math.atan2(
             targetTranslation.getY() - currentPose.getTranslation().getY(), 
@@ -203,20 +238,62 @@ public class FollowPath extends Command {
         double vx = translationControllerOutput * Math.cos(angleToTarget);
         double vy = translationControllerOutput * Math.sin(angleToTarget);
 
-        RotationTarget currentRotationTarget = (RotationTarget) pathElementsWithConstraints.get(rotationElementIndex).getFirst();
         double targetRotation;
-        if (currentRotationTarget.profiledRotation()) {
-            double remainingRotationDistance = calculateRemainingDistanceToRotationTarget();
-            double rotationSegmentDistance = calculateRotationTargetSegmentDistance();
-            double segmentProgress = 1 - remainingRotationDistance / rotationSegmentDistance;
-            targetRotation = lastRotationElementTargetRad + segmentProgress * (currentRotationTarget.rotation().getRadians() - lastRotationElementTargetRad);
+        RotationTargetConstraint rotationConstraint;
+
+        if (rotationElementIndex < pathElementsWithConstraints.size() &&
+            pathElementsWithConstraints.get(rotationElementIndex).getFirst() instanceof RotationTarget) {
+
+            RotationTarget currentRotationTarget = (RotationTarget) pathElementsWithConstraints.get(rotationElementIndex).getFirst();
+            rotationConstraint = (RotationTargetConstraint) pathElementsWithConstraints.get(rotationElementIndex).getSecond();
+            currentRotationTargetRad = currentRotationTarget.rotation();
+
+            if (currentRotationTarget.profiledRotation()) {
+                double remainingRotationDistance = calculateRemainingDistanceToRotationTarget();
+                double rotationSegmentDistance = calculateRotationTargetSegmentDistance();
+
+                // Avoid divide by zero
+                double segmentProgress = 0.0;
+                if (rotationSegmentDistance > 0) {
+                    segmentProgress = 1 - remainingRotationDistance / rotationSegmentDistance;
+                    // Clamp to valid range
+                    segmentProgress = Math.max(0.0, Math.min(1.0, segmentProgress));
+                }
+
+                // Calculate the shortest angular path from current robot rotation to target
+                double startRotation = currentPose.getRotation().getRadians();
+                double endRotation = currentRotationTarget.rotation().getRadians();
+                double targetRotationDifference = endRotation - startRotation;
+                double robotRotationDifference = endRotation - currentPose.getRotation().getRadians();
+                double rotationDifference;
+                if (Math.abs(robotRotationDifference) > Math.abs(targetRotationDifference)) {
+                    rotationDifference = MathUtil.angleModulus(endRotation - startRotation) - 2 * Math.PI;
+                }
+                else {
+                    rotationDifference = MathUtil.angleModulus(endRotation - startRotation);
+                }
+
+
+                // Normalize the rotation difference to [-π, π] to take shortest path
+                
+
+                // Interpolate along the shortest path
+                targetRotation = startRotation + segmentProgress * rotationDifference;
+            } else {
+                targetRotation = MathUtil.angleModulus(currentRotationTarget.rotation().getRadians());
+            }
+
         } else {
-            targetRotation = currentRotationTarget.rotation().getRadians();
+            targetRotation = previousRotationElementTargetRad;
+            currentRotationTargetRad = new Rotation2d(targetRotation);
+            rotationConstraint = new RotationTargetConstraint(
+                    path.getDefaultGlobalConstraints().getMaxVelocityDegPerSec(), 
+                    path.getDefaultGlobalConstraints().getMaxAccelerationDegPerSec2()
+                );
         }
         double omega = rotationController.calculate(currentPose.getRotation().getRadians(), targetRotation);
 
         TranslationTargetConstraint translationConstraint = (TranslationTargetConstraint) pathElementsWithConstraints.get(translationElementIndex).getSecond();
-        RotationTargetConstraint rotationConstraint = (RotationTargetConstraint) pathElementsWithConstraints.get(rotationElementIndex).getSecond();
 
         ChassisSpeeds targetSpeeds = new ChassisSpeeds(vx, vy, omega);
         targetSpeeds = ChassisRateLimiter.limit(
@@ -228,25 +305,28 @@ public class FollowPath extends Command {
             translationConstraint.maxVelocityMetersPerSec(),
             Math.toRadians(rotationConstraint.maxVelocityDegPerSec())
         );
-        lastSpeeds = targetSpeeds;
-        lastRotationElementTargetRad = currentPose.getRotation().getRadians();
+        // targetSpeeds.omegaRadiansPerSecond = omega;
 
         robotRelativeSpeedsConsumer.accept(ChassisSpeeds.fromFieldRelativeSpeeds(targetSpeeds, currentPose.getRotation()));
 
+        lastSpeeds = targetSpeeds;
+
         if (logCounter++ % 3 == 0) {
             robotTranslations.add(currentPose.getTranslation());
+
+            // Limit memory usage by removing oldest point when list gets too large
+            if (robotTranslations.size() > 100) {
+                robotTranslations.remove(0); // Remove the oldest (first) entry
+            }
+
             Logger.recordOutput("FollowPath/robotTranslations", robotTranslations.toArray(Translation2d[]::new));
         }
 
         Logger.recordOutput("FollowPath/calculateRemainingPathDistance", calculateRemainingPathDistance());
-        Logger.recordOutput("FollowPath/straightLineDistToEnd", 
-            currentPose.getTranslation().getDistance(
-                ((TranslationTarget) pathElementsWithConstraints.get(pathElementsWithConstraints.size() - 1).getFirst()).translation()
-            ));
         Logger.recordOutput("FollowPath/translationElementIndex", translationElementIndex);
         Logger.recordOutput("FollowPath/rotationElementIndex", rotationElementIndex);
-        Logger.recordOutput("FollowPath/targetRotationElement", currentRotationTarget);
         Logger.recordOutput("FollowPath/targetRotation", targetRotation);
+        Logger.recordOutput("FollowPath/rotationControllerOutput", omega);
 
     }
     
@@ -296,14 +376,14 @@ public class FollowPath extends Command {
     private double calculateRotationTargetSegmentDistance() {
         // Find the previous rotation target (immediately before current rotation)
 
-        Translation2d startPoint = lastRotationElementIndex == 0
+        Translation2d startPoint = previousRotationElementIndex == 0
             ? startPose.getTranslation()
-            : calculateRotationTargetTranslation(lastRotationElementIndex);
+            : calculateRotationTargetTranslation(previousRotationElementIndex);
         Translation2d endPoint = calculateRotationTargetTranslation(rotationElementIndex);
 
         double distance = 0.0;
         Translation2d prev = startPoint;
-        int startIdx = lastRotationElementIndex == 0 ? 0 : lastRotationElementIndex + 1;
+        int startIdx = previousRotationElementIndex == 0 ? 0 : previousRotationElementIndex + 1;
         for (int i = startIdx; i <= rotationElementIndex; i++) {
             if (i == rotationElementIndex) {
                 distance += prev.getDistance(endPoint);
@@ -333,16 +413,34 @@ public class FollowPath extends Command {
                 break;
             }
         }
+        if (translationA == null) {
+            return translationB;
+        }
+        if (translationB == null) {
+            return translationA;
+        }
+
+        // If the two translation points are at the same location, return that location
+        double segmentLength = translationA.getDistance(translationB);
+        if (segmentLength == 0) {
+            Logger.recordOutput("FollowPath/calculateRotationTargetTranslation", new Pose2d(translationA, new Rotation2d()));
+            return translationA;
+        }
 
         double angle = Math.atan2(
-            translationB.getY() - translationA.getY(), 
+            translationB.getY() - translationA.getY(),
             translationB.getX() - translationA.getX()
         );
 
         double tRatio = ((RotationTarget) pathElementsWithConstraints.get(index).getFirst()).t_ratio();
+        // Ensure tRatio is in valid range
+        tRatio = Math.max(0.0, Math.min(1.0, tRatio));
+
+        // Calculate the interpolated point along the segment
+        double interpolatedDistance = segmentLength * tRatio;
         Translation2d pointOnSegment = new Translation2d(
-            translationA.getX() + Math.cos(angle) * tRatio,
-            translationA.getY() + Math.sin(angle) * tRatio
+            translationA.getX() + Math.cos(angle) * interpolatedDistance,
+            translationA.getY() + Math.sin(angle) * interpolatedDistance
         );
 
         Logger.recordOutput("FollowPath/calculateRotationTargetTranslation", new Pose2d(pointOnSegment, new Rotation2d()));
@@ -353,20 +451,58 @@ public class FollowPath extends Command {
     private boolean isRotationTRatioGreater() {
         if (isRotationNextSegment()) { return true; }
         if (isRotationPreviousSegment()) { return false; }
-        if (!(pathElementsWithConstraints.get(rotationElementIndex).getFirst() instanceof RotationTarget)) { return false; }
+        if (rotationElementIndex >= pathElementsWithConstraints.size() ||
+            !(pathElementsWithConstraints.get(rotationElementIndex).getFirst() instanceof RotationTarget)) { return false; }
 
         Pose2d currentPose = poseSupplier.get();
 
-        
-        Translation2d translationA = translationElementIndex > 0 ? ((TranslationTarget) pathElementsWithConstraints.get(lastTranslationElementIndex).getFirst()).translation() : startPose.getTranslation();
-        Translation2d translationB = ((TranslationTarget) pathElementsWithConstraints.get(translationElementIndex).getFirst()).translation();
+        // Find the segment that contains this rotation target
+        Translation2d translationA = null;
+        Translation2d translationB = null;
+
+        // Find the translation target before the rotation target
+        for (int i = rotationElementIndex - 1; i >= 0; i--) {
+            if (pathElementsWithConstraints.get(i).getFirst() instanceof TranslationTarget) {
+                translationA = ((TranslationTarget) pathElementsWithConstraints.get(i).getFirst()).translation();
+                break;
+            }
+        }
+
+        // Find the translation target after the rotation target
+        for (int i = rotationElementIndex + 1; i < pathElementsWithConstraints.size(); i++) {
+            if (pathElementsWithConstraints.get(i).getFirst() instanceof TranslationTarget) {
+                translationB = ((TranslationTarget) pathElementsWithConstraints.get(i).getFirst()).translation();
+                break;
+            }
+        }
+
+        // If we can't find bounding translation targets, default behavior
+        if (translationA == null || translationB == null) {
+            return true; // Stay at current rotation target
+        }
 
         double segmentLength = translationA.getDistance(translationB);
-        double segmentProgress = currentPose.getTranslation().getDistance(translationB) / segmentLength;
-        boolean out = segmentProgress < ((RotationTarget) pathElementsWithConstraints.get(rotationElementIndex).getFirst()).t_ratio();
+        if (segmentLength == 0) {
+            return true; // Avoid division by zero
+        }
 
-        Logger.recordOutput("FollowPath/isRotationTRatioGreater", out);
-        return out;
+        // Calculate progress along the segment (0 = at translationA, 1 = at translationB)
+        double distanceFromA = currentPose.getTranslation().getDistance(translationA);
+        double segmentProgress = distanceFromA / segmentLength;
+
+        // Clamp progress to [0, 1]
+        segmentProgress = Math.max(0, Math.min(1, segmentProgress));
+
+        double targetTRatio = ((RotationTarget) pathElementsWithConstraints.get(rotationElementIndex).getFirst()).t_ratio();
+
+        // Return true if we haven't reached the target t_ratio yet (should stay at current target)
+        boolean shouldStayAtCurrentTarget = segmentProgress < targetTRatio;
+
+        Logger.recordOutput("FollowPath/isRotationTRatioGreater", shouldStayAtCurrentTarget);
+        Logger.recordOutput("FollowPath/segmentProgress", segmentProgress);
+        Logger.recordOutput("FollowPath/targetTRatio", targetTRatio);
+
+        return shouldStayAtCurrentTarget;
     }
     
     private boolean isRotationPreviousSegment() {
@@ -385,7 +521,6 @@ public class FollowPath extends Command {
 
     @Override
     public boolean isFinished() {
-        Pose2d currentPose = poseSupplier.get();
         // check if this is the last rotation element
         boolean isLastRotationElement = true;
         for (int i = rotationElementIndex+1; i < pathElementsWithConstraints.size(); i++) {
@@ -394,14 +529,18 @@ public class FollowPath extends Command {
                 break;
             }
         }
-        boolean isLastTranslationElement = translationElementIndex == pathElementsWithConstraints.size() - 1;
-        boolean finished = isLastRotationElement && isLastTranslationElement && 
-            currentPose.getTranslation().getDistance(
-                ((TranslationTarget) pathElementsWithConstraints.get(translationElementIndex).getFirst()).translation()
-            ) <= path.getEndTranslationToleranceMeters() &&
-            currentPose.getRotation().minus(
-                ((RotationTarget) pathElementsWithConstraints.get(rotationElementIndex).getFirst()).rotation()
-            ).getDegrees() <= path.getEndRotationToleranceDeg();
+        // check if this is the last translation element (same pattern as rotation)
+        boolean isLastTranslationElement = true;
+        for (int i = translationElementIndex+1; i < pathElementsWithConstraints.size(); i++) {
+            if (pathElementsWithConstraints.get(i).getFirst() instanceof TranslationTarget) {
+                isLastTranslationElement = false;
+                break;
+            }
+        }
+        boolean finished = 
+            isLastRotationElement && isLastTranslationElement && 
+            translationController.atSetpoint() && 
+            Math.abs(currentRotationTargetRad.minus(poseSupplier.get().getRotation()).getRadians()) < Math.toRadians(path.getEndRotationToleranceDeg());
 
         Logger.recordOutput("FollowPath/finished", finished);
         return finished;
