@@ -29,9 +29,15 @@ public class FollowPath extends Command {
     private static PIDController rotationController = null;
 
     public static PIDController getTranslationController() {
+        if (translationController == null) {
+            throw new IllegalStateException("Translation controller has not been set");
+        }
         return createPIDControllerCopy(translationController);
     }
     public static PIDController getRotationController() {
+        if (rotationController == null) {
+            throw new IllegalStateException("Rotation controller has not been set");
+        }
         return createPIDControllerCopy(rotationController);
     }
     public static void setTranslationController(PIDController translationController) {
@@ -48,6 +54,9 @@ public class FollowPath extends Command {
     }
 
     private static PIDController createPIDControllerCopy(PIDController source) {
+        if (source == null) {
+            throw new IllegalArgumentException("Cannot create copy of null PIDController");
+        }
         return new PIDController(source.getP(), source.getI(), source.getD());
     }
 
@@ -55,6 +64,28 @@ public class FollowPath extends Command {
         translationController.setTolerance(path.getEndTranslationToleranceMeters());
         rotationController.setTolerance(Math.toRadians(path.getEndRotationToleranceDeg()));
         rotationController.enableContinuousInput(-Math.PI, Math.PI);
+    }
+
+    private boolean validatePath() {
+        if (pathElementsWithConstraints.isEmpty()) {
+            Logger.recordOutput("FollowPath/error", "Path contains no elements");
+            return false;
+        }
+
+        boolean hasTranslationTarget = false;
+        for (Pair<PathElement, PathElementConstraint> element : pathElementsWithConstraints) {
+            if (element.getFirst() instanceof TranslationTarget) {
+                hasTranslationTarget = true;
+                break;
+            }
+        }
+
+        if (!hasTranslationTarget) {
+            Logger.recordOutput("FollowPath/error", "Path contains no translation targets");
+            return false;
+        }
+
+        return true;
     }
 
     private final Path path;
@@ -76,6 +107,7 @@ public class FollowPath extends Command {
 
     private int logCounter = 0;
     private ArrayList<Translation2d> robotTranslations = new ArrayList<>();
+    private double cachedRemainingDistance = 0.0;
 
     public FollowPath(
         Path path, 
@@ -128,11 +160,17 @@ public class FollowPath extends Command {
         }
         pathElementsWithConstraints = path.getPathElementsWithConstraintsNoWaypoints();
 
+        // Validate path before proceeding
+        if (!validatePath()) {
+            Logger.recordOutput("FollowPath/error", "Path validation failed");
+            return;
+        }
+
         rotationElementIndex = 0;
         translationElementIndex = 0;
         lastTimestamp = Timer.getTimestamp();
-        lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), startPose.getRotation());
         startPose = poseSupplier.get();
+        lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), startPose.getRotation());
         previousRotationElementTargetRad = startPose.getRotation().getRadians();
         previousRotationElementIndex = rotationElementIndex;
         rotationController.reset();
@@ -149,9 +187,23 @@ public class FollowPath extends Command {
         }
         Logger.recordOutput("FollowPath/pathTranslations", pathTranslations.toArray(Translation2d[]::new));
 
-        // find the reset start pose. find the first translation target and use its translation as the start translation and the first rotation target as the start rotation. 
+        // find the reset start pose. find the first translation target and use its translation as the start translation and the first rotation target as the start rotation.
         // if no rotation target, use the current robot rotation as the start rotation
-        Translation2d resetTranslation = ((TranslationTarget) pathElementsWithConstraints.get(0).getFirst()).translation();
+        if (pathElementsWithConstraints.isEmpty()) {
+            throw new IllegalStateException("Path must contain at least one element");
+        }
+
+        // Find first translation target
+        Translation2d resetTranslation = null;
+        for (Pair<PathElement, PathElementConstraint> element : pathElementsWithConstraints) {
+            if (element.getFirst() instanceof TranslationTarget) {
+                resetTranslation = ((TranslationTarget) element.getFirst()).translation();
+                break;
+            }
+        }
+        if (resetTranslation == null) {
+            throw new IllegalStateException("Path must contain at least one translation target");
+        }
         Rotation2d resetRotation = startPose.getRotation();
         for (int i = 0; i < pathElementsWithConstraints.size(); i++) {
             if (pathElementsWithConstraints.get(i).getFirst() instanceof RotationTarget) {
@@ -168,8 +220,24 @@ public class FollowPath extends Command {
         double dt = Timer.getTimestamp() - lastTimestamp;
         lastTimestamp = Timer.getTimestamp();
 
+        // Early return if path is invalid
+        if (!validatePath()) {
+            Logger.recordOutput("FollowPath/error", "Cannot execute with invalid path");
+            return;
+        }
+
         Pose2d currentPose = poseSupplier.get();
-        
+
+        // Ensure we have valid indices
+        if (translationElementIndex >= pathElementsWithConstraints.size()) {
+            Logger.recordOutput("FollowPath/error", "Translation element index out of bounds");
+            return;
+        }
+        if (!(pathElementsWithConstraints.get(translationElementIndex).getFirst() instanceof TranslationTarget)) {
+            Logger.recordOutput("FollowPath/error", "Expected TranslationTarget at index " + translationElementIndex);
+            return;
+        }
+
         TranslationTarget currentTranslationTarget = (TranslationTarget) pathElementsWithConstraints.get(translationElementIndex).getFirst();
         // check to see if we are in the intermediate handoff radius of the current target translation
         if (currentPose.getTranslation().getDistance(currentTranslationTarget.translation()) <= 
@@ -231,10 +299,13 @@ public class FollowPath extends Command {
         }
         double remainingDistance = calculateRemainingPathDistance();
         double angleToTarget = Math.atan2(
-            targetTranslation.getY() - currentPose.getTranslation().getY(), 
+            targetTranslation.getY() - currentPose.getTranslation().getY(),
             targetTranslation.getX() - currentPose.getTranslation().getX()
         );
-        double translationControllerOutput =  -translationController.calculate(remainingDistance, 0);
+        double translationControllerOutput = -translationController.calculate(remainingDistance, 0);
+
+        // Cache the remaining distance for logging
+        cachedRemainingDistance = remainingDistance;
         double vx = translationControllerOutput * Math.cos(angleToTarget);
         double vy = translationControllerOutput * Math.sin(angleToTarget);
 
@@ -245,6 +316,10 @@ public class FollowPath extends Command {
             pathElementsWithConstraints.get(rotationElementIndex).getFirst() instanceof RotationTarget) {
 
             RotationTarget currentRotationTarget = (RotationTarget) pathElementsWithConstraints.get(rotationElementIndex).getFirst();
+            if (!(pathElementsWithConstraints.get(rotationElementIndex).getSecond() instanceof RotationTargetConstraint)) {
+                Logger.recordOutput("FollowPath/error", "Expected RotationTargetConstraint at index " + rotationElementIndex);
+                return;
+            }
             rotationConstraint = (RotationTargetConstraint) pathElementsWithConstraints.get(rotationElementIndex).getSecond();
             currentRotationTargetRad = currentRotationTarget.rotation();
 
@@ -252,12 +327,15 @@ public class FollowPath extends Command {
                 double remainingRotationDistance = calculateRemainingDistanceToRotationTarget();
                 double rotationSegmentDistance = calculateRotationTargetSegmentDistance();
 
-                // Avoid divide by zero
+                // Avoid divide by zero and handle edge cases
                 double segmentProgress = 0.0;
-                if (rotationSegmentDistance > 0) {
+                if (rotationSegmentDistance > 1e-6) { // Use small epsilon instead of just > 0
                     segmentProgress = 1 - remainingRotationDistance / rotationSegmentDistance;
                     // Clamp to valid range
                     segmentProgress = Math.max(0.0, Math.min(1.0, segmentProgress));
+                } else if (rotationSegmentDistance < 0) {
+                    Logger.recordOutput("FollowPath/warning", "Negative rotation segment distance: " + rotationSegmentDistance);
+                    segmentProgress = 0.0;
                 }
 
                 // Calculate the shortest angular path from current robot rotation to target
@@ -293,6 +371,10 @@ public class FollowPath extends Command {
         }
         double omega = rotationController.calculate(currentPose.getRotation().getRadians(), targetRotation);
 
+        if (!(pathElementsWithConstraints.get(translationElementIndex).getSecond() instanceof TranslationTargetConstraint)) {
+            Logger.recordOutput("FollowPath/error", "Expected TranslationTargetConstraint at index " + translationElementIndex);
+            return;
+        }
         TranslationTargetConstraint translationConstraint = (TranslationTargetConstraint) pathElementsWithConstraints.get(translationElementIndex).getSecond();
 
         ChassisSpeeds targetSpeeds = new ChassisSpeeds(vx, vy, omega);
@@ -314,15 +396,16 @@ public class FollowPath extends Command {
         if (logCounter++ % 3 == 0) {
             robotTranslations.add(currentPose.getTranslation());
 
-            // Limit memory usage by removing oldest point when list gets too large
+            // Limit memory usage by keeping only the most recent points
             if (robotTranslations.size() > 100) {
-                robotTranslations.remove(0); // Remove the oldest (first) entry
+                // Remove oldest entries to keep only the last 75 points
+                robotTranslations.subList(0, robotTranslations.size() - 75).clear();
             }
 
             Logger.recordOutput("FollowPath/robotTranslations", robotTranslations.toArray(Translation2d[]::new));
         }
 
-        Logger.recordOutput("FollowPath/calculateRemainingPathDistance", calculateRemainingPathDistance());
+        Logger.recordOutput("FollowPath/calculateRemainingPathDistance", cachedRemainingDistance);
         Logger.recordOutput("FollowPath/translationElementIndex", translationElementIndex);
         Logger.recordOutput("FollowPath/rotationElementIndex", rotationElementIndex);
         Logger.recordOutput("FollowPath/targetRotation", targetRotation);
@@ -399,6 +482,12 @@ public class FollowPath extends Command {
     }
 
     private Translation2d calculateRotationTargetTranslation(int index) {
+        // Validate index
+        if (index < 0 || index >= pathElementsWithConstraints.size()) {
+            Logger.recordOutput("FollowPath/error", "Invalid index for calculateRotationTargetTranslation: " + index);
+            return new Translation2d();
+        }
+
         // find the two encompassing translation targets
         Translation2d translationA = null, translationB = null;
         for (int i = index; i >= 0; i--) {
@@ -412,6 +501,10 @@ public class FollowPath extends Command {
                 translationB = ((TranslationTarget) pathElementsWithConstraints.get(i).getFirst()).translation();
                 break;
             }
+        }
+        if (translationA == null && translationB == null) {
+            Logger.recordOutput("FollowPath/error", "No translation targets found around rotation target at index " + index);
+            return new Translation2d(); // Return default if no translation targets found
         }
         if (translationA == null) {
             return translationB;
@@ -431,6 +524,12 @@ public class FollowPath extends Command {
             translationB.getY() - translationA.getY(),
             translationB.getX() - translationA.getX()
         );
+
+        if (index >= pathElementsWithConstraints.size() ||
+            !(pathElementsWithConstraints.get(index).getFirst() instanceof RotationTarget)) {
+            Logger.recordOutput("FollowPath/error", "Invalid rotation target index: " + index);
+            return new Translation2d(); // Return a default value
+        }
 
         double tRatio = ((RotationTarget) pathElementsWithConstraints.get(index).getFirst()).t_ratio();
         // Ensure tRatio is in valid range
@@ -482,8 +581,8 @@ public class FollowPath extends Command {
         }
 
         double segmentLength = translationA.getDistance(translationB);
-        if (segmentLength == 0) {
-            return true; // Avoid division by zero
+        if (segmentLength < 1e-6) {
+            return true; // Avoid division by zero or very small segments
         }
 
         // Calculate progress along the segment (0 = at translationA, 1 = at translationB)
