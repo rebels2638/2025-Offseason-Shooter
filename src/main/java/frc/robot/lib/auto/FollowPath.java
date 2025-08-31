@@ -21,10 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 import org.littletonrobotics.junction.Logger;
 
 public class FollowPath extends Command {
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FollowPath.class.getName());
+
     private static PIDController translationController = null;
     private static PIDController rotationController = null;
 
@@ -64,28 +65,6 @@ public class FollowPath extends Command {
         translationController.setTolerance(path.getEndTranslationToleranceMeters());
         rotationController.setTolerance(Math.toRadians(path.getEndRotationToleranceDeg()));
         rotationController.enableContinuousInput(-Math.PI, Math.PI);
-    }
-
-    private boolean validatePath() {
-        if (pathElementsWithConstraints.isEmpty()) {
-            Logger.recordOutput("FollowPath/error", "Path contains no elements");
-            return false;
-        }
-
-        boolean hasTranslationTarget = false;
-        for (Pair<PathElement, PathElementConstraint> element : pathElementsWithConstraints) {
-            if (element.getFirst() instanceof TranslationTarget) {
-                hasTranslationTarget = true;
-                break;
-            }
-        }
-
-        if (!hasTranslationTarget) {
-            Logger.recordOutput("FollowPath/error", "Path contains no translation targets");
-            return false;
-        }
-
-        return true;
     }
 
     private final Path path;
@@ -155,16 +134,16 @@ public class FollowPath extends Command {
             throw new IllegalArgumentException("Translation and rotation controllers must be provided and must not be null");
         }
 
+        if (!path.isValid()) {
+            logger.log(java.util.logging.Level.WARNING, "FollowPath: Path invalid - skipping initialization");
+            return;
+        }
+
         if (shouldFlipPathSupplier.get()) {
             path.flip();
         }
         pathElementsWithConstraints = path.getPathElementsWithConstraintsNoWaypoints();
 
-        // Validate path before proceeding
-        if (!validatePath()) {
-            Logger.recordOutput("FollowPath/error", "Path validation failed");
-            return;
-        }
 
         rotationElementIndex = 0;
         translationElementIndex = 0;
@@ -217,14 +196,14 @@ public class FollowPath extends Command {
 
     @Override
     public void execute() {
+        if (!path.isValid()) {
+            logger.log(java.util.logging.Level.WARNING, "FollowPath: Path invalid - skipping execution");
+            return;
+        }
+        
         double dt = Timer.getTimestamp() - lastTimestamp;
         lastTimestamp = Timer.getTimestamp();
 
-        // Early return if path is invalid
-        if (!validatePath()) {
-            Logger.recordOutput("FollowPath/error", "Cannot execute with invalid path");
-            return;
-        }
 
         Pose2d currentPose = poseSupplier.get();
 
@@ -620,6 +599,11 @@ public class FollowPath extends Command {
 
     @Override
     public boolean isFinished() {
+        if (!path.isValid()) {
+            logger.log(java.util.logging.Level.WARNING, "FollowPath: Path invalid - finishing early");
+            return true;
+        }
+
         // check if this is the last rotation element
         boolean isLastRotationElement = true;
         for (int i = rotationElementIndex+1; i < pathElementsWithConstraints.size(); i++) {

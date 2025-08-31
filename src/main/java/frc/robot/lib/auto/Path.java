@@ -4,11 +4,15 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
 public class Path {
+    private static final Logger logger = Logger.getLogger(Path.class.getName());
+
     public sealed interface PathElement permits Waypoint, TranslationTarget, RotationTarget {
         public PathElement copy();
     }
@@ -156,6 +160,7 @@ public class Path {
     private PathConstraints pathConstraints;
     private static DefaultGlobalConstraints defaultGlobalConstraints = null;
     private boolean flipped = false;
+    private boolean isValid = true;
     
     public Path(List<PathElement> pathElements, PathConstraints constraints, DefaultGlobalConstraints defaultGlobalConstraints) {
         if (pathElements == null) {
@@ -197,30 +202,40 @@ public class Path {
     /**
      * Validates that the first and last path elements are both either waypoints or translation targets.
      * If the path has only 1 element, it must be a waypoint or translation target.
-     * @throws IllegalArgumentException if the validation fails
+     * Logs an error if validation fails but allows program execution to continue.
      */
     private void validatePathEndpoints() {
+        if (pathElements.size() == 0) {
+            isValid = false;
+            logger.log(Level.WARNING, "Path validation failed: Path cannot be empty");
+            return;
+        }
+
         if (pathElements.size() == 1) {
             PathElement element = pathElements.get(0);
             if (element instanceof RotationTarget) {
-                throw new IllegalArgumentException("Path cannot consist of a single rotation target");
+                isValid = false;
+                logger.log(Level.WARNING, "Path validation failed: Path cannot consist of a single rotation target");
             }
             return;
         }
 
         PathElement first = pathElements.get(0);
         PathElement last = pathElements.get(pathElements.size() - 1);
-        
+
         boolean firstIsValid = first instanceof Waypoint || first instanceof TranslationTarget;
         boolean lastIsValid = last instanceof Waypoint || last instanceof TranslationTarget;
-        
+
         if (!firstIsValid || !lastIsValid) {
-            throw new IllegalArgumentException(
-                "First and last path elements must both be either Waypoints or TranslationTargets. " +
+            isValid = false;
+            logger.log(Level.WARNING, "Path validation failed: First and last path elements must both be either Waypoints or TranslationTargets. " +
                 "First element is: " + first.getClass().getSimpleName() + ", " +
-                "Last element is: " + last.getClass().getSimpleName()
-            );
+                "Last element is: " + last.getClass().getSimpleName());
         }
+    }
+
+    public boolean isValid() {
+        return isValid;
     }
 
     public DefaultGlobalConstraints getDefaultGlobalConstraints() {
@@ -297,6 +312,10 @@ public class Path {
     }
 
     public List<Pair<PathElement, PathElementConstraint>> getPathElementsWithConstraints() {
+        if (!isValid()) {
+            return new ArrayList<>();
+        }
+        
         List<Pair<PathElement, PathElementConstraint>> elementsWithConstraints = new ArrayList<>();
         int translationOrdinal = 0;
         int rotationOrdinal = 0;
@@ -429,6 +448,10 @@ public class Path {
     }
 
     public List<Pair<PathElement, PathElementConstraint>> getPathElementsWithConstraintsNoWaypoints() {
+        if (!isValid()) {
+            return new ArrayList<>();
+        }
+        
         List<Pair<PathElement, PathElementConstraint>> elementsWithConstraints = getPathElementsWithConstraints();
         List<Pair<PathElement, PathElementConstraint>> out = new ArrayList<>();
         for (int i = 0; i < elementsWithConstraints.size(); i++) {
@@ -482,6 +505,10 @@ public class Path {
         return out;
     }
     public void flip() {
+        if (!isValid()) {
+            return;
+        }
+        
         if (flipped) return;
 
         for (int i = 0; i < pathElements.size(); i++) {
@@ -516,6 +543,10 @@ public class Path {
     }
 
     public void undoFlip() {
+        if (!isValid()) {
+            return;
+        }
+        
         if (!flipped) return;
         flipped = false;
         flip();
