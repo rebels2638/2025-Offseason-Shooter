@@ -4,12 +4,14 @@ import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
+import java.util.ArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -239,6 +241,8 @@ public class SwerveDrive extends SubsystemBase {
             );
         }
 
+        ArrayList<Pose2d> updatedPoses = new ArrayList<Pose2d>();
+
         double[] odometryTimestampsSeconds = moduleInputs[0].odometryTimestampsSeconds;
         for (int i = 0; i < odometryTimestampsSeconds.length; i++) {
             for (int j = 0; j < 4; j++) {
@@ -258,7 +262,11 @@ public class SwerveDrive extends SubsystemBase {
                     gyroInputs.isConnected ? gyroInputs.yawVelocityRadPerSec : 0
                 )
             );
+
+            updatedPoses.add(RobotState.getInstance().getEstimatedPose());
         }
+
+        Logger.recordOutput("SwerveDrive/updatedPoses", (Pose2d[]) updatedPoses.toArray());
 
         Logger.recordOutput("SwerveDrive/measuredModuleStates", moduleStates);
         Logger.recordOutput("SwerveDrive/measuredModulePositions", modulePositions);
