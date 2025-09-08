@@ -326,19 +326,8 @@ public class FollowPath extends Command {
 
                 // Calculate the shortest angular path from current robot rotation to target
                 double endRotation = currentRotationTarget.rotation().getRadians();
-                double targetRotationDifference = endRotation - currentRotationTargetInitRad;
-                double robotRotationDifference = endRotation - currentPose.getRotation().getRadians();
-                double rotationDifference = MathUtil.angleModulus(endRotation - currentRotationTargetInitRad);
-                // if (Math.abs(robotRotationDifference) > Math.abs(targetRotationDifference)) {
-                //     rotationDifference = MathUtil.angleModulus(endRotation - currentRotationTargetInitRad) - 2 * Math.PI;
-                // }
-                // else {
-                //     rotationDifference = MathUtil.angleModulus(endRotation - currentRotationTargetInitRad);
-                // }
-
-
                 // Normalize the rotation difference to [-π, π] to take shortest path
-                
+                double rotationDifference = MathUtil.angleModulus(endRotation - currentRotationTargetInitRad);
 
                 // Interpolate along the shortest path
                 targetRotation = currentRotationTargetInitRad + segmentProgress * rotationDifference;
