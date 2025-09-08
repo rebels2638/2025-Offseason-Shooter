@@ -78,10 +78,11 @@ public class FollowPath extends Command {
     private int translationElementIndex = 0;
     private ChassisSpeeds lastSpeeds = new ChassisSpeeds();
     private double lastTimestamp = 0;
-    private Pose2d startPose = new Pose2d();
+    private Pose2d pathInitStartPose = new Pose2d();
     private double previousRotationElementTargetRad = 0;   
     private int previousRotationElementIndex = 0;
     private Rotation2d currentRotationTargetRad = new Rotation2d();
+    private double currentRotationTargetInitRad = 0;
     private List<Pair<PathElement, PathElementConstraint>> pathElementsWithConstraints = new ArrayList<>();
 
     private int logCounter = 0;
@@ -148,10 +149,11 @@ public class FollowPath extends Command {
         rotationElementIndex = 0;
         translationElementIndex = 0;
         lastTimestamp = Timer.getTimestamp();
-        startPose = poseSupplier.get();
-        lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), startPose.getRotation());
-        previousRotationElementTargetRad = startPose.getRotation().getRadians();
+        pathInitStartPose = poseSupplier.get();
+        lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), pathInitStartPose.getRotation());
+        previousRotationElementTargetRad = pathInitStartPose.getRotation().getRadians();
         previousRotationElementIndex = rotationElementIndex;
+        currentRotationTargetInitRad = pathInitStartPose.getRotation().getRadians();
         rotationController.reset();
         translationController.reset();
         configureControllers();
@@ -183,7 +185,7 @@ public class FollowPath extends Command {
         if (resetTranslation == null) {
             throw new IllegalStateException("Path must contain at least one translation target");
         }
-        Rotation2d resetRotation = startPose.getRotation();
+        Rotation2d resetRotation = pathInitStartPose.getRotation();
         for (int i = 0; i < pathElementsWithConstraints.size(); i++) {
             if (pathElementsWithConstraints.get(i).getFirst() instanceof RotationTarget) {
                 resetRotation = ((RotationTarget) pathElementsWithConstraints.get(i).getFirst()).rotation();
@@ -266,6 +268,7 @@ public class FollowPath extends Command {
             pathElementsWithConstraints.get(lastRotationElementIndex).getFirst() instanceof RotationTarget) {
             previousRotationElementTargetRad = ((RotationTarget) pathElementsWithConstraints.get(lastRotationElementIndex).getFirst()).rotation().getRadians();
             previousRotationElementIndex = lastRotationElementIndex;
+            currentRotationTargetInitRad = currentPose.getRotation().getRadians();
         }
 
         Translation2d targetTranslation = null;
@@ -306,6 +309,9 @@ public class FollowPath extends Command {
                 double remainingRotationDistance = calculateRemainingDistanceToRotationTarget();
                 double rotationSegmentDistance = calculateRotationTargetSegmentDistance();
 
+                Logger.recordOutput("FollowPath/remainingRotationDistance", remainingRotationDistance);
+                Logger.recordOutput("FollowPath/rotationSegmentDistance", rotationSegmentDistance);
+
                 // Avoid divide by zero and handle edge cases
                 double segmentProgress = 0.0;
                 if (rotationSegmentDistance > 1e-6) { // Use small epsilon instead of just > 0
@@ -316,26 +322,26 @@ public class FollowPath extends Command {
                     Logger.recordOutput("FollowPath/warning", "Negative rotation segment distance: " + rotationSegmentDistance);
                     segmentProgress = 0.0;
                 }
+                Logger.recordOutput("FollowPath/segmentProgress", segmentProgress);
 
                 // Calculate the shortest angular path from current robot rotation to target
-                double startRotation = currentPose.getRotation().getRadians();
                 double endRotation = currentRotationTarget.rotation().getRadians();
-                double targetRotationDifference = endRotation - startRotation;
+                double targetRotationDifference = endRotation - currentRotationTargetInitRad;
                 double robotRotationDifference = endRotation - currentPose.getRotation().getRadians();
-                double rotationDifference;
-                if (Math.abs(robotRotationDifference) > Math.abs(targetRotationDifference)) {
-                    rotationDifference = MathUtil.angleModulus(endRotation - startRotation) - 2 * Math.PI;
-                }
-                else {
-                    rotationDifference = MathUtil.angleModulus(endRotation - startRotation);
-                }
+                double rotationDifference = MathUtil.angleModulus(endRotation - currentRotationTargetInitRad);
+                // if (Math.abs(robotRotationDifference) > Math.abs(targetRotationDifference)) {
+                //     rotationDifference = MathUtil.angleModulus(endRotation - currentRotationTargetInitRad) - 2 * Math.PI;
+                // }
+                // else {
+                //     rotationDifference = MathUtil.angleModulus(endRotation - currentRotationTargetInitRad);
+                // }
 
 
                 // Normalize the rotation difference to [-π, π] to take shortest path
                 
 
                 // Interpolate along the shortest path
-                targetRotation = startRotation + segmentProgress * rotationDifference;
+                targetRotation = currentRotationTargetInitRad + segmentProgress * rotationDifference;
             } else {
                 targetRotation = MathUtil.angleModulus(currentRotationTarget.rotation().getRadians());
             }
@@ -439,7 +445,7 @@ public class FollowPath extends Command {
         // Find the previous rotation target (immediately before current rotation)
 
         Translation2d startPoint = previousRotationElementIndex == 0
-            ? startPose.getTranslation()
+            ? pathInitStartPose.getTranslation()
             : calculateRotationTargetTranslation(previousRotationElementIndex);
         Translation2d endPoint = calculateRotationTargetTranslation(rotationElementIndex);
 

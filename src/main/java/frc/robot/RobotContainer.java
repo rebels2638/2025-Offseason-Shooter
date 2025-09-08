@@ -59,7 +59,7 @@ public class RobotContainer {
         // return sysidChooser.get();
 
         return new FollowPath(
-            new Path("example_a"), 
+            new Path("wide_turn_test"), 
             swerveDrive,
             robotState::getEstimatedPose,
             robotState::resetPose,
