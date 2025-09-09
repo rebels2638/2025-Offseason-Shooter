@@ -72,7 +72,7 @@ public class ModuleIOTalonFX implements ModuleIO {
 
     public ModuleIOTalonFX(SwerveModuleGeneralConfigBase generalConfig, SwerveModuleSpecificConfigBase specificConfig) {
         this.generalConfig = generalConfig;
-        
+
         TalonFXConfiguration driveConfig = new TalonFXConfiguration();
 
         driveConfig.Slot0.kP = generalConfig.getDriveKP();
@@ -236,7 +236,13 @@ public class ModuleIOTalonFX implements ModuleIO {
             steerTemperature,
 
             steerEncoderAbsolutePosition,
-            steerEncoderPositionStatusSignal
+            steerEncoderPositionStatusSignal,
+
+            drivePositionStatusSignal,
+            driveVelocityStatusSignal,
+
+            steerPositionStatusSignal,
+            steerVelocityStatusSignal
         );
 
         inputs.drivePositionMeters = BaseStatusSignal.getLatencyCompensatedValue(drivePositionStatusSignal, driveVelocityStatusSignal).in(Rotation);
