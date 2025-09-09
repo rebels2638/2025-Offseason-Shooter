@@ -266,7 +266,7 @@ public class SwerveDrive extends SubsystemBase {
             updatedPoses.add(RobotState.getInstance().getEstimatedPose());
         }
 
-        // Logger.recordOutput("SwerveDrive/updatedPoses", (Pose2d[]) updatedPoses.toArray());
+        Logger.recordOutput("SwerveDrive/updatedPoses", updatedPoses.toArray(new Pose2d[0]));
 
         Logger.recordOutput("SwerveDrive/measuredModuleStates", moduleStates);
         Logger.recordOutput("SwerveDrive/measuredModulePositions", modulePositions);
