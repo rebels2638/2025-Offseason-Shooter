@@ -145,29 +145,6 @@ public class FollowPath extends Command {
         }
         pathElementsWithConstraints = path.getPathElementsWithConstraintsNoWaypoints();
 
-
-        rotationElementIndex = 0;
-        translationElementIndex = 0;
-        lastTimestamp = Timer.getTimestamp();
-        pathInitStartPose = poseSupplier.get();
-        lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), pathInitStartPose.getRotation());
-        previousRotationElementTargetRad = pathInitStartPose.getRotation().getRadians();
-        previousRotationElementIndex = rotationElementIndex;
-        currentRotationTargetInitRad = pathInitStartPose.getRotation().getRadians();
-        rotationController.reset();
-        translationController.reset();
-        configureControllers();
-
-        ArrayList<Translation2d> pathTranslations = new ArrayList<>();
-        robotTranslations.clear();
-        logCounter = 0;
-        for (int i = 0; i < pathElementsWithConstraints.size(); i++) {
-            if (pathElementsWithConstraints.get(i).getFirst() instanceof TranslationTarget) {
-                pathTranslations.add(((TranslationTarget) pathElementsWithConstraints.get(i).getFirst()).translation());
-            }
-        }
-        Logger.recordOutput("FollowPath/pathTranslations", pathTranslations.toArray(Translation2d[]::new));
-
         // find the reset start pose. find the first translation target and use its translation as the start translation and the first rotation target as the start rotation.
         // if no rotation target, use the current robot rotation as the start rotation
         if (pathElementsWithConstraints.isEmpty()) {
@@ -193,7 +170,28 @@ public class FollowPath extends Command {
             }
         }
         poseResetConsumer.accept(new Pose2d(resetTranslation, resetRotation));
-        
+
+        rotationElementIndex = 0;
+        translationElementIndex = 0;
+        lastTimestamp = Timer.getTimestamp();
+        pathInitStartPose = poseSupplier.get();
+        lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), pathInitStartPose.getRotation());
+        previousRotationElementTargetRad = pathInitStartPose.getRotation().getRadians();
+        previousRotationElementIndex = rotationElementIndex;
+        currentRotationTargetInitRad = pathInitStartPose.getRotation().getRadians();
+        rotationController.reset();
+        translationController.reset();
+        configureControllers();
+
+        ArrayList<Translation2d> pathTranslations = new ArrayList<>();
+        robotTranslations.clear();
+        logCounter = 0;
+        for (int i = 0; i < pathElementsWithConstraints.size(); i++) {
+            if (pathElementsWithConstraints.get(i).getFirst() instanceof TranslationTarget) {
+                pathTranslations.add(((TranslationTarget) pathElementsWithConstraints.get(i).getFirst()).translation());
+            }
+        }
+        Logger.recordOutput("FollowPath/pathTranslations", pathTranslations.toArray(Translation2d[]::new));
     }
 
     @Override
@@ -327,10 +325,10 @@ public class FollowPath extends Command {
                 // Calculate the shortest angular path from current robot rotation to target
                 double endRotation = currentRotationTarget.rotation().getRadians();
                 // Normalize the rotation difference to [-π, π] to take shortest path
-                double rotationDifference = MathUtil.angleModulus(endRotation - currentRotationTargetInitRad);
+                double rotationDifference = MathUtil.angleModulus(endRotation - previousRotationElementTargetRad);
 
                 // Interpolate along the shortest path
-                targetRotation = currentRotationTargetInitRad + segmentProgress * rotationDifference;
+                targetRotation = previousRotationElementTargetRad + segmentProgress * rotationDifference;
             } else {
                 targetRotation = MathUtil.angleModulus(currentRotationTarget.rotation().getRadians());
             }
@@ -384,6 +382,8 @@ public class FollowPath extends Command {
         Logger.recordOutput("FollowPath/rotationElementIndex", rotationElementIndex);
         Logger.recordOutput("FollowPath/targetRotation", targetRotation);
         Logger.recordOutput("FollowPath/rotationControllerOutput", omega);
+        
+        Logger.recordOutput("FollowPath/currentRotationTargetInitRad", currentRotationTargetInitRad);
 
     }
     

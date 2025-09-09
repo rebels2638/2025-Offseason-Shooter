@@ -126,7 +126,7 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getRotationCompensationCoefficient() {
-        return 0.0;
+        return 0.1;
     }
 
     @Override
