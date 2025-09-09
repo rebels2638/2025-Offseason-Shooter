@@ -8,14 +8,14 @@
         "intermediate_handoff_radius_meters": 0.25
       },
       "rotation_target": {
-        "rotation_radians": 1.409723223854222,
+        "rotation_radians": 0.0,
         "profiled_rotation": true
       }
     },
     {
       "type": "translation",
-      "x_meters": 11.901286015460295,
-      "y_meters": 5.80681307097681,
+      "x_meters": 7.856980572730807,
+      "y_meters": 3.80481469567218,
       "intermediate_handoff_radius_meters": 0.25
     }
   ]

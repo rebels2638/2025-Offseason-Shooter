@@ -72,8 +72,7 @@ public class ModuleIOTalonFX implements ModuleIO {
 
     public ModuleIOTalonFX(SwerveModuleGeneralConfigBase generalConfig, SwerveModuleSpecificConfigBase specificConfig) {
         this.generalConfig = generalConfig;
-
-        // Drive motor
+        
         TalonFXConfiguration driveConfig = new TalonFXConfiguration();
 
         driveConfig.Slot0.kP = generalConfig.getDriveKP();
