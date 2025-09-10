@@ -20,6 +20,7 @@ import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigBase;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigComp;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigProto;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigSim;
+import frc.robot.subsystems.swerve.SwerveDrive;
 
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
@@ -247,7 +248,7 @@ public class RobotState {
      * Clear pose buffer
      */
     public void resetPose(Pose2d initialPose) {
-        // SwerveDrive.getInstance().resetGyro(initialPose.getRotation());
+        SwerveDrive.getInstance().resetGyro(initialPose.getRotation());
         swerveDrivePoseEstimator.resetPosition(initialPose.getRotation(), lastWheelPositions, initialPose);
 
         poseBuffer.clear();
