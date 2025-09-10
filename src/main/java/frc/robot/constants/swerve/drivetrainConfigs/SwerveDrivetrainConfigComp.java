@@ -35,8 +35,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxAngularVelocityRadiansPerSec() {
-        // return getMaxModuleVelocity() / Math.hypot(getFrontLeftPositionMeters().getX(), getFrontLeftPositionMeters().getY()); 
-        return 4* Math.PI;
+        return getMaxModuleVelocity() / Math.hypot(getFrontLeftPositionMeters().getX(), getFrontLeftPositionMeters().getY()); 
     }
 
     @Override
