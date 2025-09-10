@@ -41,8 +41,8 @@ public class RobotContainer {
 
         swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
         xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
-        FollowPath.setTranslationController(new PIDController(5, 0, 0));
-        FollowPath.setRotationController(new PIDController(6, 0, 0));
+        FollowPath.setTranslationController(new PIDController(3, 0, 0));
+        FollowPath.setRotationController(new PIDController(3, 0, 0));
 
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineForward", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kForward));
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kReverse));
@@ -65,7 +65,7 @@ public class RobotContainer {
             robotState::resetPose,
             // (Pose2d pose) -> {}, 
             Constants::shouldFlipPath,
-            robotState::getFieldRelativeSpeeds,
+            robotState::getRobotRelativeSpeeds,
             swerveDrive::driveRobotRelative
         );
 
