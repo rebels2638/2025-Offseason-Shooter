@@ -22,8 +22,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import edu.wpi.first.wpilibj.Filesystem;
+
 public class JsonUtils {
-    public static final java.nio.file.Path PROJECT_ROOT = java.nio.file.Path.of("src", "main", "deploy", "autos");
+    public static final File PROJECT_ROOT = new File(Filesystem.getDeployDirectory(), "autos");
 
     private static final ObjectMapper mapper = new ObjectMapper()
         .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
@@ -218,6 +220,6 @@ public class JsonUtils {
     }
 
     public static Path loadPath(String pathFileName) {
-        return loadPath(PROJECT_ROOT.toFile(), pathFileName);
+        return loadPath(PROJECT_ROOT, pathFileName);
     }
 }

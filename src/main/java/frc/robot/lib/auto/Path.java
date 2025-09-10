@@ -196,7 +196,7 @@ public class Path {
     }
 
     public Path(String pathFileName) {
-        this(JsonUtils.PROJECT_ROOT.toFile(), pathFileName);
+        this(JsonUtils.PROJECT_ROOT, pathFileName);
     }
 
     /**
