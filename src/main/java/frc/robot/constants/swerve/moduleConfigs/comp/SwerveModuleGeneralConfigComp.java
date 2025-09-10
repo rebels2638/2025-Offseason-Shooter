@@ -24,7 +24,7 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getDriveSupplyCurrentLimit() {
-        return 70.0;
+        return 90.0;
     }
 
     @Override
@@ -34,22 +34,22 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getDriveSupplyCurrentLimitLowerLimit() {
-        return 65.0;
+        return 85.0;
     }
 
     @Override
     public double getDriveStatorCurrentLimit() {
-        return 20.0;
+        return 80.0;
     }
 
     @Override
     public double getDrivePeakForwardTorqueCurrent() {
-        return 20.0;
+        return 80.0;
     }
 
     @Override
     public double getDrivePeakReverseTorqueCurrent() {
-        return -20.0;
+        return -80.0;
     }
 
     @Override
