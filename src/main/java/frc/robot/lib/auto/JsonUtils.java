@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class JsonUtils {
-    public static final String PROJECT_ROOT = "src/main/deploy/autos";
+    public static final java.nio.file.Path PROJECT_ROOT = java.nio.file.Path.of("src", "main", "deploy", "autos");
 
     private static final ObjectMapper mapper = new ObjectMapper()
         .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
@@ -218,6 +218,6 @@ public class JsonUtils {
     }
 
     public static Path loadPath(String pathFileName) {
-        return loadPath(new File(PROJECT_ROOT), pathFileName);
+        return loadPath(PROJECT_ROOT.toFile(), pathFileName);
     }
 }
