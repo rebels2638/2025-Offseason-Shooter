@@ -4,6 +4,7 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
@@ -70,5 +71,12 @@ public class RobotContainer {
         );
 
         // return null;
+    }
+
+    public void setSwerveCoast(boolean isCoast) {
+        swerveDrive.setWheelCoast(isCoast);
+    }
+    public void stopDrive() {
+        swerveDrive.driveFieldRelative(new ChassisSpeeds(0, 0, 0));
     }
 }

@@ -33,4 +33,5 @@ public interface ModuleIO {
     public default void setState(SwerveModuleState state) {}
     public default void setSteerTorqueCurrentFOC(double torqueCurrentFOC, double driveVelocityMetersPerSec) {}
     public default void setDriveTorqueCurrentFOC(double torqueCurrentFOC, Rotation2d steerAngle) {}
+    public default void setWheelCoast(boolean isCoast) {}
 }
