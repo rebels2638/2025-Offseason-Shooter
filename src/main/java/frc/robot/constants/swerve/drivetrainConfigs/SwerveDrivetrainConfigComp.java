@@ -30,7 +30,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxTranslationalAccelerationMetersPerSecSec() {
-        return 5.4;
+        return 14;
     }
 
     @Override
@@ -40,7 +40,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getMaxAngularAccelerationRadiansPerSecSec() {
-        return 12.0;
+        return Math.toRadians(2000);
     }
 
     @Override
@@ -50,22 +50,22 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public Translation2d getFrontLeftPositionMeters() {
-        return new Translation2d(0.23, 0.23);
+        return new Translation2d(0.26, 0.26);
     }
 
     @Override
     public Translation2d getFrontRightPositionMeters() {
-        return new Translation2d(0.23, -0.23);
+        return new Translation2d(0.26, -0.26);
     }
 
     @Override
     public Translation2d getBackLeftPositionMeters() {
-        return new Translation2d(-0.23, 0.23);
+        return new Translation2d(-0.26, 0.26);
     }
 
     @Override
     public Translation2d getBackRightPositionMeters() {
-        return new Translation2d(-0.23, -0.23);
+        return new Translation2d(-0.26, -0.26);
     }
 
     @Override

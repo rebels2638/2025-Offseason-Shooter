@@ -11,6 +11,12 @@
         "rotation_radians": 0.0,
         "profiled_rotation": true
       }
+    },
+    {
+      "type": "translation",
+      "x_meters": 9.871203081564651,
+      "y_meters": 5.57,
+      "intermediate_handoff_radius_meters": 0.25
     }
   ]
 }
