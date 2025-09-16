@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import frc.robot.Robot;
 import frc.robot.RobotState;
 import frc.robot.RobotState.OdometryObservation;
 import frc.robot.constants.Constants;
@@ -336,6 +337,12 @@ public class SwerveDrive extends SubsystemBase {
 
     public void resetGyro(Rotation2d yaw) {
         gyroIO.resetGyro(yaw);
+    }
+
+    public void setWheelCoast(boolean isCoast) {
+        for (ModuleIO module : modules) {
+            module.setWheelCoast(isCoast);
+        }
     }
 
     public Command getDynamicDriveCharacterizationSysIdRoutine(Direction direction) {
