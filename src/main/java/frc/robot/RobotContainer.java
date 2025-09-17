@@ -4,9 +4,12 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.AbsoluteFieldDrive;
 import frc.robot.constants.Constants;
@@ -59,16 +62,22 @@ public class RobotContainer {
     public Command getAutonomousCommand() {
         // return sysidChooser.get();
 
-        return new FollowPath(
-            new Path("shoptest"), 
-            swerveDrive,
-            robotState::getEstimatedPose,
-            robotState::resetPose,
-            // (Pose2d pose) -> {}, 
-            Constants::shouldFlipPath,
-            robotState::getRobotRelativeSpeeds,
-            swerveDrive::driveRobotRelative
-        );
+        Path path = new Path("example_tele");
+
+        return  
+            new SequentialCommandGroup(
+                new WaitUntilCommand(() -> swerveDrive.alignModules(Path.getInitialModuleDirection(path, robotState::getEstimatedPose), 6).get()),
+                new FollowPath(
+                    path,
+                    swerveDrive,
+                    robotState::getEstimatedPose,
+                    robotState::resetPose,
+                    // (Pose2d pose) -> {}, 
+                    Constants::shouldFlipPath,
+                    robotState::getRobotRelativeSpeeds,
+                    swerveDrive::driveRobotRelative
+                )
+            );
 
         // return null;
     }
