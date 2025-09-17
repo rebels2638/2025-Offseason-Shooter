@@ -4,9 +4,11 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
@@ -553,7 +555,58 @@ public class Path {
         flipped = false;
     }
 
+    public static Rotation2d getInitialModuleDirection(Path path, Supplier<Pose2d> poseSupplier) {
+        Pose2d robotPose = poseSupplier.get();
+        
+        if (!path.isValid()) {
+            return new Rotation2d(0);
+        }
 
+        // Get all translation targets from the path
+        List<Pair<PathElement, PathElementConstraint>> pathElements = path.getPathElementsWithConstraintsNoWaypoints();
+        List<TranslationTarget> translationTargets = new ArrayList<>();
+        for (Pair<PathElement, PathElementConstraint> element : pathElements) {
+            if (element.getFirst() instanceof TranslationTarget) {
+                translationTargets.add((TranslationTarget) element.getFirst());
+            }
+        }
+
+        if (translationTargets.isEmpty()) {
+            return new Rotation2d(0);
+        }
+
+        // if there is one translation target, return direction of translation target from robot pose
+        if (translationTargets.size() == 1) {
+            Translation2d target = translationTargets.get(0).translation();
+            return new Rotation2d(
+                target.getX() - robotPose.getTranslation().getX(),
+                target.getY() - robotPose.getTranslation().getY()
+            );
+        }
+
+        // if there is more than one translation target, choose the first target which's handoff radius does not intersect robot pose and return direction of that target from robot pose
+        for (TranslationTarget target : translationTargets) {
+            double handoffRadius = target.intermediateHandoffRadiusMeters()
+                .orElse(path.getDefaultGlobalConstraints().getIntermediateHandoffRadiusMeters());
+            double distanceToTarget = robotPose.getTranslation().getDistance(target.translation());
+
+            // If handoff radius exists and robot pose is outside the handoff radius, use this target
+            if (distanceToTarget > handoffRadius) {
+                return new Rotation2d(
+                    target.translation().getX() - robotPose.getTranslation().getX(),
+                    target.translation().getY() - robotPose.getTranslation().getY()
+                );
+            }
+        }
+
+        // if there is no target which's handoff radius does not intersect robot pose, return direction of the last target from robot pose
+        Translation2d lastTarget = translationTargets.get(translationTargets.size() - 1).translation();
+        return new Rotation2d(
+            lastTarget.getX() - robotPose.getTranslation().getX(),
+            lastTarget.getY() - robotPose.getTranslation().getY()
+        );
+    }
+    
     public Path copy() {
         List<PathElement> deepCopiedElements = new ArrayList<>(pathElements.size());
         for (PathElement element : pathElements) {

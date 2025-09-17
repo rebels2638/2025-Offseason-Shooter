@@ -7,6 +7,7 @@ import static edu.wpi.first.units.Units.Volts;
 import java.util.ArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 import org.littletonrobotics.junction.Logger;
 
@@ -74,10 +75,14 @@ public class SwerveDrive extends SubsystemBase {
     private final GyroIO gyroIO;
     private GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
 
+    private SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
+    private SwerveModuleState[] moduleStates = new SwerveModuleState[4];
+
     private ChassisSpeeds desiredRobotRelativeSpeeds = new ChassisSpeeds();
     private ChassisSpeeds obtainableFieldRelativeSpeeds = new ChassisSpeeds();
 
     double prevLoopTime = Timer.getTimestamp();
+    double prevDriveTime = Timer.getTimestamp();
 
     private final SwerveModuleGeneralConfigBase moduleGeneralConfig;
     private final SwerveDrivetrainConfigBase drivetrainConfig;
@@ -231,10 +236,6 @@ public class SwerveDrive extends SubsystemBase {
             odometryLock.unlock();
         }
 
-
-        SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
-        SwerveModuleState[] moduleStates = new SwerveModuleState[4];
-
         for (int i = 0; i < 4; i++) {
             moduleStates[i] = new SwerveModuleState(
                 moduleInputs[i].driveVelocityMetersPerSec,
@@ -272,6 +273,52 @@ public class SwerveDrive extends SubsystemBase {
         Logger.recordOutput("SwerveDrive/measuredModuleStates", moduleStates);
         Logger.recordOutput("SwerveDrive/measuredModulePositions", modulePositions);
 
+
+
+        Logger.recordOutput("SwerveDrive/CurrentCommand", this.getCurrentCommand() == null ? "" : this.getCurrentCommand().toString());
+    }
+
+    private ChassisSpeeds compensateRobotRelativeSpeeds(ChassisSpeeds speeds) {
+        Rotation2d angularVelocity = new Rotation2d(speeds.omegaRadiansPerSecond * drivetrainConfig.getRotationCompensationCoefficient());
+        if (angularVelocity.getRadians() != 0.0) {
+            speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                ChassisSpeeds.fromRobotRelativeSpeeds( // why should this be split into two?
+                    speeds.vxMetersPerSecond,
+                    speeds.vyMetersPerSecond,
+                    speeds.omegaRadiansPerSecond,
+                    RobotState.getInstance().getEstimatedPose().getRotation().plus(angularVelocity)
+                ),
+                RobotState.getInstance().getEstimatedPose().getRotation()
+            );
+        }
+
+        return speeds;
+    }
+
+    // return a supplier that is true if the modules are aligned within the tolerance
+    public Supplier<Boolean> alignModules(Rotation2d targetRotation, double toleranceDeg) {
+        for (int i = 0; i < 4; i++) {
+            SwerveModuleState state = new SwerveModuleState(0, targetRotation);
+            state.optimize(moduleStates[i].angle);
+            modules[i].setState(state);
+        }
+
+        return () -> {
+            for (int i = 0; i < 4; i++) {
+                if (Math.abs(moduleStates[i].angle.minus(targetRotation).getDegrees()) > toleranceDeg) {
+                    return false;
+                }
+            }
+            return true;
+        };
+    }
+    
+    public void driveRobotRelative(ChassisSpeeds speeds) {
+        double dt = Timer.getTimestamp() - prevDriveTime; 
+        prevDriveTime = Timer.getTimestamp();
+
+        desiredRobotRelativeSpeeds = speeds;
+
         ChassisSpeeds desiredFieldRelativeSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(desiredRobotRelativeSpeeds, RobotState.getInstance().getEstimatedPose().getRotation());
         Logger.recordOutput("SwerveDrive/desiredFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
         Logger.recordOutput("SwerveDrive/desiredRobotRelativeSpeeds", desiredRobotRelativeSpeeds);
@@ -304,30 +351,6 @@ public class SwerveDrive extends SubsystemBase {
             modules[i].setState(moduleSetpoints[i]);
         }
         Logger.recordOutput("SwerveDrive/optimizedModuleSetpoints", moduleSetpoints);
-
-
-        Logger.recordOutput("SwerveDrive/CurrentCommand", this.getCurrentCommand() == null ? "" : this.getCurrentCommand().toString());
-    }
-
-    private ChassisSpeeds compensateRobotRelativeSpeeds(ChassisSpeeds speeds) {
-        Rotation2d angularVelocity = new Rotation2d(speeds.omegaRadiansPerSecond * drivetrainConfig.getRotationCompensationCoefficient());
-        if (angularVelocity.getRadians() != 0.0) {
-            speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-                ChassisSpeeds.fromRobotRelativeSpeeds( // why should this be split into two?
-                    speeds.vxMetersPerSecond,
-                    speeds.vyMetersPerSecond,
-                    speeds.omegaRadiansPerSecond,
-                    RobotState.getInstance().getEstimatedPose().getRotation().plus(angularVelocity)
-                ),
-                RobotState.getInstance().getEstimatedPose().getRotation()
-            );
-        }
-
-        return speeds;
-    }
-    
-    public void driveRobotRelative(ChassisSpeeds speeds) {
-        desiredRobotRelativeSpeeds = speeds;
     }
 
     public void driveFieldRelative(ChassisSpeeds speeds) {
