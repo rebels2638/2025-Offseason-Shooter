@@ -578,10 +578,11 @@ public class Path {
         // if there is one translation target, return direction of translation target from robot pose
         if (translationTargets.size() == 1) {
             Translation2d target = translationTargets.get(0).translation();
-            return new Rotation2d(
-                target.getX() - robotPose.getTranslation().getX(),
-                target.getY() - robotPose.getTranslation().getY()
-            );
+            return 
+                robotPose.getRotation().minus(new Rotation2d(
+                    target.getX() - robotPose.getTranslation().getX(),
+                    target.getY() - robotPose.getTranslation().getY()
+                ));
         }
 
         // if there is more than one translation target, choose the first target which's handoff radius does not intersect robot pose and return direction of that target from robot pose
@@ -592,19 +593,21 @@ public class Path {
 
             // If handoff radius exists and robot pose is outside the handoff radius, use this target
             if (distanceToTarget > handoffRadius) {
-                return new Rotation2d(
-                    target.translation().getX() - robotPose.getTranslation().getX(),
-                    target.translation().getY() - robotPose.getTranslation().getY()
-                );
+                return 
+                    robotPose.getRotation().minus(new Rotation2d(
+                        target.translation().getX() - robotPose.getTranslation().getX(),
+                        target.translation().getY() - robotPose.getTranslation().getY()
+                    ));
             }
         }
 
         // if there is no target which's handoff radius does not intersect robot pose, return direction of the last target from robot pose
         Translation2d lastTarget = translationTargets.get(translationTargets.size() - 1).translation();
-        return new Rotation2d(
-            lastTarget.getX() - robotPose.getTranslation().getX(),
-            lastTarget.getY() - robotPose.getTranslation().getY()
-        );
+        return 
+            robotPose.getRotation().minus(new Rotation2d(
+                lastTarget.getX() - robotPose.getTranslation().getX(),
+                lastTarget.getY() - robotPose.getTranslation().getY()
+            ));
     }
     
     public Path copy() {
