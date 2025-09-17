@@ -39,17 +39,17 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getDriveStatorCurrentLimit() {
-        return 35.0;
+        return 45.0;
     }
 
     @Override
     public double getDrivePeakForwardTorqueCurrent() {
-        return 35.0;
+        return 45.0;
     }
 
     @Override
     public double getDrivePeakReverseTorqueCurrent() {
-        return -35.0;
+        return -45.0;
     }
 
     @Override
