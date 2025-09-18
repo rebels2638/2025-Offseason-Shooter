@@ -28,6 +28,7 @@ public class FollowPath extends Command {
 
     private static PIDController translationController = null;
     private static PIDController rotationController = null;
+    private static PIDController crossTrackController = null;
 
     public static PIDController getTranslationController() {
         if (translationController == null) {
@@ -54,6 +55,20 @@ public class FollowPath extends Command {
         FollowPath.rotationController = createPIDControllerCopy(rotationController);
     }
 
+    public static void setCrossTrackController(PIDController crossTrackController) {
+        if (crossTrackController == null) {
+            throw new IllegalArgumentException("Cross track controller must not be null");
+        }
+        FollowPath.crossTrackController = createPIDControllerCopy(crossTrackController);
+    }
+
+    public static PIDController getCrossTrackController() {
+        if (crossTrackController == null) {
+            throw new IllegalStateException("Cross track controller has not been set");
+        }
+        return createPIDControllerCopy(crossTrackController);
+    }
+
     private static PIDController createPIDControllerCopy(PIDController source) {
         if (source == null) {
             throw new IllegalArgumentException("Cannot create copy of null PIDController");
@@ -64,6 +79,7 @@ public class FollowPath extends Command {
     private void configureControllers() {
         translationController.setTolerance(path.getEndTranslationToleranceMeters());
         rotationController.setTolerance(Math.toRadians(path.getEndRotationToleranceDeg()));
+        crossTrackController.setTolerance(path.getEndTranslationToleranceMeters());
         rotationController.enableContinuousInput(-Math.PI, Math.PI);
     }
 
@@ -76,6 +92,8 @@ public class FollowPath extends Command {
 
     private int rotationElementIndex = 0;
     private int translationElementIndex = 0;
+    private int prevTranslationElementIndex = 0;
+
     private ChassisSpeeds lastSpeeds = new ChassisSpeeds();
     private double lastTimestamp = 0;
     private Pose2d pathInitStartPose = new Pose2d();
@@ -98,7 +116,8 @@ public class FollowPath extends Command {
         Supplier<Boolean> shouldFlipPathSupplier,
         Consumer<Pose2d> poseResetConsumer,
         PIDController translationController, 
-        PIDController rotationController
+        PIDController rotationController,
+        PIDController crossTrackController
     ) {
         if (translationController == null || rotationController == null) {
             throw new IllegalArgumentException("Translation and rotation controllers must be provided and must not be null or must be set before calling FollowPath");
@@ -112,6 +131,7 @@ public class FollowPath extends Command {
         this.poseResetConsumer = poseResetConsumer;
         setTranslationController(translationController);
         setRotationController(rotationController);
+        setCrossTrackController(crossTrackController);
         configureControllers();
         
         addRequirements(driveSubsystem);
@@ -126,7 +146,7 @@ public class FollowPath extends Command {
         Supplier<ChassisSpeeds> robotRelativeSpeedsSupplier,
         Consumer<ChassisSpeeds> robotRelativeSpeedsConsumer
     ) {
-        this(path, driveSubsystem, poseSupplier, robotRelativeSpeedsSupplier, robotRelativeSpeedsConsumer, shouldFlipPathSupplier, poseResetConsumer, translationController, rotationController);
+        this(path, driveSubsystem, poseSupplier, robotRelativeSpeedsSupplier, robotRelativeSpeedsConsumer, shouldFlipPathSupplier, poseResetConsumer, translationController, rotationController, crossTrackController);
     }
 
     @Override
@@ -173,6 +193,7 @@ public class FollowPath extends Command {
 
         rotationElementIndex = 0;
         translationElementIndex = 0;
+        prevTranslationElementIndex = 0;
         lastTimestamp = Timer.getTimestamp();
         pathInitStartPose = poseSupplier.get();
         lastSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeedsSupplier.get(), pathInitStartPose.getRotation());
@@ -223,8 +244,10 @@ public class FollowPath extends Command {
             currentTranslationTarget.intermediateHandoffRadiusMeters().orElse(path.getDefaultGlobalConstraints().getIntermediateHandoffRadiusMeters())) {
             // if we are in the intermediate handoff radius of the current target translation,
             // switch to the next translation element
+
             for (int i = translationElementIndex + 1; i < pathElementsWithConstraints.size(); i++) {
                 if (pathElementsWithConstraints.get(i).getFirst() instanceof TranslationTarget) {
+                    prevTranslationElementIndex = translationElementIndex;
                     translationElementIndex = i;
                     break;
                 }
@@ -288,6 +311,11 @@ public class FollowPath extends Command {
         cachedRemainingDistance = remainingDistance;
         double vx = translationControllerOutput * Math.cos(angleToTarget);
         double vy = translationControllerOutput * Math.sin(angleToTarget);
+
+        double crossTrackError = calculateCrossTrackError();
+        double crossTrackControllerOutput = -crossTrackController.calculate(crossTrackError, 0);
+        vx += crossTrackControllerOutput * Math.cos(angleToTarget - Math.PI / 2);
+        vy += crossTrackControllerOutput * Math.sin(angleToTarget - Math.PI / 2);
 
         double targetRotation;
         RotationTargetConstraint rotationConstraint;
@@ -359,7 +387,6 @@ public class FollowPath extends Command {
             translationConstraint.maxVelocityMetersPerSec(),
             Math.toRadians(rotationConstraint.maxVelocityDegPerSec())
         );
-        // targetSpeeds.omegaRadiansPerSecond = omega;
 
         robotRelativeSpeedsConsumer.accept(ChassisSpeeds.fromFieldRelativeSpeeds(targetSpeeds, currentPose.getRotation()));
 
@@ -453,6 +480,69 @@ public class FollowPath extends Command {
             }
         }
         return distance;
+    }
+
+    private double calculateCrossTrackError() {
+        Translation2d targetTranslation = ((TranslationTarget) pathElementsWithConstraints.get(translationElementIndex).getFirst()).translation();
+        Translation2d prevTranslation;
+        if (translationElementIndex > 0) {
+            prevTranslation = ((TranslationTarget) pathElementsWithConstraints.get(prevTranslationElementIndex).getFirst()).translation();
+        }
+        else {
+            prevTranslation = pathInitStartPose.getTranslation();
+        }
+
+        Pose2d currentPose = poseSupplier.get();
+        Translation2d robotPosition = currentPose.getTranslation();
+
+        // Vector from previous point to target point
+        double dx = targetTranslation.getX() - prevTranslation.getX();
+        double dy = targetTranslation.getY() - prevTranslation.getY();
+
+        // Vector from previous point to robot
+        double dxRobot = robotPosition.getX() - prevTranslation.getX();
+        double dyRobot = robotPosition.getY() - prevTranslation.getY();
+
+        // Length squared of the line segment
+        double segmentLengthSquared = dx * dx + dy * dy;
+
+        if (segmentLengthSquared < 1e-6) {
+            // Points are essentially the same, return distance to target
+            return robotPosition.getDistance(targetTranslation);
+        }
+
+        // Project robot position onto the line (dot product)
+        double t = (dxRobot * dx + dyRobot * dy) / segmentLengthSquared;
+
+        // Clamp t to [0, 1] to stay within the segment
+        t = Math.max(0.0, Math.min(1.0, t));
+
+        // Find the closest point on the line segment
+        double closestX = prevTranslation.getX() + t * dx;
+        double closestY = prevTranslation.getY() + t * dy;
+        Translation2d closestPoint = new Translation2d(closestX, closestY);
+
+        // Calculate signed cross-track error
+        // Positive = right of path, Negative = left of path
+        double pathVectorX = targetTranslation.getX() - prevTranslation.getX();
+        double pathVectorY = targetTranslation.getY() - prevTranslation.getY();
+        double robotVectorX = robotPosition.getX() - prevTranslation.getX();
+        double robotVectorY = robotPosition.getY() - prevTranslation.getY();
+
+        // Cross product to determine side: positive = left, negative = right
+        double crossProduct = pathVectorX * robotVectorY - pathVectorY * robotVectorX;
+
+        // Return signed distance (positive = right of path, negative = left of path)
+        double signedError = robotPosition.getDistance(closestPoint);
+        if (crossProduct < 0) {
+            signedError = -signedError; // Left of path = negative
+        }
+        // Right of path = positive (crossProduct > 0), so no change needed
+
+        Logger.recordOutput("FollowPath/closestPoint", new Pose2d(closestPoint, currentPose.getRotation()));
+        Logger.recordOutput("FollowPath/crossTrackError", signedError);
+
+        return signedError;
     }
 
     private Translation2d calculateRotationTargetTranslation(int index) {
