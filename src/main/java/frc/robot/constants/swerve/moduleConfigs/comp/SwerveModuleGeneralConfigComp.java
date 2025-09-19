@@ -134,17 +134,17 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getSteerStatorCurrentLimit() {
-        return 45.0;
+        return 80.0;
     }
 
     @Override
     public double getSteerPeakForwardTorqueCurrent() {
-        return 45.0;
+        return 80.0;
     }
 
     @Override
     public double getSteerPeakReverseTorqueCurrent() {
-        return -45.0;
+        return -80.0;
     }
 
     @Override
@@ -164,7 +164,7 @@ public class SwerveModuleGeneralConfigComp extends SwerveModuleGeneralConfigBase
 
     @Override
     public double getSteerKP() {
-        return 100;//80
+        return 150;//80
     }
 
     @Override

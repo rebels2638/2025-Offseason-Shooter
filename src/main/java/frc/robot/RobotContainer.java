@@ -38,6 +38,8 @@ public class RobotContainer {
 
     private final LoggedDashboardChooser<Command> sysidChooser = new LoggedDashboardChooser<>("Auto/SYSIDChooser");
 
+    Path path = new Path("shoptest");
+
     private RobotContainer() {
         this.xboxTester = new XboxController(1);
         this.xboxOperator = new XboxController(2);
@@ -45,8 +47,8 @@ public class RobotContainer {
 
         swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
         xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
-        FollowPath.setTranslationController(new PIDController(3, 0, 0));
-        FollowPath.setRotationController(new PIDController(3, 0, 0));
+        FollowPath.setTranslationController(new PIDController(4, 0, 0));
+        FollowPath.setRotationController(new PIDController(5, 0, 0));
 
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineForward", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kForward));
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kReverse));
@@ -61,12 +63,9 @@ public class RobotContainer {
 
     public Command getAutonomousCommand() {
         // return sysidChooser.get();
-
-        Path path = new Path("example_tele");
-
         return  
             new SequentialCommandGroup(
-                new WaitUntilCommand(() -> swerveDrive.alignModules(Path.getInitialModuleDirection(path, robotState::getEstimatedPose), 6).get()),
+                new WaitUntilCommand(() -> swerveDrive.alignModules(new Rotation2d(), 15).get()),
                 new FollowPath(
                     path,
                     swerveDrive,

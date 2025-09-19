@@ -75,8 +75,19 @@ public class SwerveDrive extends SubsystemBase {
     private final GyroIO gyroIO;
     private GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
 
-    private SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
-    private SwerveModuleState[] moduleStates = new SwerveModuleState[4];
+    private SwerveModulePosition[] modulePositions = {
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition()
+
+    };
+    private SwerveModuleState[] moduleStates = {
+        new SwerveModuleState(),
+        new SwerveModuleState(),
+        new SwerveModuleState(),
+        new SwerveModuleState()
+    };
 
     private ChassisSpeeds desiredRobotRelativeSpeeds = new ChassisSpeeds();
     private ChassisSpeeds obtainableFieldRelativeSpeeds = new ChassisSpeeds();
@@ -305,7 +316,8 @@ public class SwerveDrive extends SubsystemBase {
 
         return () -> {
             for (int i = 0; i < 4; i++) {
-                if (Math.abs(moduleStates[i].angle.minus(targetRotation).getDegrees()) > toleranceDeg) {
+                if (Math.abs(moduleStates[i].angle.minus(targetRotation).getDegrees()) > toleranceDeg && 
+                    Math.abs(moduleStates[i].angle.plus(Rotation2d.fromDegrees(180)).minus(targetRotation).getDegrees()) > toleranceDeg) {
                     return false;
                 }
             }
