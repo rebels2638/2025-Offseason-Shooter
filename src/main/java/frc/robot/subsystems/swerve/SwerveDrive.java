@@ -75,14 +75,13 @@ public class SwerveDrive extends SubsystemBase {
     private final GyroIO gyroIO;
     private GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
 
-    private SwerveModulePosition[] modulePositions = {
+    private SwerveModulePosition[] modulePositions = new SwerveModulePosition[] {
         new SwerveModulePosition(),
         new SwerveModulePosition(),
         new SwerveModulePosition(),
         new SwerveModulePosition()
-
-    };
-    private SwerveModuleState[] moduleStates = {
+    };  
+    private SwerveModuleState[] moduleStates = new SwerveModuleState[] {
         new SwerveModuleState(),
         new SwerveModuleState(),
         new SwerveModuleState(),

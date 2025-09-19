@@ -49,6 +49,7 @@ public class RobotContainer {
         xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
         FollowPath.setTranslationController(new PIDController(4, 0, 0));
         FollowPath.setRotationController(new PIDController(5, 0, 0));
+        FollowPath.setCrossTrackController(new PIDController(3, 0, 0));
 
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineForward", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kForward));
         sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kReverse));
@@ -63,6 +64,7 @@ public class RobotContainer {
 
     public Command getAutonomousCommand() {
         // return sysidChooser.get();
+
         return  
             new SequentialCommandGroup(
                 new WaitUntilCommand(() -> swerveDrive.alignModules(new Rotation2d(), 15).get()),
