@@ -12,9 +12,11 @@ import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.AbsoluteFieldDrive;
+import frc.robot.commands.turret.RunTurretRaw;
 import frc.robot.constants.Constants;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.swerve.SwerveDrive;
+import frc.robot.subsystems.turret.Turret;
 import frc.robot.lib.auto.FollowPath;
 import frc.robot.lib.auto.Path;
 
@@ -31,62 +33,24 @@ public class RobotContainer {
 
     private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
     private final RobotState robotState = RobotState.getInstance(); // we just initialize it here to save time during first reference in subsystems
+    private final Turret turret = Turret.getInstance();
 
     private final XboxController xboxTester;
     private final XboxController xboxDriver;
     private final XboxController xboxOperator;
 
-    private final LoggedDashboardChooser<Command> sysidChooser = new LoggedDashboardChooser<>("Auto/SYSIDChooser");
-
-    Path path = new Path("shoptest");
 
     private RobotContainer() {
         this.xboxTester = new XboxController(1);
         this.xboxOperator = new XboxController(2);
         this.xboxDriver = new XboxController(3);
 
+        turret.setDefaultCommand(new RunTurretRaw(xboxOperator));
         swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
         xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
-        FollowPath.setTranslationController(new PIDController(4, 0, 0));
-        FollowPath.setRotationController(new PIDController(5, 0, 0));
-        FollowPath.setCrossTrackController(new PIDController(3.7, 0, 0));
-
-        sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineForward", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kForward));
-        sysidChooser.addOption("DynamicDriveCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicDriveCharacterizationSysIdRoutine(Direction.kReverse));
-        sysidChooser.addOption("QuasistaticDriveCharacterizationSysIdRoutineForward", swerveDrive.getQuasistaticDriveCharacterizationSysIdRoutine(Direction.kForward));
-        sysidChooser.addOption("QuasistaticDriveCharacterizationSysIdRoutineReverse", swerveDrive.getQuasistaticDriveCharacterizationSysIdRoutine(Direction.kReverse));
-
-        sysidChooser.addOption("DynamicSteerCharacterizationSysIdRoutineForward", swerveDrive.getDynamicSteerCharacterizationSysIdRoutine(Direction.kForward));
-        sysidChooser.addOption("DynamicSteerCharacterizationSysIdRoutineReverse", swerveDrive.getDynamicSteerCharacterizationSysIdRoutine(Direction.kReverse));
-        sysidChooser.addOption("QuasistaticSteerCharacterizationSysIdRoutineForward", swerveDrive.getQuasistaticSteerCharacterizationSysIdRoutine(Direction.kForward));
-        sysidChooser.addOption("QuasistaticSteerCharacterizationSysIdRoutineReverse", swerveDrive.getQuasistaticSteerCharacterizationSysIdRoutine(Direction.kReverse));
     }
 
     public Command getAutonomousCommand() {
-        // return sysidChooser.get();
-
-        return  
-            new SequentialCommandGroup(
-                new WaitUntilCommand(() -> swerveDrive.alignModules(new Rotation2d(), 15).get()),
-                new FollowPath(
-                    path,
-                    swerveDrive,
-                    robotState::getEstimatedPose,
-                    robotState::resetPose,
-                    // (Pose2d pose) -> {}, 
-                    Constants::shouldFlipPath,
-                    robotState::getRobotRelativeSpeeds,
-                    swerveDrive::driveRobotRelative
-                )
-            );
-
-        // return null;
-    }
-
-    public void setSwerveCoast(boolean isCoast) {
-        swerveDrive.setWheelCoast(isCoast);
-    }
-    public void stopDrive() {
-        swerveDrive.driveFieldRelative(new ChassisSpeeds(0, 0, 0));
+        return null;
     }
 }
