@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.AbsoluteFieldDrive;
+import frc.robot.commands.turret.RunTurretRaw;
 import frc.robot.constants.Constants;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.swerve.SwerveDrive;
@@ -44,6 +45,7 @@ public class RobotContainer {
         this.xboxOperator = new XboxController(2);
         this.xboxDriver = new XboxController(3);
 
+        turret.setDefaultCommand(new RunTurretRaw(xboxOperator));
         swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
         xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
     }

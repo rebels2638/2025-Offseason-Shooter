@@ -46,7 +46,7 @@ public class TurretIOTalonFX implements TurretIO {
 
     private final TurretConfigBase generalConfig;
 
-    private Rotation2d lastturretAngleRad = new Rotation2d();
+    private Rotation2d lastTurretAngleRad = new Rotation2d();
     private SwerveModuleState lastRequestedState = new SwerveModuleState();
     private double lastRequestedStateTime = Timer.getFPGATimestamp();
 
@@ -151,7 +151,7 @@ public class TurretIOTalonFX implements TurretIO {
         timestampQueue.clear();
         turretPositionQueue.clear();
 
-        lastturretAngleRad = new Rotation2d(inputs.turretPosition.getRadians());
+        lastTurretAngleRad = new Rotation2d(inputs.turretPosition.getRadians());
     }
 
     @Override

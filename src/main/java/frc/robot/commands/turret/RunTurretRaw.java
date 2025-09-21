@@ -20,8 +20,10 @@ public class RunTurretRaw extends Command {
     }
 
     public void execute() {
+        double maxAngleDeg = 360.0;
+
         double xInput = MathUtil.applyDeadband(xboxController.getLeftX(), Constants.OperatorConstants.LEFT_X_DEADBAND);
-        double angleDelta = xInput * 360.0;
+        double angleDelta = xInput * maxAngleDeg;
 
         turret.setTurretAngle(new Rotation2d(Units.degreesToRadians(angleDelta)));
     }

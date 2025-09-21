@@ -62,7 +62,7 @@ public class TurretIOSim implements TurretIO {
     public void setState(SwerveModuleState state) {
         turretFeedback.setSetpoint(state.angle.getRadians());
 
-        isTurretClosedLoop = true;
+        isTurretClosedLoop = false;
 
         lastDesiredState = state;
     }
