@@ -62,22 +62,22 @@ public class ShooterConfigSim extends ShooterConfigBase {
 
     @Override
     public double getHoodKS() {
-        return 0.1;
+        return 0;
     }
 
     @Override
     public double getHoodKV() {
-        return 0.12;
+        return 0;
     }
 
     @Override
     public double getHoodKA() {
-        return 0.01;
+        return 0.0;
     }
 
     @Override
     public double getHoodKP() {
-        return 10.0;
+        return 25.0;
     }
 
     @Override
@@ -87,7 +87,7 @@ public class ShooterConfigSim extends ShooterConfigBase {
 
     @Override
     public double getHoodKD() {
-        return 1.0;
+        return 0.0;
     }
 
     @Override
@@ -106,7 +106,7 @@ public class ShooterConfigSim extends ShooterConfigBase {
     }
 
     @Override
-    public double getHoodGearRatio() {
+    public double getHoodMotorToOutputShaftRatio() {
         return 100.0;
     }
 
@@ -153,22 +153,22 @@ public class ShooterConfigSim extends ShooterConfigBase {
 
     @Override
     public double getFlywheelKS() {
-        return 0.1;
+        return 0;
     }
 
     @Override
     public double getFlywheelKV() {
-        return 0.002;
+        return 2.44;
     }
 
     @Override
     public double getFlywheelKA() {
-        return 0.0005;
+        return 0.1;
     }
 
     @Override
     public double getFlywheelKP() {
-        return 0.05;
+        return 0.3;
     }
 
     @Override
@@ -197,7 +197,7 @@ public class ShooterConfigSim extends ShooterConfigBase {
     }
 
     @Override
-    public double getFlywheelGearRatio() {
+    public double getFlywheelMotorToOutputShaftRatio() {
         return 1.0;
     }
 
@@ -244,22 +244,22 @@ public class ShooterConfigSim extends ShooterConfigBase {
 
     @Override
     public double getFeederKS() {
-        return 0.1;
+        return 0;
     }
 
     @Override
     public double getFeederKV() {
-        return 0.002;
+        return 2.44;
     }
 
     @Override
     public double getFeederKA() {
-        return 0.0005;
+        return 0.1;
     }
 
     @Override
     public double getFeederKP() {
-        return 0.05;
+        return 0.3;
     }
 
     @Override
@@ -288,7 +288,7 @@ public class ShooterConfigSim extends ShooterConfigBase {
     }
 
     @Override
-    public double getFeederGearRatio() {
+    public double getFeederMotorToOutputShaftRatio() {
         return 5.0;
     }
 }

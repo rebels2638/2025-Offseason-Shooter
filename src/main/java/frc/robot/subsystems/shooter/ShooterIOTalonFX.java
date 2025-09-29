@@ -69,7 +69,7 @@ public class ShooterIOTalonFX implements ShooterIO {
         hoodConfig.MotionMagic.MotionMagicJerk = config.getHoodMotionMagicJerkRotationsPerSecSecSec();
 
         hoodConfig.ClosedLoopGeneral.ContinuousWrap = true;
-        hoodConfig.Feedback.SensorToMechanismRatio = config.getHoodGearRatio();
+        hoodConfig.Feedback.SensorToMechanismRatio = config.getHoodMotorToOutputShaftRatio();
 
         hoodConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         hoodConfig.MotorOutput.Inverted = config.getIsHoodInverted() ?
@@ -104,7 +104,7 @@ public class ShooterIOTalonFX implements ShooterIO {
         flywheelConfig.Slot0.StaticFeedforwardSign = StaticFeedforwardSignValue.UseVelocitySign;
 
         flywheelConfig.ClosedLoopGeneral.ContinuousWrap = false;
-        flywheelConfig.Feedback.SensorToMechanismRatio = config.getFlywheelGearRatio();
+        flywheelConfig.Feedback.SensorToMechanismRatio = config.getFlywheelMotorToOutputShaftRatio();
 
         flywheelConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         flywheelConfig.MotorOutput.Inverted = config.getIsFlywheelInverted() ?
@@ -139,7 +139,7 @@ public class ShooterIOTalonFX implements ShooterIO {
         feederConfig.Slot0.StaticFeedforwardSign = StaticFeedforwardSignValue.UseVelocitySign;
 
         feederConfig.ClosedLoopGeneral.ContinuousWrap = false;
-        feederConfig.Feedback.SensorToMechanismRatio = config.getFeederGearRatio();
+        feederConfig.Feedback.SensorToMechanismRatio = config.getFeederMotorToOutputShaftRatio();
 
         feederConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         feederConfig.MotorOutput.Inverted = config.getIsFeederInverted() ?

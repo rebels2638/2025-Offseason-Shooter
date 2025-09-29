@@ -106,7 +106,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
     }
 
     @Override
-    public double getHoodGearRatio() {
+    public double getHoodMotorToOutputShaftRatio() {
         return 100.0; // 100:1 gear ratio
     }
 
@@ -197,7 +197,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
     }
 
     @Override
-    public double getFlywheelGearRatio() {
+    public double getFlywheelMotorToOutputShaftRatio() {
         return 1.0; // Direct drive
     }
 
@@ -288,7 +288,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
     }
 
     @Override
-    public double getFeederGearRatio() {
+    public double getFeederMotorToOutputShaftRatio() {
         return 5.0; // 5:1 gear ratio
     }
 }

@@ -25,7 +25,7 @@ public abstract class ShooterConfigBase {
     public abstract double getHoodMotionMagicAccelerationRotationsPerSecSec();
     public abstract double getHoodMotionMagicJerkRotationsPerSecSecSec();
 
-    public abstract double getHoodGearRatio();
+    public abstract double getHoodMotorToOutputShaftRatio();
 
     // Flywheel motor config (velocity control)
     public abstract int getFlywheelCanId();
@@ -49,7 +49,7 @@ public abstract class ShooterConfigBase {
     public abstract double getFlywheelMotionMagicAccelerationRotationsPerSecSec();
     public abstract double getFlywheelMotionMagicJerkRotationsPerSecSecSec();
 
-    public abstract double getFlywheelGearRatio();
+    public abstract double getFlywheelMotorToOutputShaftRatio();
 
     // Feeder motor config (velocity control)
     public abstract int getFeederCanId();
@@ -73,5 +73,5 @@ public abstract class ShooterConfigBase {
     public abstract double getFeederMotionMagicAccelerationRotationsPerSecSec();
     public abstract double getFeederMotionMagicJerkRotationsPerSecSecSec();
 
-    public abstract double getFeederGearRatio();
+    public abstract double getFeederMotorToOutputShaftRatio();
 }

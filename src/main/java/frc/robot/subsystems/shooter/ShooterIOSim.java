@@ -2,9 +2,11 @@ package frc.robot.subsystems.shooter;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import frc.robot.constants.shooter.ShooterConfigBase;
@@ -21,16 +23,16 @@ public class ShooterIOSim implements ShooterIO {
         );
     private final DCMotorSim flywheelSim =
         new DCMotorSim(
-            LinearSystemId.createDCMotorSystem(flywheelMotorModel, 0.0005, 6.12),
+            LinearSystemId.createDCMotorSystem(flywheelMotorModel, (2.8087 * 0.0194 * 0.0485614385) / 6.12, 6.12),
             flywheelMotorModel
         );
     private final DCMotorSim feederSim =
         new DCMotorSim(
-            LinearSystemId.createDCMotorSystem(feederMotorModel, 0.0002, 12.24),
+            LinearSystemId.createDCMotorSystem(feederMotorModel, (2.8087 * 0.0194 * 0.0485614385) / 6.12, 6.12),
             feederMotorModel
         );
 
-    private PIDController hoodFeedback;
+    private ProfiledPIDController hoodFeedback;
     private PIDController flywheelFeedback;
     private PIDController feederFeedback;
 
@@ -41,7 +43,6 @@ public class ShooterIOSim implements ShooterIO {
     private boolean isFlywheelClosedLoop = true;
     private boolean isFeederClosedLoop = true;
 
-    private double desiredHoodAngleRotations = 0;
     private double desiredFlywheelVelocityRotationsPerSec = 0;
     private double desiredFeederVelocityRotationsPerSec = 0;
 
@@ -53,7 +54,9 @@ public class ShooterIOSim implements ShooterIO {
         this.config = config;
 
         // Initialize PID controllers with config values
-        hoodFeedback = new PIDController(config.getHoodKP(), config.getHoodKI(), config.getHoodKD());
+        hoodFeedback = new ProfiledPIDController(config.getHoodKP(), config.getHoodKI(), config.getHoodKD(), 
+            new TrapezoidProfile.Constraints(config.getHoodMotionMagicCruiseVelocityRotationsPerSec(), config.getHoodMotionMagicAccelerationRotationsPerSecSec())
+        );
         flywheelFeedback = new PIDController(config.getFlywheelKP(), config.getFlywheelKI(), config.getFlywheelKD());
         feederFeedback = new PIDController(config.getFeederKP(), config.getFeederKI(), config.getFeederKD());
 
@@ -83,7 +86,7 @@ public class ShooterIOSim implements ShooterIO {
             flywheelSim.setInputVoltage(
                 MathUtil.clamp(
                     flywheelFeedforward.calculate(desiredFlywheelVelocityRotationsPerSec) +
-                    flywheelFeedback.calculate(flywheelSim.getAngularVelocityRadPerSec() * config.getFlywheelGearRatio()),
+                    flywheelFeedback.calculate(flywheelSim.getAngularVelocityRadPerSec() * 0.0485614385),
                     -12,
                     12
                 )
@@ -94,7 +97,7 @@ public class ShooterIOSim implements ShooterIO {
             feederSim.setInputVoltage(
                 MathUtil.clamp(
                     feederFeedforward.calculate(desiredFeederVelocityRotationsPerSec) +
-                    feederFeedback.calculate(feederSim.getAngularVelocityRadPerSec() * config.getFeederGearRatio()),
+                    feederFeedback.calculate(feederSim.getAngularVelocityRadPerSec() * 0.0485614385),
                     -12,
                     12
                 )
@@ -105,13 +108,13 @@ public class ShooterIOSim implements ShooterIO {
         flywheelSim.update(dt);
         feederSim.update(dt);
 
-        inputs.hoodAngleRotations = hoodSim.getAngularPositionRad() / (2 * Math.PI) * config.getHoodGearRatio();
-        inputs.hoodVelocityRotationsPerSec = hoodSim.getAngularVelocityRadPerSec() / (2 * Math.PI) * config.getHoodGearRatio();
+        inputs.hoodAngleRotations = hoodSim.getAngularPositionRotations();
+        inputs.hoodVelocityRotationsPerSec = hoodSim.getAngularVelocityRadPerSec();
 
-        inputs.flywheelVelocityRotationsPerSec = flywheelSim.getAngularVelocityRadPerSec() / (2 * Math.PI) * config.getFlywheelGearRatio();
+        inputs.flywheelVelocityRotationsPerSec = flywheelSim.getAngularVelocityRadPerSec() * 0.0485614385;
         inputs.flywheelAppliedVolts = flywheelSim.getInputVoltage();
 
-        inputs.feederVelocityRotationsPerSec = feederSim.getAngularVelocityRadPerSec() / (2 * Math.PI) * config.getFeederGearRatio();
+        inputs.feederVelocityRotationsPerSec = feederSim.getAngularVelocityRadPerSec() * 0.0485614385;
         inputs.feederAppliedVolts = feederSim.getInputVoltage();
 
         inputs.hoodTorqueCurrent = hoodSim.getCurrentDrawAmps();
@@ -124,21 +127,20 @@ public class ShooterIOSim implements ShooterIO {
 
     @Override
     public void setAngle(double angleRotations) {
-        hoodFeedback.setSetpoint(angleRotations / config.getHoodGearRatio() * 2 * Math.PI);
-        desiredHoodAngleRotations = angleRotations;
+        hoodFeedback.setGoal(angleRotations * (2 * Math.PI));
         isHoodClosedLoop = true;
     }
 
     @Override
     public void setShotVelocity(double velocityRotationsPerSec) {
-        flywheelFeedback.setSetpoint(velocityRotationsPerSec / config.getFlywheelGearRatio() * 2 * Math.PI);
+        flywheelFeedback.setSetpoint(velocityRotationsPerSec);
         desiredFlywheelVelocityRotationsPerSec = velocityRotationsPerSec;
         isFlywheelClosedLoop = true;
     }
 
     @Override
     public void setFeedVelocity(double velocityRotationsPerSec) {
-        feederFeedback.setSetpoint(velocityRotationsPerSec / config.getFeederGearRatio() * 2 * Math.PI);
+        feederFeedback.setSetpoint(velocityRotationsPerSec);
         desiredFeederVelocityRotationsPerSec = velocityRotationsPerSec;
         isFeederClosedLoop = true;
     }

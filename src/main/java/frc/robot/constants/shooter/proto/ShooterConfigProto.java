@@ -106,7 +106,7 @@ public class ShooterConfigProto extends ShooterConfigBase {
     }
 
     @Override
-    public double getHoodGearRatio() {
+    public double getHoodMotorToOutputShaftRatio() {
         return 100.0;
     }
 
@@ -197,7 +197,7 @@ public class ShooterConfigProto extends ShooterConfigBase {
     }
 
     @Override
-    public double getFlywheelGearRatio() {
+    public double getFlywheelMotorToOutputShaftRatio() {
         return 1.0;
     }
 
@@ -288,7 +288,7 @@ public class ShooterConfigProto extends ShooterConfigBase {
     }
 
     @Override
-    public double getFeederGearRatio() {
+    public double getFeederMotorToOutputShaftRatio() {
         return 5.0;
     }
 }

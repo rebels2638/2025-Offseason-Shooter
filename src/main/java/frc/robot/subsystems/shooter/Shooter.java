@@ -2,6 +2,7 @@ package frc.robot.subsystems.shooter;
 
 import org.littletonrobotics.junction.Logger;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.Constants;
 import frc.robot.constants.shooter.ShooterConfigBase;
@@ -59,15 +60,18 @@ public class Shooter extends SubsystemBase {
         Logger.processInputs("Shooter", shooterInputs);
     }
 
-    public void setAngle(double angleRotations) {
-        shooterIO.setAngle(angleRotations);
+    public void setAngle(Rotation2d angle) {
+        Logger.recordOutput("Shooter/angleSetpointRotations", angle.getRotations());
+        shooterIO.setAngle(angle.getRotations());
     }
 
     public void setShotVelocity(double velocityRotationsPerSec) {
+        Logger.recordOutput("Shooter/shotVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
         shooterIO.setShotVelocity(velocityRotationsPerSec);
     }
 
     public void setFeedVelocity(double velocityRotationsPerSec) {
+        Logger.recordOutput("Shooter/feedVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
         shooterIO.setFeedVelocity(velocityRotationsPerSec);
     }
 
