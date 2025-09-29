@@ -65,6 +65,9 @@ public class ShooterIOSim implements ShooterIO {
         feederFeedforward = new SimpleMotorFeedforward(config.getFeederKS(), config.getFeederKV(), config.getFeederKA());
 
         hoodFeedback.enableContinuousInput(-Math.PI, Math.PI);
+
+        // Initialize hood position to starting angle
+        hoodSim.setState(config.getHoodStartingAngleRotations() * 2 * Math.PI, 0);
     }
 
     @Override
@@ -127,7 +130,11 @@ public class ShooterIOSim implements ShooterIO {
 
     @Override
     public void setAngle(double angleRotations) {
-        hoodFeedback.setGoal(angleRotations * (2 * Math.PI));
+        // Clamp angle within software limits
+        double clampedAngle = MathUtil.clamp(angleRotations,
+            config.getHoodMinAngleRotations(),
+            config.getHoodMaxAngleRotations());
+        hoodFeedback.setGoal(clampedAngle * (2 * Math.PI));
         isHoodClosedLoop = true;
     }
 

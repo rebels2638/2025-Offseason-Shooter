@@ -27,6 +27,11 @@ public abstract class ShooterConfigBase {
 
     public abstract double getHoodMotorToOutputShaftRatio();
 
+    // Hood angle limits and starting position
+    public abstract double getHoodStartingAngleRotations();
+    public abstract double getHoodMinAngleRotations();
+    public abstract double getHoodMaxAngleRotations();
+
     // Flywheel motor config (velocity control)
     public abstract int getFlywheelCanId();
     public abstract boolean getIsFlywheelInverted();

@@ -110,6 +110,21 @@ public class ShooterConfigProto extends ShooterConfigBase {
         return 100.0;
     }
 
+    @Override
+    public double getHoodStartingAngleRotations() {
+        return 0.0;
+    }
+
+    @Override
+    public double getHoodMinAngleRotations() {
+        return -0.5;
+    }
+
+    @Override
+    public double getHoodMaxAngleRotations() {
+        return 0.5;
+    }
+
     // Flywheel motor config
     @Override
     public int getFlywheelCanId() {

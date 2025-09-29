@@ -87,10 +87,19 @@ public class ShooterIOTalonFX implements ShooterIO {
         hoodConfig.TorqueCurrent.PeakForwardTorqueCurrent = config.getHoodPeakForwardTorqueCurrent();
         hoodConfig.TorqueCurrent.PeakReverseTorqueCurrent = config.getHoodPeakReverseTorqueCurrent();
 
+        // Software limits for hood angle
+        hoodConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+        hoodConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = config.getHoodMaxAngleRotations();
+        hoodConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+        hoodConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = config.getHoodMinAngleRotations();
+
         hoodConfig.FutureProofConfigs = true;
 
         hoodMotor = new TalonFX(config.getHoodCanId(), config.getCanBusName());
         PhoenixUtil.tryUntilOk(5, () -> hoodMotor.getConfigurator().apply(hoodConfig, 0.25));
+
+        // Set starting angle offset
+        PhoenixUtil.tryUntilOk(5, () -> hoodMotor.setPosition(config.getHoodStartingAngleRotations(), 0.25));
 
         // Flywheel motor configuration (velocity control)
         TalonFXConfiguration flywheelConfig = new TalonFXConfiguration();
@@ -218,7 +227,10 @@ public class ShooterIOTalonFX implements ShooterIO {
 
     @Override
     public void setAngle(double angleRotations) {
-        hoodMotor.setControl(hoodMotorRequest.withPosition(angleRotations));
+        // Clamp angle within software limits
+        double clampedAngle = Math.max(config.getHoodMinAngleRotations(),
+            Math.min(config.getHoodMaxAngleRotations(), angleRotations));
+        hoodMotor.setControl(hoodMotorRequest.withPosition(clampedAngle));
     }
 
     @Override
