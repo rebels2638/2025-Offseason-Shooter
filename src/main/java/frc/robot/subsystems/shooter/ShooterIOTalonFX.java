@@ -28,12 +28,14 @@ public class ShooterIOTalonFX implements ShooterIO {
     private final TalonFX hoodMotor;
     private final TalonFX flywheelMotor;
     private final TalonFX feederMotor;
+    private final TalonFX indexerMotor;
 
     private final StatusSignal<Angle> hoodPositionStatusSignal;
     private final StatusSignal<AngularVelocity> hoodVelocityStatusSignal;
 
     private final StatusSignal<AngularVelocity> flywheelVelocityStatusSignal;
     private final StatusSignal<AngularVelocity> feederVelocityStatusSignal;
+    private final StatusSignal<AngularVelocity> indexerVelocityStatusSignal;
 
     private final StatusSignal<Current> hoodTorqueCurrent;
     private final StatusSignal<Temperature> hoodTemperature;
@@ -44,9 +46,13 @@ public class ShooterIOTalonFX implements ShooterIO {
     private final StatusSignal<Current> feederTorqueCurrent;
     private final StatusSignal<Temperature> feederTemperature;
 
+    private final StatusSignal<Current> indexerTorqueCurrent;
+    private final StatusSignal<Temperature> indexerTemperature;
+
     private final MotionMagicTorqueCurrentFOC hoodMotorRequest = new MotionMagicTorqueCurrentFOC(0).withSlot(0);
     private final VelocityTorqueCurrentFOC flywheelMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
     private final VelocityTorqueCurrentFOC feederMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
+    private final VelocityTorqueCurrentFOC indexerMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
 
     private final ShooterConfigBase config;
 
@@ -171,6 +177,41 @@ public class ShooterIOTalonFX implements ShooterIO {
         feederMotor = new TalonFX(config.getFeederCanId(), config.getCanBusName());
         PhoenixUtil.tryUntilOk(5, () -> feederMotor.getConfigurator().apply(feederConfig, 0.25));
 
+        // Indexer motor configuration (velocity control)
+        TalonFXConfiguration indexerConfig = new TalonFXConfiguration();
+
+        indexerConfig.Slot0.kP = config.getIndexerKP();
+        indexerConfig.Slot0.kI = config.getIndexerKI();
+        indexerConfig.Slot0.kD = config.getIndexerKD();
+        indexerConfig.Slot0.kS = config.getIndexerKS();
+        indexerConfig.Slot0.kV = config.getIndexerKV();
+        indexerConfig.Slot0.kA = config.getIndexerKA();
+        indexerConfig.Slot0.StaticFeedforwardSign = StaticFeedforwardSignValue.UseVelocitySign;
+
+        indexerConfig.ClosedLoopGeneral.ContinuousWrap = false;
+        indexerConfig.Feedback.SensorToMechanismRatio = config.getIndexerMotorToOutputShaftRatio();
+
+        indexerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        indexerConfig.MotorOutput.Inverted = config.getIsIndexerInverted() ?
+            InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
+
+        // Current and torque limiting
+        indexerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+        indexerConfig.CurrentLimits.SupplyCurrentLimit = config.getIndexerSupplyCurrentLimit();
+        indexerConfig.CurrentLimits.SupplyCurrentLowerLimit = config.getIndexerSupplyCurrentLimitLowerLimit();
+        indexerConfig.CurrentLimits.SupplyCurrentLowerTime = config.getIndexerSupplyCurrentLimitLowerTime();
+
+        indexerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+        indexerConfig.CurrentLimits.StatorCurrentLimit = config.getIndexerStatorCurrentLimit();
+
+        indexerConfig.TorqueCurrent.PeakForwardTorqueCurrent = config.getIndexerPeakForwardTorqueCurrent();
+        indexerConfig.TorqueCurrent.PeakReverseTorqueCurrent = config.getIndexerPeakReverseTorqueCurrent();
+
+        indexerConfig.FutureProofConfigs = true;
+
+        indexerMotor = new TalonFX(config.getIndexerCanId(), config.getCanBusName());
+        PhoenixUtil.tryUntilOk(5, () -> indexerMotor.getConfigurator().apply(indexerConfig, 0.25));
+
         // Status signals
         hoodTorqueCurrent = hoodMotor.getTorqueCurrent().clone();
         hoodTemperature = hoodMotor.getDeviceTemp().clone();
@@ -181,22 +222,29 @@ public class ShooterIOTalonFX implements ShooterIO {
         feederTorqueCurrent = feederMotor.getTorqueCurrent().clone();
         feederTemperature = feederMotor.getDeviceTemp().clone();
 
+        indexerTorqueCurrent = indexerMotor.getTorqueCurrent().clone();
+        indexerTemperature = indexerMotor.getDeviceTemp().clone();
+
         hoodPositionStatusSignal = hoodMotor.getPosition().clone();
         hoodVelocityStatusSignal = hoodMotor.getVelocity().clone();
 
         flywheelVelocityStatusSignal = flywheelMotor.getVelocity().clone();
         feederVelocityStatusSignal = feederMotor.getVelocity().clone();
+        indexerVelocityStatusSignal = indexerMotor.getVelocity().clone();
 
         BaseStatusSignal.setUpdateFrequencyForAll(100,
             hoodTorqueCurrent, hoodTemperature,
             flywheelTorqueCurrent, flywheelTemperature,
             feederTorqueCurrent, feederTemperature,
+            indexerTorqueCurrent, indexerTemperature,
             hoodPositionStatusSignal, hoodVelocityStatusSignal,
-            flywheelVelocityStatusSignal, feederVelocityStatusSignal);
+            flywheelVelocityStatusSignal, feederVelocityStatusSignal,
+            indexerVelocityStatusSignal);
 
         hoodMotor.optimizeBusUtilization();
         flywheelMotor.optimizeBusUtilization();
         feederMotor.optimizeBusUtilization();
+        indexerMotor.optimizeBusUtilization();
     }
 
     @Override
@@ -205,8 +253,10 @@ public class ShooterIOTalonFX implements ShooterIO {
             hoodTorqueCurrent, hoodTemperature,
             flywheelTorqueCurrent, flywheelTemperature,
             feederTorqueCurrent, feederTemperature,
+            indexerTorqueCurrent, indexerTemperature,
             hoodPositionStatusSignal, hoodVelocityStatusSignal,
-            flywheelVelocityStatusSignal, feederVelocityStatusSignal);
+            flywheelVelocityStatusSignal, feederVelocityStatusSignal,
+            indexerVelocityStatusSignal);
 
         inputs.hoodAngleRotations = hoodPositionStatusSignal.getValue().in(Rotations);
         inputs.hoodVelocityRotationsPerSec = hoodVelocityStatusSignal.getValue().in(RotationsPerSecond);
@@ -217,12 +267,17 @@ public class ShooterIOTalonFX implements ShooterIO {
         inputs.feederVelocityRotationsPerSec = feederVelocityStatusSignal.getValue().in(RotationsPerSecond);
         inputs.feederAppliedVolts = feederMotor.getMotorVoltage().getValueAsDouble();
 
+        inputs.indexerVelocityRotationsPerSec = indexerVelocityStatusSignal.getValue().in(RotationsPerSecond);
+        inputs.indexerAppliedVolts = indexerMotor.getMotorVoltage().getValueAsDouble();
+
         inputs.hoodTorqueCurrent = hoodTorqueCurrent.getValue().in(Amps);
         inputs.hoodTemperatureFahrenheit = hoodTemperature.getValue().in(Fahrenheit);
 
         inputs.flywheelTemperatureFahrenheit = flywheelTemperature.getValue().in(Fahrenheit);
 
         inputs.feederTemperatureFahrenheit = feederTemperature.getValue().in(Fahrenheit);
+
+        inputs.indexerTemperatureFahrenheit = indexerTemperature.getValue().in(Fahrenheit);
     }
 
     @Override
@@ -256,5 +311,15 @@ public class ShooterIOTalonFX implements ShooterIO {
     @Override
     public void setFeederVoltage(double voltage) {
         feederMotor.setControl(new VoltageOut(voltage));
+    }
+
+    @Override
+    public void setIndexerVelocity(double velocityRotationsPerSec) {
+        indexerMotor.setControl(indexerMotorRequest.withVelocity(velocityRotationsPerSec));
+    }
+
+    @Override
+    public void setIndexerVoltage(double voltage) {
+        indexerMotor.setControl(new VoltageOut(voltage));
     }
 }

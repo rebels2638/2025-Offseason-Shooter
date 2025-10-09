@@ -306,4 +306,95 @@ public class ShooterConfigSim extends ShooterConfigBase {
     public double getFeederMotorToOutputShaftRatio() {
         return 5.0;
     }
+
+    // Indexer motor config
+    @Override
+    public int getIndexerCanId() {
+        return 23;
+    }
+
+    @Override
+    public boolean getIsIndexerInverted() {
+        return false;
+    }
+
+    @Override
+    public double getIndexerSupplyCurrentLimit() {
+        return 30.0;
+    }
+
+    @Override
+    public double getIndexerSupplyCurrentLimitLowerTime() {
+        return 1.0;
+    }
+
+    @Override
+    public double getIndexerSupplyCurrentLimitLowerLimit() {
+        return 25.0;
+    }
+
+    @Override
+    public double getIndexerStatorCurrentLimit() {
+        return 40.0;
+    }
+
+    @Override
+    public double getIndexerPeakForwardTorqueCurrent() {
+        return 40.0;
+    }
+
+    @Override
+    public double getIndexerPeakReverseTorqueCurrent() {
+        return -40.0;
+    }
+
+    @Override
+    public double getIndexerKS() {
+        return 0;
+    }
+
+    @Override
+    public double getIndexerKV() {
+        return 2.44;
+    }
+
+    @Override
+    public double getIndexerKA() {
+        return 0.1;
+    }
+
+    @Override
+    public double getIndexerKP() {
+        return 0.3;
+    }
+
+    @Override
+    public double getIndexerKI() {
+        return 0.0;
+    }
+
+    @Override
+    public double getIndexerKD() {
+        return 0.0;
+    }
+
+    @Override
+    public double getIndexerMotionMagicCruiseVelocityRotationsPerSec() {
+        return 50.0;
+    }
+
+    @Override
+    public double getIndexerMotionMagicAccelerationRotationsPerSecSec() {
+        return 100.0;
+    }
+
+    @Override
+    public double getIndexerMotionMagicJerkRotationsPerSecSecSec() {
+        return 500.0;
+    }
+
+    @Override
+    public double getIndexerMotorToOutputShaftRatio() {
+        return 5.0;
+    }
 }

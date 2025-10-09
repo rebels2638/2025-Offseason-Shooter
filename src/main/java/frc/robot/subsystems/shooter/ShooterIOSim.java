@@ -15,6 +15,7 @@ public class ShooterIOSim implements ShooterIO {
     private final DCMotor hoodMotorModel = DCMotor.getKrakenX60Foc(1);
     private final DCMotor flywheelMotorModel = DCMotor.getKrakenX60Foc(1);
     private final DCMotor feederMotorModel = DCMotor.getKrakenX60Foc(1);
+    private final DCMotor indexerMotorModel = DCMotor.getKrakenX60Foc(1);
 
     private final DCMotorSim hoodSim =
         new DCMotorSim(
@@ -31,20 +32,29 @@ public class ShooterIOSim implements ShooterIO {
             LinearSystemId.createDCMotorSystem(feederMotorModel, (2.8087 * 0.0194 * 0.0485614385) / 6.12, 6.12),
             feederMotorModel
         );
+    private final DCMotorSim indexerSim =
+        new DCMotorSim(
+            LinearSystemId.createDCMotorSystem(indexerMotorModel, (2.8087 * 0.0194 * 0.0485614385) / 6.12, 6.12),
+            indexerMotorModel
+        );
 
     private ProfiledPIDController hoodFeedback;
     private PIDController flywheelFeedback;
     private PIDController feederFeedback;
+    private PIDController indexerFeedback;
 
     private SimpleMotorFeedforward flywheelFeedforward;
     private SimpleMotorFeedforward feederFeedforward;
+    private SimpleMotorFeedforward indexerFeedforward;
 
     private boolean isHoodClosedLoop = true;
     private boolean isFlywheelClosedLoop = true;
     private boolean isFeederClosedLoop = true;
+    private boolean isIndexerClosedLoop = true;
 
     private double desiredFlywheelVelocityRotationsPerSec = 0;
     private double desiredFeederVelocityRotationsPerSec = 0;
+    private double desiredIndexerVelocityRotationsPerSec = 0;
 
     private double lastTimeInputs = Timer.getTimestamp();
 
@@ -59,10 +69,12 @@ public class ShooterIOSim implements ShooterIO {
         );
         flywheelFeedback = new PIDController(config.getFlywheelKP(), config.getFlywheelKI(), config.getFlywheelKD());
         feederFeedback = new PIDController(config.getFeederKP(), config.getFeederKI(), config.getFeederKD());
+        indexerFeedback = new PIDController(config.getIndexerKP(), config.getIndexerKI(), config.getIndexerKD());
 
         // Initialize feedforward controllers with config values
         flywheelFeedforward = new SimpleMotorFeedforward(config.getFlywheelKS(), config.getFlywheelKV(), config.getFlywheelKA());
         feederFeedforward = new SimpleMotorFeedforward(config.getFeederKS(), config.getFeederKV(), config.getFeederKA());
+        indexerFeedforward = new SimpleMotorFeedforward(config.getIndexerKS(), config.getIndexerKV(), config.getIndexerKA());
 
         hoodFeedback.enableContinuousInput(-Math.PI, Math.PI);
 
@@ -107,9 +119,21 @@ public class ShooterIOSim implements ShooterIO {
             );
         }
 
+        if (isIndexerClosedLoop) {
+            indexerSim.setInputVoltage(
+                MathUtil.clamp(
+                    indexerFeedforward.calculate(desiredIndexerVelocityRotationsPerSec) +
+                    indexerFeedback.calculate(indexerSim.getAngularVelocityRadPerSec() * 0.0485614385),
+                    -12,
+                    12
+                )
+            );
+        }
+
         hoodSim.update(dt);
         flywheelSim.update(dt);
         feederSim.update(dt);
+        indexerSim.update(dt);
 
         inputs.hoodAngleRotations = hoodSim.getAngularPositionRotations();
         inputs.hoodVelocityRotationsPerSec = hoodSim.getAngularVelocityRadPerSec();
@@ -120,12 +144,16 @@ public class ShooterIOSim implements ShooterIO {
         inputs.feederVelocityRotationsPerSec = feederSim.getAngularVelocityRadPerSec() * 0.0485614385;
         inputs.feederAppliedVolts = feederSim.getInputVoltage();
 
+        inputs.indexerVelocityRotationsPerSec = indexerSim.getAngularVelocityRadPerSec() * 0.0485614385;
+        inputs.indexerAppliedVolts = indexerSim.getInputVoltage();
+
         inputs.hoodTorqueCurrent = hoodSim.getCurrentDrawAmps();
 
         // Simulation doesn't have temperature sensors, use default values
         inputs.hoodTemperatureFahrenheit = 70.0;
         inputs.flywheelTemperatureFahrenheit = 70.0;
         inputs.feederTemperatureFahrenheit = 70.0;
+        inputs.indexerTemperatureFahrenheit = 70.0;
     }
 
     @Override
@@ -168,5 +196,18 @@ public class ShooterIOSim implements ShooterIO {
     public void setFeederVoltage(double voltage) {
         feederSim.setInputVoltage(voltage);
         isFeederClosedLoop = false;
+    }
+
+    @Override
+    public void setIndexerVelocity(double velocityRotationsPerSec) {
+        indexerFeedback.setSetpoint(velocityRotationsPerSec);
+        desiredIndexerVelocityRotationsPerSec = velocityRotationsPerSec;
+        isIndexerClosedLoop = true;
+    }
+
+    @Override
+    public void setIndexerVoltage(double voltage) {
+        indexerSim.setInputVoltage(voltage);
+        isIndexerClosedLoop = false;
     }
 }

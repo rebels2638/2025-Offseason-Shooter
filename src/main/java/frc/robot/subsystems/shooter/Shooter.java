@@ -75,6 +75,11 @@ public class Shooter extends SubsystemBase {
         shooterIO.setFeedVelocity(velocityRotationsPerSec);
     }
 
+    public void setIndexerVelocity(double velocityRotationsPerSec) {
+        Logger.recordOutput("Shooter/indexerVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
+        shooterIO.setIndexerVelocity(velocityRotationsPerSec);
+    }
+
     public double getHoodAngleRotations() {
         return shooterInputs.hoodAngleRotations;
     }
@@ -85,5 +90,9 @@ public class Shooter extends SubsystemBase {
 
     public double getFeederVelocityRotationsPerSec() {
         return shooterInputs.feederVelocityRotationsPerSec;
+    }
+
+    public double getIndexerVelocityRotationsPerSec() {
+        return shooterInputs.indexerVelocityRotationsPerSec;
     }
 }

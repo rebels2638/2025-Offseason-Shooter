@@ -79,4 +79,28 @@ public abstract class ShooterConfigBase {
     public abstract double getFeederMotionMagicJerkRotationsPerSecSecSec();
 
     public abstract double getFeederMotorToOutputShaftRatio();
+
+    // Indexer motor config (velocity control)
+    public abstract int getIndexerCanId();
+    public abstract boolean getIsIndexerInverted();
+
+    public abstract double getIndexerSupplyCurrentLimit();
+    public abstract double getIndexerSupplyCurrentLimitLowerTime();
+    public abstract double getIndexerSupplyCurrentLimitLowerLimit();
+    public abstract double getIndexerStatorCurrentLimit();
+    public abstract double getIndexerPeakForwardTorqueCurrent();
+    public abstract double getIndexerPeakReverseTorqueCurrent();
+
+    public abstract double getIndexerKS();
+    public abstract double getIndexerKV();
+    public abstract double getIndexerKA();
+    public abstract double getIndexerKP();
+    public abstract double getIndexerKI();
+    public abstract double getIndexerKD();
+
+    public abstract double getIndexerMotionMagicCruiseVelocityRotationsPerSec();
+    public abstract double getIndexerMotionMagicAccelerationRotationsPerSecSec();
+    public abstract double getIndexerMotionMagicJerkRotationsPerSecSecSec();
+
+    public abstract double getIndexerMotorToOutputShaftRatio();
 }

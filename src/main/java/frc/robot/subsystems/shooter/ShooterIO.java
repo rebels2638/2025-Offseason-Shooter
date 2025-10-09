@@ -15,10 +15,14 @@ public interface ShooterIO {
         public double feederVelocityRotationsPerSec = 0;
         public double feederAppliedVolts = 0;
 
+        public double indexerVelocityRotationsPerSec = 0;
+        public double indexerAppliedVolts = 0;
+
         public double hoodTemperatureFahrenheit = 0;
 
         public double flywheelTemperatureFahrenheit = 0;
         public double feederTemperatureFahrenheit = 0;
+        public double indexerTemperatureFahrenheit = 0;
     }
 
     public default void updateInputs(ShooterIOInputs inputs) {}
@@ -28,4 +32,6 @@ public interface ShooterIO {
     public default void setHoodTorqueCurrentFOC(double torqueCurrentFOC) {}
     public default void setFlywheelVoltage(double voltage) {}
     public default void setFeederVoltage(double voltage) {}
+    public default void setIndexerVelocity(double velocityRotationsPerSec) {}
+    public default void setIndexerVoltage(double voltage) {}
 }
