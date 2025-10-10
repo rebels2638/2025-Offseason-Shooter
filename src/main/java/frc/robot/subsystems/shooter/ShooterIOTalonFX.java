@@ -56,12 +56,14 @@ public class ShooterIOTalonFX implements ShooterIO {
 
     private final ShooterConfigBase config;
 
+    private double startingAngleRotations;
+
     public ShooterIOTalonFX(ShooterConfigBase config) {
         this.config = config;
 
         // Hood motor configuration (positional control)
         TalonFXConfiguration hoodConfig = new TalonFXConfiguration();
-
+        startingAngleRotations = config.getHoodStartingAngleRotations();
         hoodConfig.Slot0.kP = config.getHoodKP();
         hoodConfig.Slot0.kI = config.getHoodKI();
         hoodConfig.Slot0.kD = config.getHoodKD();
@@ -95,17 +97,16 @@ public class ShooterIOTalonFX implements ShooterIO {
 
         // Software limits for hood angle
         hoodConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-        hoodConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = config.getHoodMaxAngleRotations();
+        hoodConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = config.getHoodMaxAngleRotations() - config.getHoodStartingAngleRotations();
         hoodConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-        hoodConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = config.getHoodMinAngleRotations();
+        hoodConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = config.getHoodMinAngleRotations() - config.getHoodStartingAngleRotations();
 
-        hoodConfig.FutureProofConfigs = true;
+        hoodConfig.FutureProofConfigs = false;
 
         hoodMotor = new TalonFX(config.getHoodCanId(), config.getCanBusName());
         PhoenixUtil.tryUntilOk(5, () -> hoodMotor.getConfigurator().apply(hoodConfig, 0.25));
 
         // Set starting angle offset
-        PhoenixUtil.tryUntilOk(5, () -> hoodMotor.setPosition(config.getHoodStartingAngleRotations(), 0.25));
 
         // Flywheel motor configuration (velocity control)
         TalonFXConfiguration flywheelConfig = new TalonFXConfiguration();
@@ -137,7 +138,7 @@ public class ShooterIOTalonFX implements ShooterIO {
         flywheelConfig.TorqueCurrent.PeakForwardTorqueCurrent = config.getFlywheelPeakForwardTorqueCurrent();
         flywheelConfig.TorqueCurrent.PeakReverseTorqueCurrent = config.getFlywheelPeakReverseTorqueCurrent();
 
-        flywheelConfig.FutureProofConfigs = true;
+        flywheelConfig.FutureProofConfigs = false;
 
         flywheelMotor = new TalonFX(config.getFlywheelCanId(), config.getCanBusName());
         PhoenixUtil.tryUntilOk(5, () -> flywheelMotor.getConfigurator().apply(flywheelConfig, 0.25));
@@ -172,7 +173,7 @@ public class ShooterIOTalonFX implements ShooterIO {
         feederConfig.TorqueCurrent.PeakForwardTorqueCurrent = config.getFeederPeakForwardTorqueCurrent();
         feederConfig.TorqueCurrent.PeakReverseTorqueCurrent = config.getFeederPeakReverseTorqueCurrent();
 
-        feederConfig.FutureProofConfigs = true;
+        feederConfig.FutureProofConfigs = false;
 
         feederMotor = new TalonFX(config.getFeederCanId(), config.getCanBusName());
         PhoenixUtil.tryUntilOk(5, () -> feederMotor.getConfigurator().apply(feederConfig, 0.25));
@@ -207,7 +208,7 @@ public class ShooterIOTalonFX implements ShooterIO {
         indexerConfig.TorqueCurrent.PeakForwardTorqueCurrent = config.getIndexerPeakForwardTorqueCurrent();
         indexerConfig.TorqueCurrent.PeakReverseTorqueCurrent = config.getIndexerPeakReverseTorqueCurrent();
 
-        indexerConfig.FutureProofConfigs = true;
+        indexerConfig.FutureProofConfigs = false;
 
         indexerMotor = new TalonFX(config.getIndexerCanId(), config.getCanBusName());
         PhoenixUtil.tryUntilOk(5, () -> indexerMotor.getConfigurator().apply(indexerConfig, 0.25));
@@ -245,6 +246,9 @@ public class ShooterIOTalonFX implements ShooterIO {
         flywheelMotor.optimizeBusUtilization();
         feederMotor.optimizeBusUtilization();
         indexerMotor.optimizeBusUtilization();
+
+        PhoenixUtil.tryUntilOk(5, () -> hoodMotor.setPosition(0, 0.25));
+
     }
 
     @Override
@@ -258,7 +262,7 @@ public class ShooterIOTalonFX implements ShooterIO {
             flywheelVelocityStatusSignal, feederVelocityStatusSignal,
             indexerVelocityStatusSignal);
 
-        inputs.hoodAngleRotations = hoodPositionStatusSignal.getValue().in(Rotations);
+        inputs.hoodAngleRotations = hoodPositionStatusSignal.getValue().in(Rotations) + startingAngleRotations;
         inputs.hoodVelocityRotationsPerSec = hoodVelocityStatusSignal.getValue().in(RotationsPerSecond);
 
         inputs.flywheelVelocityRotationsPerSec = flywheelVelocityStatusSignal.getValue().in(RotationsPerSecond);
