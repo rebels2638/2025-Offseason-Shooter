@@ -16,13 +16,13 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public String getCanBusName() {
-        return "rio";
+        return "drivetrain";
     }
 
     // Hood motor config
     @Override
     public int getHoodCanId() {
-        return 20;
+        return 19;
     }
 
     @Override
@@ -107,28 +107,28 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getHoodMotorToOutputShaftRatio() {
-        return 100.0; // 100:1 gear ratio
+        return 84/36; // 100:1 gear ratio
     }
 
     @Override
     public double getHoodStartingAngleRotations() {
-        return 0.0;
+        return 36/360;
     }
 
     @Override
     public double getHoodMinAngleRotations() {
-        return -0.5;
+        return 36/360;
     }
 
     @Override
     public double getHoodMaxAngleRotations() {
-        return 0.5;
+        return 150/360;
     }
 
     // Flywheel motor config
     @Override
     public int getFlywheelCanId() {
-        return 21;
+        return 16;
     }
 
     @Override
@@ -213,13 +213,13 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFlywheelMotorToOutputShaftRatio() {
-        return 1.0; // Direct drive
+        return 1.5; // Direct drive
     }
 
     // Feeder motor config
     @Override
     public int getFeederCanId() {
-        return 22;
+        return 35;
     }
 
     @Override
@@ -304,18 +304,18 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFeederMotorToOutputShaftRatio() {
-        return 5.0; // 5:1 gear ratio
+        return 3; // 5:1 gear ratio
     }
 
     // Indexer motor config
     @Override
     public int getIndexerCanId() {
-        return 23;
+        return 20;
     }
 
     @Override
     public boolean getIsIndexerInverted() {
-        return false;
+        return true;
     }
 
     @Override
@@ -395,6 +395,6 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getIndexerMotorToOutputShaftRatio() {
-        return 5.0; // 5:1 gear ratio
+        return 3; // 5:1 gear ratio
     }
 }
