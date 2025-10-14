@@ -33,22 +33,38 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
+        // return new SequentialCommandGroup(
+        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(0))),
+        //     new InstantCommand(() -> shooter.setShotVelocity(2)),
+        //     new InstantCommand(() -> shooter.setFeedVelocity(2)),
+        //     new WaitCommand(4),
+        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(90))),
+        //     new InstantCommand(() -> shooter.setShotVelocity(1)),
+        //     new InstantCommand(() -> shooter.setFeedVelocity(1)),
+        //     new WaitCommand(4),
+        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(180))),
+        //     new InstantCommand(() -> shooter.setShotVelocity(0)),
+        //     new InstantCommand(() -> shooter.setFeedVelocity(0)),
+        //     new WaitCommand(4),
+        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(270))),
+        //     new WaitCommand(4),
+        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(360)))
+        // );
+
         return new SequentialCommandGroup(
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(0))),
-            new InstantCommand(() -> shooter.setShotVelocity(2)),
-            new InstantCommand(() -> shooter.setFeedVelocity(2)),
-            new WaitCommand(4),
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(90))),
-            new InstantCommand(() -> shooter.setShotVelocity(1)),
-            new InstantCommand(() -> shooter.setFeedVelocity(1)),
-            new WaitCommand(4),
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(180))),
-            new InstantCommand(() -> shooter.setShotVelocity(0)),
-            new InstantCommand(() -> shooter.setFeedVelocity(0)),
-            new WaitCommand(4),
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(270))),
-            new WaitCommand(4),
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(360)))
-        );
+            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(40))),
+            new WaitCommand(1.5),
+            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(50))),
+            new WaitCommand(1.5),
+            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(60))),
+            new WaitCommand(1.5),
+            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(100))),
+            new WaitCommand(1.5),
+            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(125))),
+            new WaitCommand(1.5),
+            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(170))),
+            new WaitCommand(1.5),
+            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(38)))
+        );   
     }
 }

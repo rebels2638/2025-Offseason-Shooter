@@ -52,57 +52,57 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getHoodPeakForwardTorqueCurrent() {
-        return 40.0;
+        return 80.0;
     }
 
     @Override
     public double getHoodPeakReverseTorqueCurrent() {
-        return -40.0;
+        return -80.0;
     }
 
     @Override
     public double getHoodKS() {
-        return 0.1;
+        return 0;
     }
 
     @Override
     public double getHoodKV() {
-        return 0.12;
+        return 0;
     }
 
     @Override
     public double getHoodKA() {
-        return 0.01;
-    }
-
-    @Override
-    public double getHoodKP() {
-        return 50.0;
-    }
-
-    @Override
-    public double getHoodKI() {
         return 0.0;
     }
 
     @Override
+    public double getHoodKP() {
+        return 50; // 300
+    }
+
+    @Override
+    public double getHoodKI() {
+        return 1.8; // 10
+    }
+
+    @Override
     public double getHoodKD() {
-        return 5.0;
+        return 0; // 12
     }
 
     @Override
     public double getHoodMotionMagicCruiseVelocityRotationsPerSec() {
-        return 10.0;
+        return 4.0;
     }
 
     @Override
     public double getHoodMotionMagicAccelerationRotationsPerSecSec() {
-        return 20.0;
+        return 11.0;
     }
 
     @Override
     public double getHoodMotionMagicJerkRotationsPerSecSecSec() {
-        return 100.0;
+        return 40.0;
     }
 
     @Override
@@ -112,17 +112,17 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getHoodStartingAngleRotations() {
-        return 36/360;
+        return 36.0/360.0;
     }
 
     @Override
     public double getHoodMinAngleRotations() {
-        return 36/360;
+        return 36.0/360.0;
     }
 
     @Override
     public double getHoodMaxAngleRotations() {
-        return 150/360;
+        return 150.0/360.0;
     }
 
     // Flywheel motor config
@@ -158,32 +158,32 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFlywheelPeakForwardTorqueCurrent() {
-        return 80.0;
+        return 100.0;
     }
 
     @Override
     public double getFlywheelPeakReverseTorqueCurrent() {
-        return -80.0;
+        return -100.0;
     }
 
     @Override
     public double getFlywheelKS() {
-        return 0.1;
+        return 0.0;
     }
 
     @Override
     public double getFlywheelKV() {
-        return 0.002;
+        return 0.0;
     }
 
     @Override
     public double getFlywheelKA() {
-        return 0.0005;
+        return 0.0;
     }
 
     @Override
     public double getFlywheelKP() {
-        return 0.1;
+        return 0;
     }
 
     @Override
@@ -249,32 +249,32 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFeederPeakForwardTorqueCurrent() {
-        return 40.0;
+        return 80.0;
     }
 
     @Override
     public double getFeederPeakReverseTorqueCurrent() {
-        return -40.0;
+        return -80.0;
     }
 
     @Override
     public double getFeederKS() {
-        return 0.1;
+        return 0.0;
     }
 
     @Override
     public double getFeederKV() {
-        return 0.002;
+        return 0.00;
     }
 
     @Override
     public double getFeederKA() {
-        return 0.0005;
+        return 0.000;
     }
 
     @Override
     public double getFeederKP() {
-        return 0.1;
+        return 0;
     }
 
     @Override
@@ -340,32 +340,32 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getIndexerPeakForwardTorqueCurrent() {
-        return 40.0;
+        return 80.0;
     }
 
     @Override
     public double getIndexerPeakReverseTorqueCurrent() {
-        return -40.0;
+        return -80.0;
     }
 
     @Override
     public double getIndexerKS() {
-        return 0.1;
+        return 0.0;
     }
 
     @Override
     public double getIndexerKV() {
-        return 0.002;
+        return 0.00;
     }
 
     @Override
     public double getIndexerKA() {
-        return 0.0005;
+        return 0.000;
     }
 
     @Override
     public double getIndexerKP() {
-        return 0.1;
+        return 0;
     }
 
     @Override
