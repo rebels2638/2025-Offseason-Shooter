@@ -13,6 +13,7 @@ public interface ShooterIO {
 
         public double flywheelVelocityRotationsPerSec = 0;
         public double flywheelAppliedVolts = 0;
+        public double flywheelTorqueCurrent = 0;
 
         public double feederVelocityRotationsPerSec = 0;
         public double feederAppliedVolts = 0;

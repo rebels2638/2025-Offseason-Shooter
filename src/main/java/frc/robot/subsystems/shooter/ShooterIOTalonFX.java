@@ -9,6 +9,7 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
@@ -51,7 +52,7 @@ public class ShooterIOTalonFX implements ShooterIO {
     private final StatusSignal<Temperature> indexerTemperature;
 
     // private final MotionMagicTorqueCurrentFOC hoodMotorRequest = new MotionMagicTorqueCurrentFOC(0).withSlot(0);
-    private final MotionMagicVoltage hoodMotorRequest = new MotionMagicVoltage(0).withSlot(0);
+    private final PositionVoltage hoodMotorRequest = new PositionVoltage(0).withSlot(0);
 
     private final VelocityVoltage flywheelMotorRequest = new VelocityVoltage(0).withSlot(0);
     private final VelocityVoltage feederMotorRequest = new VelocityVoltage(0).withSlot(0);
@@ -273,6 +274,7 @@ public class ShooterIOTalonFX implements ShooterIO {
 
         inputs.feederVelocityRotationsPerSec = feederVelocityStatusSignal.getValue().in(RotationsPerSecond);
         inputs.feederAppliedVolts = feederMotor.getMotorVoltage().getValueAsDouble();
+        inputs.flywheelTorqueCurrent = flywheelTorqueCurrent.getValue().in(Amps);
 
         inputs.indexerVelocityRotationsPerSec = indexerVelocityStatusSignal.getValue().in(RotationsPerSecond);
         inputs.indexerAppliedVolts = indexerMotor.getMotorVoltage().getValueAsDouble();

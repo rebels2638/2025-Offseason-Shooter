@@ -53,18 +53,31 @@ public class RobotContainer {
 
         return new SequentialCommandGroup(
             new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(40))),
+            new InstantCommand(() -> shooter.setShotVelocity(1)),
             new WaitCommand(1.5),
+
             new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(50))),
+            new InstantCommand(() -> shooter.setShotVelocity(5)),
             new WaitCommand(1.5),
+
             new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(60))),
+            new InstantCommand(() -> shooter.setShotVelocity(20)),
             new WaitCommand(1.5),
+
             new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(100))),
+            new InstantCommand(() -> shooter.setShotVelocity(40)),
             new WaitCommand(1.5),
+            
             new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(125))),
+            new InstantCommand(() -> shooter.setShotVelocity(50)),
             new WaitCommand(1.5),
+
             new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(170))),
+            new InstantCommand(() -> shooter.setShotVelocity(60)),
             new WaitCommand(1.5),
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(38)))
+
+            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(38))),
+            new InstantCommand(() -> shooter.setShotVelocity(0))
         );   
     }
 }

@@ -32,7 +32,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getHoodSupplyCurrentLimit() {
-        return 30.0;
+        return 80.0;
     }
 
     @Override
@@ -42,12 +42,12 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getHoodSupplyCurrentLimitLowerLimit() {
-        return 25.0;
+        return 80.0;
     }
 
     @Override
     public double getHoodStatorCurrentLimit() {
-        return 40.0;
+        return 80.0;
     }
 
     @Override
@@ -82,12 +82,12 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getHoodKI() {
-        return 1.8; // 10
+        return 0.0; // 10
     }
 
     @Override
     public double getHoodKD() {
-        return 0; // 12
+        return 1.0; // 12
     }
 
     @Override
@@ -107,7 +107,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getHoodMotorToOutputShaftRatio() {
-        return 84/36; // 100:1 gear ratio
+        return 84.0/36.0; 
     }
 
     @Override
@@ -138,7 +138,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFlywheelSupplyCurrentLimit() {
-        return 60.0;
+        return 15.0;
     }
 
     @Override
@@ -148,32 +148,32 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFlywheelSupplyCurrentLimitLowerLimit() {
-        return 50.0;
+        return 15.0;
     }
 
     @Override
     public double getFlywheelStatorCurrentLimit() {
-        return 80.0;
+        return 15.0;
     }
 
     @Override
     public double getFlywheelPeakForwardTorqueCurrent() {
-        return 100.0;
+        return 15.0;
     }
 
     @Override
     public double getFlywheelPeakReverseTorqueCurrent() {
-        return -100.0;
+        return -15.0;
     }
 
     @Override
     public double getFlywheelKS() {
-        return 0.0;
+        return 0.1;
     }
 
     @Override
     public double getFlywheelKV() {
-        return 0.0;
+        return 0.188;
     }
 
     @Override
@@ -183,7 +183,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFlywheelKP() {
-        return 0;
+        return 0.2;
     }
 
     @Override
@@ -213,7 +213,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFlywheelMotorToOutputShaftRatio() {
-        return 1.5; // Direct drive
+        return 18.0/12.0; // Direct drive
     }
 
     // Feeder motor config
@@ -229,7 +229,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFeederSupplyCurrentLimit() {
-        return 30.0;
+        return 90.0;
     }
 
     @Override
@@ -239,22 +239,22 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFeederSupplyCurrentLimitLowerLimit() {
-        return 25.0;
+        return 90.0;
     }
 
     @Override
     public double getFeederStatorCurrentLimit() {
-        return 40.0;
+        return 90.0;
     }
 
     @Override
     public double getFeederPeakForwardTorqueCurrent() {
-        return 80.0;
+        return 90.0;
     }
 
     @Override
     public double getFeederPeakReverseTorqueCurrent() {
-        return -80.0;
+        return -90.0;
     }
 
     @Override
@@ -304,7 +304,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFeederMotorToOutputShaftRatio() {
-        return 3; // 5:1 gear ratio
+        return 3.0; // 5:1 gear ratio
     }
 
     // Indexer motor config
@@ -320,7 +320,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getIndexerSupplyCurrentLimit() {
-        return 30.0;
+        return 90.0;
     }
 
     @Override
@@ -330,22 +330,22 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getIndexerSupplyCurrentLimitLowerLimit() {
-        return 25.0;
+        return 90.0;
     }
 
     @Override
     public double getIndexerStatorCurrentLimit() {
-        return 40.0;
+        return 90.0;
     }
 
     @Override
     public double getIndexerPeakForwardTorqueCurrent() {
-        return 80.0;
+        return 90.0;
     }
 
     @Override
     public double getIndexerPeakReverseTorqueCurrent() {
-        return -80.0;
+        return -90.0;
     }
 
     @Override
@@ -395,6 +395,6 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getIndexerMotorToOutputShaftRatio() {
-        return 3; // 5:1 gear ratio
+        return 3.0; // 5:1 gear ratio
     }
 }
