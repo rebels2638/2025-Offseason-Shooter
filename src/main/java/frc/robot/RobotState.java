@@ -47,16 +47,11 @@ public class RobotState {
         double yawVelocityRadPerSec
     ) {}
 
-    public static enum VisionObservationScale {
-        GLOBAL,
-        LOCAL
-    }
 
     public record VisionObservation(
         Pose2d visionPose, 
         double timestamp, 
-        Matrix<N3, N1> stdDevs,
-        VisionObservationScale scale
+        Matrix<N3, N1> stdDevs
     ) {}
 
 
@@ -87,7 +82,6 @@ public class RobotState {
     private final ArrayList<Consumer<Translation2d>> onLocalVisionEstimateRunnables = new ArrayList<Consumer<Translation2d>>();
     private final ArrayList<Runnable> onGlobalVisionEstimateRunnables = new ArrayList<Runnable>();
 
-    private VisionObservationScale requestedObservationScale = VisionObservationScale.GLOBAL;
 
     private RobotState() {
         switch (Constants.currentMode) {
@@ -184,7 +178,6 @@ public class RobotState {
         }
 
         Logger.recordOutput("RobotState/vision/localVisionObservationUpdateCount", localVisionObservationUpdateCount);
-        Logger.recordOutput("RobotState/vision/requestedObservationScale", requestedObservationScale);
     }
 
     public void addVisionObservation(VisionObservation observation) {
@@ -203,45 +196,8 @@ public class RobotState {
         Logger.recordOutput("RobotState/vision/visionPose", observation.visionPose());
 
         swerveDrivePoseEstimator.addVisionMeasurement(observation.visionPose(), observation.timestamp(), observation.stdDevs());
-        if (observation.scale() == VisionObservationScale.LOCAL && requestedObservationScale == VisionObservationScale.LOCAL) {
-            localVisionObservationUpdateCount++;
-        }
-        else if (requestedObservationScale == VisionObservationScale.GLOBAL) {
-            localVisionObservationUpdateCount = 0;
-        }
-
         lastEstimatedPoseUpdateTime = Timer.getTimestamp();
     }
-
-
-    public void registerRunnableOnOdometryUpdate(Runnable runnable) {
-        onOdometryUpdateRunnables.add(runnable);
-    }
-
-    public void registerRunnableOnLocalVisionEstimateRequest(Consumer<Translation2d> runnable) {
-        onLocalVisionEstimateRunnables.add(runnable);
-    }
-
-    public void registerRunnableOnGlobalVisionEstimateRequest(Runnable runnable) {
-        onGlobalVisionEstimateRunnables.add(runnable);
-    }
-
-    public void requestGlobalVisionEstimateScale() {
-        for (Runnable runnable : onGlobalVisionEstimateRunnables) {
-            runnable.run();
-        }
-
-        requestedObservationScale = VisionObservationScale.GLOBAL;
-        localVisionObservationUpdateCount = 0;
-    }
-
-    public void requestLocalVisionEstimateScale(Translation2d pose) {
-        for (Consumer<Translation2d> runnable : onLocalVisionEstimateRunnables) {
-            runnable.accept(pose);
-        }
-
-        requestedObservationScale = VisionObservationScale.LOCAL;
-    }  
 
     /**
      * Reset estimated pose and odometry pose to pose <br>
@@ -256,14 +212,6 @@ public class RobotState {
 
     public void zeroGyro() {
         resetPose(new Pose2d(getEstimatedPose().getTranslation(), new Rotation2d()));
-    }
-
-    @AutoLogOutput(key = "RobotState/isPoseEstimateValid")
-    public boolean isPoseEstimateValid() {
-        if (requestedObservationScale == VisionObservationScale.LOCAL) {
-            return localVisionObservationUpdateCount >= robotStateConfig.getMinLocalVisionObservationCount();
-        }
-        return true;
     }
 
     @AutoLogOutput(key = "RobotState/estimatedPose")
