@@ -10,6 +10,7 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import frc.robot.constants.shooter.ShooterConfigBase;
+import frc.robot.lib.util.DashboardMotorControlLoopConfigurator.MotorControlLoopConfig;
 
 public class ShooterIOSim implements ShooterIO {
     private final DCMotor hoodMotorModel = DCMotor.getKrakenX60Foc(1);
@@ -209,5 +210,45 @@ public class ShooterIOSim implements ShooterIO {
     public void setIndexerVoltage(double voltage) {
         indexerSim.setInputVoltage(voltage);
         isIndexerClosedLoop = false;
+    }
+
+    @Override
+    public void configureHoodControlLoop(MotorControlLoopConfig config) {
+        hoodFeedback.setP(config.kP());
+        hoodFeedback.setI(config.kI());
+        hoodFeedback.setD(config.kD());
+    }
+
+    @Override
+    public void configureFlywheelControlLoop(MotorControlLoopConfig config) {
+        flywheelFeedback.setP(config.kP());
+        flywheelFeedback.setI(config.kI());
+        flywheelFeedback.setD(config.kD());
+
+        flywheelFeedforward.setKs(config.kS());
+        flywheelFeedforward.setKv(config.kV());
+        flywheelFeedforward.setKa(config.kA());
+    }
+    
+    @Override
+    public void configureFeederControlLoop(MotorControlLoopConfig config) {
+        feederFeedback.setP(config.kP());
+        feederFeedback.setI(config.kI());
+        feederFeedback.setD(config.kD());
+
+        feederFeedforward.setKs(config.kS());
+        feederFeedforward.setKv(config.kV());
+        feederFeedforward.setKa(config.kA());
+    }
+
+    @Override
+    public void configureIndexerControlLoop(MotorControlLoopConfig config) {
+        indexerFeedback.setP(config.kP());
+        indexerFeedback.setI(config.kI());
+        indexerFeedback.setD(config.kD());
+
+        indexerFeedforward.setKs(config.kS());
+        indexerFeedforward.setKv(config.kV());
+        indexerFeedforward.setKa(config.kA());
     }
 }

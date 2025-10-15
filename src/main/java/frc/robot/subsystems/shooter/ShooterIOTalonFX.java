@@ -5,15 +5,12 @@ import static edu.wpi.first.units.Units.Fahrenheit;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
-import org.littletonrobotics.junction.Logger;
-
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -25,6 +22,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Temperature;
 import frc.robot.constants.shooter.ShooterConfigBase;
+import frc.robot.lib.util.DashboardMotorControlLoopConfigurator.MotorControlLoopConfig;
 import frc.robot.lib.util.PhoenixUtil;
 
 public class ShooterIOTalonFX implements ShooterIO {
@@ -55,17 +53,21 @@ public class ShooterIOTalonFX implements ShooterIO {
     // private final MotionMagicTorqueCurrentFOC hoodMotorRequest = new MotionMagicTorqueCurrentFOC(0).withSlot(0);
     private final MotionMagicVoltage hoodMotorRequest = new MotionMagicVoltage(0).withSlot(0);
 
-    private final VelocityTorqueCurrentFOC flywheelMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
-    private final VelocityTorqueCurrentFOC feederMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
-    private final VelocityTorqueCurrentFOC indexerMotorRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
+    private final VelocityVoltage flywheelMotorRequest = new VelocityVoltage(0).withSlot(0);
+    private final VelocityVoltage feederMotorRequest = new VelocityVoltage(0).withSlot(0);
+    private final VelocityVoltage indexerMotorRequest = new VelocityVoltage(0).withSlot(0);
 
     private final ShooterConfigBase config;
+    private final TalonFXConfiguration hoodConfig;
+    private final TalonFXConfiguration flywheelConfig;
+    private final TalonFXConfiguration feederConfig;
+    private final TalonFXConfiguration indexerConfig;
 
     public ShooterIOTalonFX(ShooterConfigBase config) {
         this.config = config;
 
         // Hood motor configuration (positional control)
-        TalonFXConfiguration hoodConfig = new TalonFXConfiguration();
+        hoodConfig = new TalonFXConfiguration();
         hoodConfig.Slot0.kP = config.getHoodKP();
         hoodConfig.Slot0.kI = config.getHoodKI();
         hoodConfig.Slot0.kD = config.getHoodKD();
@@ -112,7 +114,7 @@ public class ShooterIOTalonFX implements ShooterIO {
         // Set starting angle offset
 
         // Flywheel motor configuration (velocity control)
-        TalonFXConfiguration flywheelConfig = new TalonFXConfiguration();
+        flywheelConfig = new TalonFXConfiguration();
 
         flywheelConfig.Slot0.kP = config.getFlywheelKP();
         flywheelConfig.Slot0.kI = config.getFlywheelKI();
@@ -144,10 +146,10 @@ public class ShooterIOTalonFX implements ShooterIO {
         flywheelConfig.FutureProofConfigs = false;
 
         flywheelMotor = new TalonFX(config.getFlywheelCanId(), config.getCanBusName());
-        PhoenixUtil.tryUntilOk(5, () -> flywheelMotor.getConfigurator().apply(flywheelConfig, 0.5));
+        PhoenixUtil.tryUntilOk(5, () -> flywheelMotor.getConfigurator().apply(flywheelConfig, 0.25));
 
         // Feeder motor configuration (velocity control)
-        TalonFXConfiguration feederConfig = new TalonFXConfiguration();
+        feederConfig = new TalonFXConfiguration();
 
         feederConfig.Slot0.kP = config.getFeederKP();
         feederConfig.Slot0.kI = config.getFeederKI();
@@ -179,10 +181,10 @@ public class ShooterIOTalonFX implements ShooterIO {
         feederConfig.FutureProofConfigs = false;
 
         feederMotor = new TalonFX(config.getFeederCanId(), config.getCanBusName());
-        PhoenixUtil.tryUntilOk(5, () -> feederMotor.getConfigurator().apply(feederConfig, 0.5));
+        PhoenixUtil.tryUntilOk(5, () -> feederMotor.getConfigurator().apply(feederConfig, 0.25));
 
         // Indexer motor configuration (velocity control)
-        TalonFXConfiguration indexerConfig = new TalonFXConfiguration();
+        indexerConfig = new TalonFXConfiguration();
 
         indexerConfig.Slot0.kP = config.getIndexerKP();
         indexerConfig.Slot0.kI = config.getIndexerKI();
@@ -214,7 +216,7 @@ public class ShooterIOTalonFX implements ShooterIO {
         indexerConfig.FutureProofConfigs = false;
 
         indexerMotor = new TalonFX(config.getIndexerCanId(), config.getCanBusName());
-        PhoenixUtil.tryUntilOk(5, () -> indexerMotor.getConfigurator().apply(indexerConfig, 0.5));
+        PhoenixUtil.tryUntilOk(5, () -> indexerMotor.getConfigurator().apply(indexerConfig, 0.25));
 
 
         // Status signals
@@ -327,4 +329,53 @@ public class ShooterIOTalonFX implements ShooterIO {
     public void setIndexerVoltage(double voltage) {
         indexerMotor.setControl(new VoltageOut(voltage));
     }
+
+    @Override
+    public void configureHoodControlLoop(MotorControlLoopConfig config) {
+        hoodConfig.Slot0.kP = config.kP();
+        hoodConfig.Slot0.kI = config.kI();
+        hoodConfig.Slot0.kD = config.kD();
+        hoodConfig.Slot0.kS = config.kS();
+        hoodConfig.Slot0.kV = config.kV();
+        hoodConfig.Slot0.kA = config.kA();
+
+        PhoenixUtil.tryUntilOk(5, () -> hoodMotor.getConfigurator().apply(hoodConfig, 0.25));
+    }
+
+    @Override
+    public void configureFlywheelControlLoop(MotorControlLoopConfig config) {
+        flywheelConfig.Slot0.kP = config.kP();
+        flywheelConfig.Slot0.kI = config.kI();
+        flywheelConfig.Slot0.kD = config.kD();
+        flywheelConfig.Slot0.kS = config.kS();
+        flywheelConfig.Slot0.kV = config.kV();
+        flywheelConfig.Slot0.kA = config.kA();
+
+        PhoenixUtil.tryUntilOk(5, () -> flywheelMotor.getConfigurator().apply(flywheelConfig, 0.25));
+    }
+
+    @Override
+    public void configureFeederControlLoop(MotorControlLoopConfig config) {
+        feederConfig.Slot0.kP = config.kP();
+        feederConfig.Slot0.kI = config.kI();
+        feederConfig.Slot0.kD = config.kD();
+        feederConfig.Slot0.kS = config.kS();
+        feederConfig.Slot0.kV = config.kV();
+        feederConfig.Slot0.kA = config.kA();
+
+        PhoenixUtil.tryUntilOk(5, () -> feederMotor.getConfigurator().apply(feederConfig, 0.25));
+    }
+
+    @Override
+    public void configureIndexerControlLoop(MotorControlLoopConfig config) {
+        indexerConfig.Slot0.kP = config.kP();
+        indexerConfig.Slot0.kI = config.kI();
+        indexerConfig.Slot0.kD = config.kD();
+        indexerConfig.Slot0.kS = config.kS();
+        indexerConfig.Slot0.kV = config.kV();
+        indexerConfig.Slot0.kA = config.kA();
+
+        PhoenixUtil.tryUntilOk(5, () -> indexerMotor.getConfigurator().apply(indexerConfig, 0.25));
+    }
+
 }
