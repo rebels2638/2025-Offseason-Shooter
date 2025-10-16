@@ -264,7 +264,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFeederKV() {
-        return 0.00;
+        return 0.3;
     }
 
     @Override
@@ -274,7 +274,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFeederKP() {
-        return 0;
+        return 0.1;
     }
 
     @Override
@@ -355,7 +355,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getIndexerKV() {
-        return 0.00;
+        return 0.3;
     }
 
     @Override
@@ -365,7 +365,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getIndexerKP() {
-        return 0;
+        return 0.1;
     }
 
     @Override
