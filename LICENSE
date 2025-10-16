@@ -1,6 +1,7 @@
 BSD 3-Clause License
 
-Copyright (c) 2025 Rebel Robotics (FRC 2638). All rights reserved.
+Copyright (c) 2025 Rebel Robotics (FRC 2638). 
+All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -19,9 +20,9 @@ IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL REBEL ROBOTICS OR CONTRIBUTORS BE LIABLE
 FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
@@ -30,15 +31,20 @@ SUCH DAMAGE.
 
 ### Attributions
 
-This project includes limited portions of code from the following open-source projects:
+This project incorporates limited portions of code from the following open-source projects:
+
+- **WPILib**  
+  © 2009–2024 FIRST and other WPILib contributors.  
+  Licensed under the BSD 3-Clause License.  
+  Source: <https://github.com/wpilibsuite/allwpilib>
 
 - **AdvantageKit**  
-  © 2021–2025 Littleton Robotics (FRC 6328 “Mechanical Advantage”).  
+  © 2021–2025 Littleton Robotics (FRC 6328 "Mechanical Advantage").  
   Licensed under the BSD 3-Clause License.  
-  Source: [https://github.com/Mechanical-Advantage/AdvantageKit](https://github.com/Mechanical-Advantage/AdvantageKit)
+  Source: <https://github.com/Mechanical-Advantage/AdvantageKit>
 
 - **PathPlanner**  
-  Includes a copy of the `FlippingUtil` class from PathPlanner.  
+  Includes a copy of the `FlippingUtil` class.  
   © mjansen4857 / PathPlanner contributors.  
   Licensed under the MIT License.  
-  Source: [https://github.com/mjansen4857/pathplanner/blob/main/pathplannerlib/src/main/java/com/pathplanner/lib/util/FlippingUtil.java](https://github.com/mjansen4857/pathplanner/blob/main/pathplannerlib/src/main/java/com/pathplanner/lib/util/FlippingUtil.java)
+  Source: <https://github.com/mjansen4857/pathplanner>
