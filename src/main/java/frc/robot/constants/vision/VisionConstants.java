@@ -7,15 +7,33 @@
 
 package frc.robot.constants.vision;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.logging.Logger;
+
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.wpilibj.Filesystem;
 
 public class VisionConstants {
   // AprilTag layout
-  public static AprilTagFieldLayout aprilTagLayout =
-      AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+  public static AprilTagFieldLayout aprilTagLayout;
+  private static final Logger logger = Logger.getLogger(VisionConstants.class.getName());
+
+  static {
+    try {
+      File layoutFile = new File(Filesystem.getDeployDirectory(), "custom_apriltag_field_layout.json");
+      aprilTagLayout = new AprilTagFieldLayout(layoutFile.getAbsolutePath());
+      logger.info("Loaded custom AprilTag field layout from deploy directory");
+    } catch (IOException e) {
+      // Fallback to default field layout if custom field fails to load
+      aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+      logger.severe("AprilTagFieldLayout failed to load: " + e.getMessage());
+      e.printStackTrace();
+    }
+  }
 
   // Camera names, must match names configured on coprocessor
   public static String camera0Name = "camera_0";
@@ -45,10 +63,9 @@ public class VisionConstants {
         1.0 // Camera 1
       };
 
-  // Multipliers to apply for MegaTag 2 observations
-  public static double linearStdDevMegatag2Factor = 0.5; // More stable than full 3D solve
-  public static double angularStdDevMegatag2Factor =
-      Double.POSITIVE_INFINITY; // No rotation data available
+  // Multipliers to apply for MegaTag 2 observations. less than 1 means more stable than full 3D solve (more weight)
+  public static double linearStdDevMegatag2Factor = Double.POSITIVE_INFINITY;; // More stable than full 3D solve but we reject for now
+  public static double angularStdDevMegatag2Factor = Double.POSITIVE_INFINITY; // No rotation data available
 
   // Rotation rate rejection thresholds
   public static double maxRotationRateMegatag1DegreesPerSecond = 180.0; // Reject MegaTag1 observations if rotating faster than this
