@@ -49,9 +49,9 @@ public class RobotState {
 
 
     public record VisionObservation(
-        Pose2d visionPose, 
-        double timestamp, 
-        Matrix<N3, N1> stdDevs
+        Pose2d visionRobotPoseMeters,
+        double timestampSeconds,
+        Matrix<N3, N1> visionMeasurementStdDevs
     ) {}
 
 
@@ -144,6 +144,15 @@ public class RobotState {
 
     /** Add odometry observation */
     public void addOdometryObservation(OdometryObservation observation) {
+        observation = new OdometryObservation(
+            observation.timestampsSeconds(),
+            observation.isGyroConnected(),
+            observation.modulePositions().clone(),
+            observation.moduleStates().clone(),
+            observation.yawPosition(),
+            observation.yawVelocityRadPerSec()
+        );
+        
         Logger.recordOutput("RobotState/odometry/timestamp", observation.timestampsSeconds());
         Logger.recordOutput("RobotState/odometry/isGyroConnected", observation.isGyroConnected());
         Logger.recordOutput("RobotState/odometry/modulePositions", observation.modulePositions());
@@ -183,7 +192,7 @@ public class RobotState {
     public void addVisionObservation(VisionObservation observation) {
         // If measurement is old enough to be outside the pose buffer's timespan, skip.
         try {
-            if (poseBuffer.getInternalBuffer().lastKey() - poseBufferSizeSeconds > observation.timestamp()) {
+            if (poseBuffer.getInternalBuffer().lastKey() - poseBufferSizeSeconds > observation.timestampSeconds()) {
                 return;
             }
         } 
@@ -192,10 +201,10 @@ public class RobotState {
             return;
         }
 
-        Logger.recordOutput("RobotState/vision/stdDevTranslation", observation.stdDevs().get(0,0));
-        Logger.recordOutput("RobotState/vision/visionPose", observation.visionPose());
+        Logger.recordOutput("RobotState/vision/stdDevTranslation", observation.visionMeasurementStdDevs().get(0,0));
+        Logger.recordOutput("RobotState/vision/visionPose", observation.visionRobotPoseMeters());
 
-        swerveDrivePoseEstimator.addVisionMeasurement(observation.visionPose(), observation.timestamp(), observation.stdDevs());
+        swerveDrivePoseEstimator.addVisionMeasurement(observation.visionRobotPoseMeters(), observation.timestampSeconds(), observation.visionMeasurementStdDevs());
         lastEstimatedPoseUpdateTime = Timer.getTimestamp();
     }
 

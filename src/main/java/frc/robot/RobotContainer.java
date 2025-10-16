@@ -5,8 +5,11 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
+import frc.robot.commands.AbsoluteFieldDrive;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.shooter.Shooter;
+import frc.robot.subsystems.swerve.SwerveDrive;
+import frc.robot.subsystems.vision.Vision;
 
 
 public class RobotContainer {
@@ -24,36 +27,26 @@ public class RobotContainer {
     private final XboxController xboxOperator;
 
     private final Shooter shooter = Shooter.getInstance();
-
+    private final RobotState robotState = RobotState.getInstance();
+    private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
+    private final Vision vision = Vision.getInstance();
 
     private RobotContainer() {
         this.xboxTester = new XboxController(1);
         this.xboxOperator = new XboxController(2);
         this.xboxDriver = new XboxController(3);
+
+        swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
+        xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
     }
 
     public Command getAutonomousCommand() {
-        // return new SequentialCommandGroup(
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(0))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(2)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(2)),
-        //     new WaitCommand(4),
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(90))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(1)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(1)),
-        //     new WaitCommand(4),
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(180))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(0)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(0)),
-        //     new WaitCommand(4),
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(270))),
-        //     new WaitCommand(4),
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(360)))
-        // );
-
         return new SequentialCommandGroup(
             new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(40))),
             new InstantCommand(() -> shooter.setShotVelocity(1)),
+            new InstantCommand(() -> shooter.setFeedVelocity(1)),
+            new InstantCommand(() -> shooter.setIndexerVelocity(1)),
+
             new WaitCommand(1.5),
 
             new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(50))),
