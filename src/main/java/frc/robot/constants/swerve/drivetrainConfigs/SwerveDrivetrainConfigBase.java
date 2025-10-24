@@ -1,9 +1,5 @@
 package frc.robot.constants.swerve.drivetrainConfigs;
 
-import com.pathplanner.lib.config.PIDConstants;
-import com.pathplanner.lib.config.RobotConfig;
-
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Translation2d;
 
 public abstract class SwerveDrivetrainConfigBase {
@@ -26,33 +22,6 @@ public abstract class SwerveDrivetrainConfigBase {
 
     public abstract Translation2d getBackRightPositionMeters();
 
-    public abstract RobotConfig getRobotConfig();
-
-    public abstract PIDConstants getPathplannerSteerPIDConfig();
-
-    public abstract PIDConstants getPathplannerDrivePIDConfig();
-
     public abstract double getRotationCompensationCoefficient();
 
-    public abstract PIDController getAutoAlignProfiledTranslationController();
-    public abstract PIDController getAutoAlignProfiledRotationController();
-
-    public abstract double getAutoAlignTranslationTolerance();
-    public abstract double getAutoAlignTranslationVeloTolerance();
-
-    public abstract double getAutoAlignRotationTolerance();
-    public abstract double getAutoAlignRotationVeloTolerance();
-
-    public abstract double getBumperLengthMeters();
-        
-    public abstract Translation2d getBranchOffsetFromRobotCenter();
-    public abstract Translation2d getAlgayOffsetFromRobotCenter();
-
-    public abstract double getMaxAlignmentTranslationVeloMetersPerSec();
-    public abstract double getMaxAlignmentRotationVeloRadPerSec();
-
-    public abstract double getMaxAlignmentTranslationalAcelMetersPerSecPerSec();
-    public abstract double getMaxAlignmentRotationAcelRadPerSecPerSec();
-
-    public abstract double getAlgayRecessPoseOffset();
 }
