@@ -2,7 +2,11 @@ package frc.robot.subsystems.shooter;
 
 import org.littletonrobotics.junction.Logger;
 
+import edu.wpi.first.math.InterpolatingMatrixTreeMap;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.Constants;
 import frc.robot.constants.shooter.ShooterConfigBase;
@@ -30,6 +34,11 @@ public class Shooter extends SubsystemBase {
     private final DashboardMotorControlLoopConfigurator flywheelControlLoopConfigurator;
     private final DashboardMotorControlLoopConfigurator feederControlLoopConfigurator;
     private final DashboardMotorControlLoopConfigurator indexerControlLoopConfigurator;
+
+    private double hoodSetpointRotations = 0.0;
+    private double flywheelSetpointRPS = 0.0;
+    private double feederSetpointRPS = 0.0;
+    private double indexerSetpointRPS = 0.0;
 
     private Shooter() {
         switch (Constants.currentMode) {
@@ -124,21 +133,25 @@ public class Shooter extends SubsystemBase {
         double clampedAngle = Math.max(config.getHoodMinAngleRotations(),
         Math.min(config.getHoodMaxAngleRotations(), angle.getRotations()));        
 
+        hoodSetpointRotations = clampedAngle;
         Logger.recordOutput("Shooter/angleSetpointRotations", clampedAngle);
         shooterIO.setAngle(clampedAngle);
     }
 
     public void setShotVelocity(double velocityRotationsPerSec) {
+        flywheelSetpointRPS = velocityRotationsPerSec;
         Logger.recordOutput("Shooter/shotVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
         shooterIO.setShotVelocity(velocityRotationsPerSec);
     }
 
     public void setFeedVelocity(double velocityRotationsPerSec) {
+        feederSetpointRPS = velocityRotationsPerSec;
         Logger.recordOutput("Shooter/feedVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
         shooterIO.setFeedVelocity(velocityRotationsPerSec);
     }
 
     public void setIndexerVelocity(double velocityRotationsPerSec) {
+        indexerSetpointRPS = velocityRotationsPerSec;
         Logger.recordOutput("Shooter/indexerVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
         shooterIO.setIndexerVelocity(velocityRotationsPerSec);
     }
@@ -151,11 +164,40 @@ public class Shooter extends SubsystemBase {
         return shooterInputs.flywheelVelocityRotationsPerSec;
     }
 
+    public double getShotExitVelocityMetersPerSec() {
+        return shooterInputs.flywheelVelocityRotationsPerSec * 2 * Math.PI * config.getFlywheelRadiusMeters() / 2; 
+        // divide by 2 because the flywheel is a pulling the ball along the hood radius
+    }
+
     public double getFeederVelocityRotationsPerSec() {
         return shooterInputs.feederVelocityRotationsPerSec;
     }
 
     public double getIndexerVelocityRotationsPerSec() {
         return shooterInputs.indexerVelocityRotationsPerSec;
+    }
+
+    public boolean isHoodAtSetpoint() {
+        return Math.abs(shooterInputs.hoodAngleRotations - hoodSetpointRotations) < config.getHoodAngleToleranceRotations();
+    }
+
+    public boolean isFlywheelAtSetpoint() {
+        return Math.abs(shooterInputs.flywheelVelocityRotationsPerSec - flywheelSetpointRPS) < config.getFlywheelVelocityToleranceRPS();
+    }
+
+    public boolean isFeederAtSetpoint() {
+        return Math.abs(shooterInputs.feederVelocityRotationsPerSec - feederSetpointRPS) < config.getFeederVelocityToleranceRPS();
+    }
+
+    public boolean isIndexerAtSetpoint() {
+        return Math.abs(shooterInputs.indexerVelocityRotationsPerSec - indexerSetpointRPS) < config.getIndexerVelocityToleranceRPS();
+    }
+
+    public InterpolatingMatrixTreeMap<Double, N2, N1> getLerpTable() {
+        return config.getLerpTable();
+    }
+
+    public Pose3d getShooterRelativePose() {
+        return config.getShooterPose3d();
     }
 }

@@ -1,5 +1,13 @@
 package frc.robot.constants.shooter.comp;
 
+import edu.wpi.first.math.InterpolatingMatrixTreeMap;
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.Nat;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
 import frc.robot.constants.shooter.ShooterConfigBase;
 
 public class ShooterConfigComp extends ShooterConfigBase {
@@ -15,6 +23,48 @@ public class ShooterConfigComp extends ShooterConfigBase {
     private ShooterConfigComp() {}
 
     @Override
+    public InterpolatingMatrixTreeMap<Double, N2, N1> getLerpTable() {
+        InterpolatingMatrixTreeMap<Double, N2, N1> table = new InterpolatingMatrixTreeMap<>();
+        table.put(0.2, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        table.put(0.4, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        table.put(0.6, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        table.put(0.8, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        table.put(1.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        table.put(1.2, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        table.put(1.4, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        table.put(1.6, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        table.put(1.8, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            125.0/360.0, // hood angle in rotations
+            2.0 // flywheel velocity in rotations per second
+        }));
+        return table;
+    }
+
+    @Override
     public String getCanBusName() {
         return "drivetrain";
     }
@@ -27,7 +77,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public boolean getIsHoodInverted() {
-        return false;
+        return true;
     }
 
     @Override
@@ -91,38 +141,24 @@ public class ShooterConfigComp extends ShooterConfigBase {
     }
 
     @Override
-    public double getHoodMotionMagicCruiseVelocityRotationsPerSec() {
-        return 4.0;
-    }
-
-    @Override
-    public double getHoodMotionMagicAccelerationRotationsPerSecSec() {
-        return 11.0;
-    }
-
-    @Override
-    public double getHoodMotionMagicJerkRotationsPerSecSecSec() {
-        return 40.0;
-    }
-
-    @Override
     public double getHoodMotorToOutputShaftRatio() {
         return 84.0/36.0; 
     }
 
+    // shot exit angle above horizontal
     @Override
     public double getHoodStartingAngleRotations() {
-        return 36.0/360.0;
+        return 54.0/360.0;
     }
 
     @Override
     public double getHoodMinAngleRotations() {
-        return 36.0/360.0;
+        return -120/360.0;
     }
 
     @Override
     public double getHoodMaxAngleRotations() {
-        return 150.0/360.0;
+        return 54.0/360.0; // 150
     }
 
     // Flywheel motor config
@@ -197,23 +233,25 @@ public class ShooterConfigComp extends ShooterConfigBase {
     }
 
     @Override
-    public double getFlywheelMotionMagicCruiseVelocityRotationsPerSec() {
-        return 100.0;
-    }
-
-    @Override
-    public double getFlywheelMotionMagicAccelerationRotationsPerSecSec() {
-        return 200.0;
-    }
-
-    @Override
-    public double getFlywheelMotionMagicJerkRotationsPerSecSecSec() {
-        return 1000.0;
-    }
-
-    @Override
     public double getFlywheelMotorToOutputShaftRatio() {
         return 18.0/12.0; // Direct drive
+    }
+
+    @Override
+    public double getFlywheelRadiusMeters() {
+        return 0.0508; // 2 inches in meters
+    }
+
+    @Override
+    public Pose3d getShooterPose3d() {
+        // Shooter position relative to robot center
+        // X: forward from robot center (meters)
+        // Y: left/right offset (meters, positive = left)
+        // Z: height above ground (meters)
+        return new Pose3d(
+            new Translation3d(0.25, 0.0, 0.2),
+            new Rotation3d(0.0, 0.0, 0.0)
+        );
     }
 
     // Feeder motor config
@@ -288,21 +326,6 @@ public class ShooterConfigComp extends ShooterConfigBase {
     }
 
     @Override
-    public double getFeederMotionMagicCruiseVelocityRotationsPerSec() {
-        return 50.0;
-    }
-
-    @Override
-    public double getFeederMotionMagicAccelerationRotationsPerSecSec() {
-        return 100.0;
-    }
-
-    @Override
-    public double getFeederMotionMagicJerkRotationsPerSecSecSec() {
-        return 500.0;
-    }
-
-    @Override
     public double getFeederMotorToOutputShaftRatio() {
         return 3.0; // 5:1 gear ratio
     }
@@ -360,7 +383,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getIndexerKA() {
-        return 0.000;
+        return 0.0;
     }
 
     @Override
@@ -379,22 +402,27 @@ public class ShooterConfigComp extends ShooterConfigBase {
     }
 
     @Override
-    public double getIndexerMotionMagicCruiseVelocityRotationsPerSec() {
-        return 50.0;
-    }
-
-    @Override
-    public double getIndexerMotionMagicAccelerationRotationsPerSecSec() {
-        return 100.0;
-    }
-
-    @Override
-    public double getIndexerMotionMagicJerkRotationsPerSecSecSec() {
-        return 500.0;
-    }
-
-    @Override
     public double getIndexerMotorToOutputShaftRatio() {
         return 3.0; // 5:1 gear ratio
+    }
+
+    @Override
+    public double getHoodAngleToleranceRotations() {
+        return 5.0 / 360.0;
+    }
+
+    @Override
+    public double getFlywheelVelocityToleranceRPS() {
+        return 3.0;
+    }
+
+    @Override
+    public double getFeederVelocityToleranceRPS() {
+        return 5.0;
+    }
+
+    @Override
+    public double getIndexerVelocityToleranceRPS() {
+        return 5.0;
     }
 }

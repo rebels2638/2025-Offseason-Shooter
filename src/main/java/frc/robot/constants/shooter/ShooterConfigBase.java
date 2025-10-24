@@ -1,6 +1,14 @@
 package frc.robot.constants.shooter;
 
+import edu.wpi.first.math.InterpolatingMatrixTreeMap;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
+
 public abstract class ShooterConfigBase {
+    // KEY: Ground distance to target (meters). VALUE: [Hood angle (rotations), Flywheel velocity (RPS)]
+    public abstract InterpolatingMatrixTreeMap<Double, N2, N1> getLerpTable();
+
     public abstract String getCanBusName();
 
     // Hood motor config (positional control)
@@ -20,10 +28,6 @@ public abstract class ShooterConfigBase {
     public abstract double getHoodKP();
     public abstract double getHoodKI();
     public abstract double getHoodKD();
-
-    public abstract double getHoodMotionMagicCruiseVelocityRotationsPerSec();
-    public abstract double getHoodMotionMagicAccelerationRotationsPerSecSec();
-    public abstract double getHoodMotionMagicJerkRotationsPerSecSecSec();
 
     public abstract double getHoodMotorToOutputShaftRatio();
 
@@ -50,11 +54,11 @@ public abstract class ShooterConfigBase {
     public abstract double getFlywheelKI();
     public abstract double getFlywheelKD();
 
-    public abstract double getFlywheelMotionMagicCruiseVelocityRotationsPerSec();
-    public abstract double getFlywheelMotionMagicAccelerationRotationsPerSecSec();
-    public abstract double getFlywheelMotionMagicJerkRotationsPerSecSecSec();
-
     public abstract double getFlywheelMotorToOutputShaftRatio();
+    public abstract double getFlywheelRadiusMeters();
+
+    // Shooter pose relative to robot center
+    public abstract Pose3d getShooterPose3d();
 
     // Feeder motor config (velocity control)
     public abstract int getFeederCanId();
@@ -73,10 +77,6 @@ public abstract class ShooterConfigBase {
     public abstract double getFeederKP();
     public abstract double getFeederKI();
     public abstract double getFeederKD();
-
-    public abstract double getFeederMotionMagicCruiseVelocityRotationsPerSec();
-    public abstract double getFeederMotionMagicAccelerationRotationsPerSecSec();
-    public abstract double getFeederMotionMagicJerkRotationsPerSecSecSec();
 
     public abstract double getFeederMotorToOutputShaftRatio();
 
@@ -98,9 +98,11 @@ public abstract class ShooterConfigBase {
     public abstract double getIndexerKI();
     public abstract double getIndexerKD();
 
-    public abstract double getIndexerMotionMagicCruiseVelocityRotationsPerSec();
-    public abstract double getIndexerMotionMagicAccelerationRotationsPerSecSec();
-    public abstract double getIndexerMotionMagicJerkRotationsPerSecSecSec();
-
     public abstract double getIndexerMotorToOutputShaftRatio();
+
+    // Tolerances
+    public abstract double getHoodAngleToleranceRotations();
+    public abstract double getFlywheelVelocityToleranceRPS();
+    public abstract double getFeederVelocityToleranceRPS();
+    public abstract double getIndexerVelocityToleranceRPS();
 }
