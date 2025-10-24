@@ -4,6 +4,7 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.InterpolatingMatrixTreeMap;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
@@ -131,11 +132,12 @@ public class Shooter extends SubsystemBase {
     }
 
     public void setAngle(Rotation2d angle) {
-        double clampedAngle = Math.max(config.getHoodMinAngleRotations(),
-        Math.min(config.getHoodMaxAngleRotations(), angle.getRotations()));        
+        double clampedAngle = MathUtil.clamp(angle.getRotations(), config.getHoodMinAngleRotations(), config.getHoodMaxAngleRotations()); 
 
         hoodSetpointRotations = clampedAngle;
         Logger.recordOutput("Shooter/angleSetpointRotations", clampedAngle);
+        Logger.recordOutput("Shooter/rawSetpointRotations", clampedAngle);
+
         shooterIO.setAngle(clampedAngle);
     }
 

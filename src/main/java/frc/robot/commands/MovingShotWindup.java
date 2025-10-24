@@ -16,17 +16,26 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.RobotState;
-import frc.robot.VisualizeShot;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.swerve.SwerveDrive;
+import frc.robot.constants.Constants;
 
 public class MovingShotWindup extends Command {
     
     private static final double GRAVITY = 9.81; // m/s^2
-    private static final LoggedNetworkNumber LATENCY_COMPENSATION_SECONDS = new LoggedNetworkNumber("MovingShotWindup/latencyCompensationSeconds", 0.0); // seconds
-    
+    private static final LoggedNetworkNumber LATENCY_COMPENSATION_SECONDS = new LoggedNetworkNumber("MovingShotWindup/latencyCompensationSeconds", 
+        switch (Constants.currentMode) {
+            case COMP -> 0.6;
+            case SIM -> 0.6;
+            case PROTO -> 0.6;
+            case REPLAY -> 0.6;
+            default -> 0.6;
+        }
+    );
+        
     private final Shooter shooter = Shooter.getInstance();
     private final RobotState robotState = RobotState.getInstance();
     private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
@@ -118,8 +127,10 @@ public class MovingShotWindup extends Command {
             if (discriminant < 0) {
                 // Can't reach target (would require negative time), use simplified calculation
                 shotFlightTime = shooterDistanceToTarget / exitVelocityHorizontal;
+                Logger.recordOutput("MovingShotWindup/discriminantZero", true);
             } else {
                 shotFlightTime = (exitVelocityVertical + Math.sqrt(discriminant)) / GRAVITY;
+                Logger.recordOutput("MovingShotWindup/discriminantZero", false);
             }
             
             Logger.recordOutput("MovingShotWindup/iterationFlightTime", shotFlightTime);
@@ -169,6 +180,8 @@ public class MovingShotWindup extends Command {
         // Log diagnostic information
         Logger.recordOutput("MovingShotWindup/shooterAngleToTarget", shooterAngleToTarget);
         Logger.recordOutput("MovingShotWindup/shooterDistanceToTarget", shooterDistanceToTarget);
+        Logger.recordOutput("MovingShotWindup/inputTargetPosition", new Pose2d(targetTranslation, new Rotation2d()));
+        Logger.recordOutput("MovingShotWindup/offsetTargetPosition", new Pose2d(new Translation2d(targetX, targetY), new Rotation2d()));
         Logger.recordOutput("MovingShotWindup/shotFlightTime", shotFlightTime);
         Logger.recordOutput("MovingShotWindup/shooterHeight", shooterPose.getZ());
         Logger.recordOutput("MovingShotWindup/shooterYaw", shooterPose.getRotation().getZ());
@@ -202,12 +215,12 @@ public class MovingShotWindup extends Command {
     
     @Override
     public void end(boolean interrupted) {
-        
         ChassisSpeeds desiredSwerveSpeeds = desiredSwerveSpeedsSupplier.get();
         desiredSwerveSpeeds.omegaRadiansPerSecond = 0.0;
         swerveDrive.driveFieldRelative(desiredSwerveSpeeds);
-        new VisualizeShot();
         isShotValid = false; 
+        Logger.recordOutput("MovingShotWindup/endTime", Timer.getFPGATimestamp());
+
         // System.out.println("MovingShotWindup: Command ended. Interrupted = " + interrupted);
         Logger.recordOutput("MovingShotWindup/isActive", false);
     }

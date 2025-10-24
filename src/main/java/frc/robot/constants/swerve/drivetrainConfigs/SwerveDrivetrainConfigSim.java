@@ -100,11 +100,11 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getRotationToleranceDeg() {
-        return 5.0;
+        return 4.0;
     }
 
     @Override
     public double getRotationVelocityToleranceDegPerSec() {
-        return 18.0;
+        return 5.0;
     }
 }

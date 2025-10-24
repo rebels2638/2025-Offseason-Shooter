@@ -2,6 +2,7 @@ package frc.robot.lib.util;
 
 import org.littletonrobotics.junction.Logger;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -45,7 +46,16 @@ public class ProjectileVisualizer extends Command {
         this.initialVx = robotVx;
         this.initialVy = robotVy;
         this.launchVelocity = launchVelocity;
-        this.initialPose = launchPose;
+        this.initialPose = new Pose3d(
+            launchPose.getX(),
+            launchPose.getY(),
+            launchPose.getZ(),
+            new Rotation3d(
+                launchPose.getRotation().getX(),
+                launchPose.getRotation().getY(),
+                launchPose.getRotation().getZ()
+            )
+        );
     }
     
     @Override
@@ -89,7 +99,7 @@ public class ProjectileVisualizer extends Command {
         // z(t) = z0 + vz0 * t - 0.5 * g * t^2
         double x = initialPose.getX() + vx0 * t;
         double y = initialPose.getY() + vy0 * t;
-        double z = initialPose.getZ() + vz0 * t - 0.5 * GRAVITY * t * t;
+        double z = MathUtil.clamp(initialPose.getZ() + vz0 * t - 0.5 * GRAVITY * t * t, 0, Double.POSITIVE_INFINITY);
         
         // Update current position
         currentPosition = new Translation3d(x, y, z);
@@ -117,6 +127,6 @@ public class ProjectileVisualizer extends Command {
     @Override
     public boolean isFinished() {
         // End when projectile reaches negative z (hits the ground)
-        return currentPosition.getZ() < 0;
+        return currentPosition.getZ() <= 0;
     }
 }

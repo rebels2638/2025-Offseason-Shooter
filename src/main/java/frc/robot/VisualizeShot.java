@@ -5,6 +5,7 @@ import org.littletonrobotics.junction.Logger;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.wpilibj.Timer;
 import frc.robot.lib.util.ProjectileVisualizer;
 import frc.robot.subsystems.shooter.Shooter;
 
@@ -35,6 +36,8 @@ public class VisualizeShot {
         shooterPose = new Pose3d(shooterPose.getTranslation(), newRotation);
 
         Logger.recordOutput("VisualizeShot/shooterPose", shooterPose);
+        Logger.recordOutput("VisualizeShot/launchTime", Timer.getFPGATimestamp());
+
         new ProjectileVisualizer(
             RobotState.getInstance().getFieldRelativeSpeeds().vxMetersPerSecond,
             RobotState.getInstance().getFieldRelativeSpeeds().vyMetersPerSecond,
