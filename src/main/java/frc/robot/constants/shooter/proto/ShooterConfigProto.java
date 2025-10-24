@@ -63,6 +63,16 @@ public class ShooterConfigProto extends ShooterConfigBase {
         }));
         return table;
     }
+
+    @Override
+    public double getMinShotDistFromShooterMeters() {
+        return 0.2;
+    }
+
+    @Override
+    public double getMaxShotDistFromShooterMeters() {
+        return 1.8;
+    }
     
     @Override
     public String getCanBusName() {

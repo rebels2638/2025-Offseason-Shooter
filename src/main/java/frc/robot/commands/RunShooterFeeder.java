@@ -19,6 +19,11 @@ public class RunShooterFeeder extends Command {
     }
 
     @Override
+    public void execute() {
+        shooter.setFeedVelocity(velocityRotationsPerSec);
+    }
+
+    @Override
     public boolean isFinished() {
         return shooter.isFeederAtSetpoint();
     }

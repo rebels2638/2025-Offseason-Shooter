@@ -20,6 +20,11 @@ public class RunShooterHood extends Command {
     }
 
     @Override
+    public void execute() {
+        shooter.setAngle(angle);
+    }
+
+    @Override
     public boolean isFinished() {
         return shooter.isHoodAtSetpoint();
     }

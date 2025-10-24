@@ -19,6 +19,11 @@ public class RunShooterFlywheel extends Command {
     }
 
     @Override
+    public void execute() {
+        shooter.setShotVelocity(velocityRotationsPerSec);
+    }
+
+    @Override
     public boolean isFinished() {
         return shooter.isFlywheelAtSetpoint();
     }

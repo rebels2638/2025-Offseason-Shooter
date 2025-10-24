@@ -1,5 +1,6 @@
 package frc.robot.constants.swerve.drivetrainConfigs;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Translation2d;
 
 public abstract class SwerveDrivetrainConfigBase {
@@ -23,5 +24,14 @@ public abstract class SwerveDrivetrainConfigBase {
     public abstract Translation2d getBackRightPositionMeters();
 
     public abstract double getRotationCompensationCoefficient();
+
+    public abstract PIDController getTranslationController();
+    public abstract PIDController getRotationController();
+
+    public abstract double getTranslationToleranceMeters();
+    public abstract double getTranslationVelocityToleranceMeters();
+
+    public abstract double getRotationToleranceDeg();
+    public abstract double getRotationVelocityToleranceDegPerSec();
 
 }

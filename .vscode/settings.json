@@ -3,7 +3,9 @@
     "cSpell.words": [
         "apriltag",
         "desaturated",
+        "lerp",
         "setpoint",
-        "Setpoints"
+        "Setpoints",
+        "teleop"
     ]
 }

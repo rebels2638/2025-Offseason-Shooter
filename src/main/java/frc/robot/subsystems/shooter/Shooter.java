@@ -1,5 +1,6 @@
 package frc.robot.subsystems.shooter;
 
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.InterpolatingMatrixTreeMap;
@@ -164,9 +165,12 @@ public class Shooter extends SubsystemBase {
         return shooterInputs.flywheelVelocityRotationsPerSec;
     }
 
-    public double getShotExitVelocityMetersPerSec() {
-        return shooterInputs.flywheelVelocityRotationsPerSec * 2 * Math.PI * config.getFlywheelRadiusMeters() / 2; 
+    public double calculateShotExitVelocityMetersPerSec(double flywheelVelocityRotationsPerSec) {
+        return flywheelVelocityRotationsPerSec * 2 * Math.PI * config.getFlywheelRadiusMeters() / 2; 
         // divide by 2 because the flywheel is a pulling the ball along the hood radius
+    }
+    public double getShotExitVelocityMetersPerSec() {
+        return calculateShotExitVelocityMetersPerSec(shooterInputs.flywheelVelocityRotationsPerSec);
     }
 
     public double getFeederVelocityRotationsPerSec() {
@@ -177,14 +181,17 @@ public class Shooter extends SubsystemBase {
         return shooterInputs.indexerVelocityRotationsPerSec;
     }
 
+    @AutoLogOutput(key = "Shooter/isHoodAtSetpoint")
     public boolean isHoodAtSetpoint() {
         return Math.abs(shooterInputs.hoodAngleRotations - hoodSetpointRotations) < config.getHoodAngleToleranceRotations();
     }
 
+    @AutoLogOutput(key = "Shooter/isFlywheelAtSetpoint")
     public boolean isFlywheelAtSetpoint() {
         return Math.abs(shooterInputs.flywheelVelocityRotationsPerSec - flywheelSetpointRPS) < config.getFlywheelVelocityToleranceRPS();
     }
 
+    @AutoLogOutput(key = "Shooter/isFeederAtSetpoint")
     public boolean isFeederAtSetpoint() {
         return Math.abs(shooterInputs.feederVelocityRotationsPerSec - feederSetpointRPS) < config.getFeederVelocityToleranceRPS();
     }
@@ -199,5 +206,13 @@ public class Shooter extends SubsystemBase {
 
     public Pose3d getShooterRelativePose() {
         return config.getShooterPose3d();
+    }
+
+    public double getMinShotDistFromShooterMeters() {
+        return config.getMinShotDistFromShooterMeters();
+    }
+
+    public double getMaxShotDistFromShooterMeters() {
+        return config.getMaxShotDistFromShooterMeters();
     }
 }

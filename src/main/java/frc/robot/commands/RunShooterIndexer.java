@@ -19,6 +19,11 @@ public class RunShooterIndexer extends Command {
     }
 
     @Override
+    public void execute() {
+        shooter.setIndexerVelocity(velocityRotationsPerSec);
+    }
+
+    @Override
     public boolean isFinished() {
         return shooter.isIndexerAtSetpoint();
     }

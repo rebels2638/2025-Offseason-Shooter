@@ -23,6 +23,8 @@ public class ShooterConfigSim extends ShooterConfigBase {
     private ShooterConfigSim() {}
     
     @Override
+    // angle rotations, flywheel velocity in rotations per second
+    // distance is distance from shooter itself to target in meters
     public InterpolatingMatrixTreeMap<Double, N2, N1> getLerpTable() {
         // Calculated using projectile motion with:
         // - Flywheel radius: 0.0508m (2 inches)
@@ -128,6 +130,16 @@ public class ShooterConfigSim extends ShooterConfigBase {
         }));
         
         return table;
+    }
+
+    @Override
+    public double getMinShotDistFromShooterMeters() {
+        return 0.5;
+    }
+
+    @Override
+    public double getMaxShotDistFromShooterMeters() {
+        return 9.5;
     }
 
     @Override

@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -393,5 +394,17 @@ public class SwerveDrive extends SubsystemBase {
 
     public Command getQuasistaticSteerCharacterizationSysIdRoutine(Direction direction) {
         return steerCharacterizationSysIdRoutine.quasistatic(direction);
+    }
+
+    public PIDController getRotationController() {
+        return drivetrainConfig.getRotationController();
+    }
+
+    public double getRotationToleranceDeg() {
+        return drivetrainConfig.getRotationToleranceDeg();
+    }
+
+    public double getRotationVelocityToleranceDegPerSec() {
+        return drivetrainConfig.getRotationVelocityToleranceDegPerSec();
     }
 }

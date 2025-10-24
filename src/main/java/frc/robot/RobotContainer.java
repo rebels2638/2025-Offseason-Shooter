@@ -1,12 +1,14 @@
 package frc.robot;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.robot.commands.AbsoluteFieldDrive;
 import frc.robot.commands.DistanceShotWindup;
+import frc.robot.commands.MovingShotWindup;
 import frc.robot.commands.TunableShotFire;
 import frc.robot.commands.TunableShotWindup;
 import frc.robot.lib.input.XboxController;
@@ -34,13 +36,32 @@ public class RobotContainer {
     private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
     private final Vision vision = Vision.getInstance();
 
+    private final AbsoluteFieldDrive absoluteFieldDrive;
+
     private RobotContainer() {
         this.xboxTester = new XboxController(1);
         this.xboxOperator = new XboxController(2);
         this.xboxDriver = new XboxController(3);
 
-        swerveDrive.setDefaultCommand(new AbsoluteFieldDrive(xboxDriver));
+        AbsoluteFieldDrive absoluteFieldDrive = new AbsoluteFieldDrive(xboxDriver);
+        this.absoluteFieldDrive = absoluteFieldDrive;
+        // Command movingShotWindup = new MovingShotWindup(new Translation3d(5, 10, 0), absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier(), 5);
+        swerveDrive.setDefaultCommand(absoluteFieldDrive);
+        // shooter.setDefaultCommand(movingShotWindup);
+
+        this.xboxDriver.getAButton().whileTrue(
+            new MovingShotWindup(
+                new Translation3d(5, 10, 0), 
+                absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier(), 5)
+            .andThen(new TunableShotFire())
+        );
+
         // xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
+    }
+
+    public void teleopInit() {
+        // Command command = 
+        // command.schedule();
     }
 
     public Command getAutonomousCommand() {

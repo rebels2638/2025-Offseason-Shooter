@@ -105,4 +105,8 @@ public abstract class ShooterConfigBase {
     public abstract double getFlywheelVelocityToleranceRPS();
     public abstract double getFeederVelocityToleranceRPS();
     public abstract double getIndexerVelocityToleranceRPS();
+
+    // Shot distance limits (from shooter, not robot center)
+    public abstract double getMinShotDistFromShooterMeters();
+    public abstract double getMaxShotDistFromShooterMeters();
 }

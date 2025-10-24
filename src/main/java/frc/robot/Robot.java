@@ -161,6 +161,8 @@ public class Robot extends LoggedRobot {
             m_autonomousCommand.cancel();
         }
 
+        m_robotContainer.teleopInit();
+
         // m_robotContainer.offsetAngle();
     }
 

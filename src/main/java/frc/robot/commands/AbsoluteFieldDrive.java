@@ -1,6 +1,7 @@
 package frc.robot.commands;
 
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import org.littletonrobotics.junction.Logger;
 
@@ -92,5 +93,13 @@ public class AbsoluteFieldDrive extends Command {
     @Override
     public boolean isFinished() {
         return false; // This command runs indefinitely until interrupted.
+    }
+
+    public Supplier<ChassisSpeeds> getDesiredFieldRelativeSpeedsSupplier() {
+        return () -> new ChassisSpeeds(
+            vX.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
+            vY.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
+            heading.getAsDouble() * drivetrainConfig.getMaxAngularVelocityRadiansPerSec()
+        );
     }
 }
