@@ -6,6 +6,7 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.robot.commands.AbsoluteFieldDrive;
+import frc.robot.commands.DistanceShotWindup;
 import frc.robot.commands.TunableShotFire;
 import frc.robot.commands.TunableShotWindup;
 import frc.robot.lib.input.XboxController;
@@ -44,7 +45,7 @@ public class RobotContainer {
 
     public Command getAutonomousCommand() {
         return new SequentialCommandGroup(
-            new TunableShotWindup(),
+            new DistanceShotWindup(),
             new TunableShotFire()
         );
         // return new SequentialCommandGroup(
