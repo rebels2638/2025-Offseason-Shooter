@@ -26,5 +26,12 @@ public class RunShooterFlywheel extends Command {
     @Override
     public boolean isFinished() {
         return shooter.isFlywheelAtSetpoint();
+    }   
+
+    @Override
+    public void end(boolean interrupted) {
+        if (interrupted) {
+            shooter.setShotVelocity(0);
+        }
     }
 }

@@ -4,6 +4,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.robot.commands.AbsoluteFieldDrive;
@@ -11,6 +12,7 @@ import frc.robot.commands.DistanceShotWindup;
 import frc.robot.commands.MovingShotWindup;
 import frc.robot.commands.TunableShotFire;
 import frc.robot.commands.TunableShotWindup;
+import frc.robot.commands.WindupAndShoot;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.swerve.SwerveDrive;
@@ -50,10 +52,7 @@ public class RobotContainer {
         // shooter.setDefaultCommand(movingShotWindup);
 
         this.xboxDriver.getAButton().whileTrue(
-            new MovingShotWindup(
-                new Translation3d(5, 10, 0), 
-                absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier(), 5)
-            .andThen(new TunableShotFire())
+            new WindupAndShoot(absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier())
         );
 
         // xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));

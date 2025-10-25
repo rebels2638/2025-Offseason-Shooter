@@ -27,4 +27,11 @@ public class RunShooterIndexer extends Command {
     public boolean isFinished() {
         return shooter.isIndexerAtSetpoint();
     }
+
+    @Override
+    public void end(boolean interrupted) {
+        if (interrupted) {
+            shooter.setIndexerVelocity(0);
+        }
+    }
 }

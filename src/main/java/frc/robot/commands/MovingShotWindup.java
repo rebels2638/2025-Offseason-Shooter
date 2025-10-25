@@ -28,11 +28,11 @@ public class MovingShotWindup extends Command {
     private static final double GRAVITY = 9.81; // m/s^2
     private static final LoggedNetworkNumber LATENCY_COMPENSATION_SECONDS = new LoggedNetworkNumber("MovingShotWindup/latencyCompensationSeconds", 
         switch (Constants.currentMode) {
-            case COMP -> 0.6;
-            case SIM -> 0.6;
-            case PROTO -> 0.6;
-            case REPLAY -> 0.6;
-            default -> 0.6;
+            case COMP -> 0.0;
+            case SIM -> 0.0;
+            case PROTO -> 0.0;
+            case REPLAY -> 0.0;
+            default -> 0.0;
         }
     );
         
@@ -215,9 +215,16 @@ public class MovingShotWindup extends Command {
     
     @Override
     public void end(boolean interrupted) {
-        ChassisSpeeds desiredSwerveSpeeds = desiredSwerveSpeedsSupplier.get();
-        desiredSwerveSpeeds.omegaRadiansPerSecond = 0.0;
-        swerveDrive.driveFieldRelative(desiredSwerveSpeeds);
+        // ChassisSpeeds desiredSwerveSpeeds = desiredSwerveSpeedsSupplier.get();
+        // desiredSwerveSpeeds.omegaRadiansPerSecond = 0.0;
+        // swerveDrive.driveFieldRelative(desiredSwerveSpeeds);
+        if (interrupted) {
+            swerveDrive.driveFieldRelative(new ChassisSpeeds(0, 0, 0));
+            shooter.setFeedVelocity(0);
+            shooter.setShotVelocity(0);
+            shooter.setAngle(new Rotation2d(0));
+        }
+
         isShotValid = false; 
         Logger.recordOutput("MovingShotWindup/endTime", Timer.getFPGATimestamp());
 

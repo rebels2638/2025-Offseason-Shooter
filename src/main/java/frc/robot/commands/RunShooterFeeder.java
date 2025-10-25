@@ -27,4 +27,11 @@ public class RunShooterFeeder extends Command {
     public boolean isFinished() {
         return shooter.isFeederAtSetpoint();
     }
+
+    @Override
+    public void end(boolean interrupted) {
+        if (interrupted) {
+            shooter.setFeedVelocity(0);
+        }
+    }
 }
