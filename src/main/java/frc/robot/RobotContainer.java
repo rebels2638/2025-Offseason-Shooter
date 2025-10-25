@@ -41,48 +41,6 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        return new SequentialCommandGroup(
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(40))),
-            new InstantCommand(() -> shooter.setShotVelocity(1)),
-            new InstantCommand(() -> shooter.setFeedVelocity(1)),
-            new InstantCommand(() -> shooter.setIndexerVelocity(5)),
-
-            new WaitCommand(1.5),
-
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(50))),
-            new InstantCommand(() -> shooter.setShotVelocity(5)),
-            new InstantCommand(() -> shooter.setFeedVelocity(2)),
-            new InstantCommand(() -> shooter.setIndexerVelocity(5)),
-            new WaitCommand(1.5),
-
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(60))),
-            new InstantCommand(() -> shooter.setShotVelocity(20)),
-            new InstantCommand(() -> shooter.setFeedVelocity(10)),
-            new InstantCommand(() -> shooter.setIndexerVelocity(10)),
-            new WaitCommand(1.5),
-
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(100))),
-            new InstantCommand(() -> shooter.setShotVelocity(40)),
-            new InstantCommand(() -> shooter.setFeedVelocity(15)),
-            new InstantCommand(() -> shooter.setIndexerVelocity(15)),
-            new WaitCommand(1.5),
-            
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(125))),
-            new InstantCommand(() -> shooter.setShotVelocity(50)),
-            new InstantCommand(() -> shooter.setFeedVelocity(25)),
-            new InstantCommand(() -> shooter.setIndexerVelocity(25)),
-            new WaitCommand(1.5),
-
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(170))),
-            new InstantCommand(() -> shooter.setShotVelocity(60)),
-            new InstantCommand(() -> shooter.setFeedVelocity(30)),
-            new InstantCommand(() -> shooter.setIndexerVelocity(30)),
-            new WaitCommand(1.5),
-
-            new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(38))),
-            new InstantCommand(() -> shooter.setShotVelocity(0)),
-            new InstantCommand(() -> shooter.setFeedVelocity(0)),
-            new InstantCommand(() -> shooter.setIndexerVelocity(0))
-        );   
+        return null;
     }
 }

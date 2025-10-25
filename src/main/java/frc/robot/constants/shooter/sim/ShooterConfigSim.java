@@ -1,5 +1,13 @@
 package frc.robot.constants.shooter.sim;
 
+import edu.wpi.first.math.InterpolatingMatrixTreeMap;
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.Nat;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
 import frc.robot.constants.shooter.ShooterConfigBase;
 
 public class ShooterConfigSim extends ShooterConfigBase {
@@ -13,6 +21,126 @@ public class ShooterConfigSim extends ShooterConfigBase {
     }
 
     private ShooterConfigSim() {}
+    
+    @Override
+    // angle rotations, flywheel velocity in rotations per second
+    // distance is distance from shooter itself to target in meters
+    public InterpolatingMatrixTreeMap<Double, N2, N1> getLerpTable() {
+        // Calculated using projectile motion with:
+        // - Flywheel radius: 0.0508m (2 inches)
+        // - Shooter height: 0.2m above ground
+        // - Exit velocity = flywheelRPS * π * radius
+        // - Hood angle relative to horizontal
+        // - Maximum range: 9.54m at 44° with 60 RPS (9.58 m/s exit velocity)
+        InterpolatingMatrixTreeMap<Double, N2, N1> table = new InterpolatingMatrixTreeMap<>();
+        
+        table.put(0.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.08888889, // hood angle = 32.00° (exit velocity = 1.81 m/s)
+            11.37 // flywheel velocity in RPS
+        }));
+        
+        table.put(1.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.09444444, // hood angle = 34.00° (exit velocity = 2.84 m/s)
+            17.82 // flywheel velocity in RPS
+        }));
+        
+        table.put(1.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11111111, // hood angle = 40.00° (exit velocity = 3.58 m/s)
+            22.43 // flywheel velocity in RPS
+        }));
+        
+        table.put(2.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11388889, // hood angle = 41.00° (exit velocity = 4.21 m/s)
+            26.35 // flywheel velocity in RPS
+        }));
+        
+        table.put(2.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11388889, // hood angle = 41.00° (exit velocity = 4.76 m/s)
+            29.81 // flywheel velocity in RPS
+        }));
+        
+        table.put(3.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11111111, // hood angle = 40.00° (exit velocity = 5.25 m/s)
+            32.92 // flywheel velocity in RPS
+        }));
+        
+        table.put(3.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11666667, // hood angle = 42.00° (exit velocity = 5.70 m/s)
+            35.69 // flywheel velocity in RPS
+        }));
+        
+        table.put(4.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.12222222, // hood angle = 44.00° (exit velocity = 6.11 m/s)
+            38.28 // flywheel velocity in RPS
+        }));
+        
+        table.put(4.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11666667, // hood angle = 42.00° (exit velocity = 6.50 m/s)
+            40.76 // flywheel velocity in RPS
+        }));
+        
+        table.put(5.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.12222222, // hood angle = 44.00° (exit velocity = 6.86 m/s)
+            43.00 // flywheel velocity in RPS
+        }));
+        
+        table.put(5.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.12222222, // hood angle = 44.00° (exit velocity = 7.21 m/s)
+            45.19 // flywheel velocity in RPS
+        }));
+        
+        table.put(6.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.12222222, // hood angle = 44.00° (exit velocity = 7.54 m/s)
+            47.27 // flywheel velocity in RPS
+        }));
+        
+        table.put(6.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11944444, // hood angle = 43.00° (exit velocity = 7.87 m/s)
+            49.28 // flywheel velocity in RPS
+        }));
+        
+        table.put(7.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.12222222, // hood angle = 44.00° (exit velocity = 8.17 m/s)
+            51.18 // flywheel velocity in RPS
+        }));
+        
+        table.put(7.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.12222222, // hood angle = 44.00° (exit velocity = 8.46 m/s)
+            53.03 // flywheel velocity in RPS
+        }));
+        
+        table.put(8.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11944444, // hood angle = 43.00° (exit velocity = 8.75 m/s)
+            54.81 // flywheel velocity in RPS
+        }));
+        
+        table.put(8.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.12222222, // hood angle = 44.00° (exit velocity = 9.02 m/s)
+            56.54 // flywheel velocity in RPS
+        }));
+        
+        table.put(9.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.12222222, // hood angle = 44.00° (exit velocity = 9.29 m/s)
+            58.21 // flywheel velocity in RPS
+        }));
+        
+        table.put(9.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.11944444, // hood angle = 43.00° (exit velocity = 9.56 m/s)
+            59.88 // flywheel velocity in RPS
+        }));
+        
+        return table;
+    }
+
+    @Override
+    public double getMinShotDistFromShooterMeters() {
+        return 0.5;
+    }
+
+    @Override
+    public double getMaxShotDistFromShooterMeters() {
+        return 9.5;
+    }
 
     @Override
     public String getCanBusName() {
@@ -91,38 +219,24 @@ public class ShooterConfigSim extends ShooterConfigBase {
     }
 
     @Override
-    public double getHoodMotionMagicCruiseVelocityRotationsPerSec() {
-        return 10.0;
-    }
-
-    @Override
-    public double getHoodMotionMagicAccelerationRotationsPerSecSec() {
-        return 20.0;
-    }
-
-    @Override
-    public double getHoodMotionMagicJerkRotationsPerSecSecSec() {
-        return 100.0;
-    }
-
-    @Override
     public double getHoodMotorToOutputShaftRatio() {
         return 100.0;
     }
 
+    // shot exit angle above horizontal
     @Override
     public double getHoodStartingAngleRotations() {
-        return 0.0;
+        return 54.0/360.0;
     }
 
     @Override
     public double getHoodMinAngleRotations() {
-        return -0.5;
+        return -120/360.0;
     }
 
     @Override
     public double getHoodMaxAngleRotations() {
-        return 0.5;
+        return 54.0/360.0; // 150
     }
 
     // Flywheel motor config
@@ -173,17 +287,17 @@ public class ShooterConfigSim extends ShooterConfigBase {
 
     @Override
     public double getFlywheelKV() {
-        return 2.44;
+        return 0.03;
     }
 
     @Override
     public double getFlywheelKA() {
-        return 0.1;
+        return 0;
     }
 
     @Override
     public double getFlywheelKP() {
-        return 0.3;
+        return 0.02;
     }
 
     @Override
@@ -197,23 +311,25 @@ public class ShooterConfigSim extends ShooterConfigBase {
     }
 
     @Override
-    public double getFlywheelMotionMagicCruiseVelocityRotationsPerSec() {
-        return 100.0;
-    }
-
-    @Override
-    public double getFlywheelMotionMagicAccelerationRotationsPerSecSec() {
-        return 200.0;
-    }
-
-    @Override
-    public double getFlywheelMotionMagicJerkRotationsPerSecSecSec() {
-        return 1000.0;
-    }
-
-    @Override
     public double getFlywheelMotorToOutputShaftRatio() {
         return 1.0;
+    }
+
+    @Override
+    public double getFlywheelRadiusMeters() {
+        return 0.0508; // 2 inches in meters
+    }
+
+    @Override
+    public Pose3d getShooterPose3d() {
+        // Shooter position relative to robot center
+        // X: forward from robot center (meters)
+        // Y: left/right offset (meters, positive = left)
+        // Z: height above ground (meters)
+        return new Pose3d(
+            new Translation3d(0.25, 0.0, 0.2),
+            new Rotation3d(0.0, 0.0, 0.0)
+        );
     }
 
     // Feeder motor config
@@ -264,17 +380,17 @@ public class ShooterConfigSim extends ShooterConfigBase {
 
     @Override
     public double getFeederKV() {
-        return 2.44;
+        return 0.03;
     }
 
     @Override
     public double getFeederKA() {
-        return 0.1;
+        return 0;
     }
 
     @Override
     public double getFeederKP() {
-        return 0.3;
+        return 0.02;
     }
 
     @Override
@@ -285,21 +401,6 @@ public class ShooterConfigSim extends ShooterConfigBase {
     @Override
     public double getFeederKD() {
         return 0.0;
-    }
-
-    @Override
-    public double getFeederMotionMagicCruiseVelocityRotationsPerSec() {
-        return 50.0;
-    }
-
-    @Override
-    public double getFeederMotionMagicAccelerationRotationsPerSecSec() {
-        return 100.0;
-    }
-
-    @Override
-    public double getFeederMotionMagicJerkRotationsPerSecSecSec() {
-        return 500.0;
     }
 
     @Override
@@ -355,17 +456,17 @@ public class ShooterConfigSim extends ShooterConfigBase {
 
     @Override
     public double getIndexerKV() {
-        return 2.44;
+        return 0.03;
     }
 
     @Override
     public double getIndexerKA() {
-        return 0.1;
+        return 0;
     }
 
     @Override
     public double getIndexerKP() {
-        return 0.3;
+        return 0.02;
     }
 
     @Override
@@ -379,22 +480,27 @@ public class ShooterConfigSim extends ShooterConfigBase {
     }
 
     @Override
-    public double getIndexerMotionMagicCruiseVelocityRotationsPerSec() {
-        return 50.0;
-    }
-
-    @Override
-    public double getIndexerMotionMagicAccelerationRotationsPerSecSec() {
-        return 100.0;
-    }
-
-    @Override
-    public double getIndexerMotionMagicJerkRotationsPerSecSecSec() {
-        return 500.0;
-    }
-
-    @Override
     public double getIndexerMotorToOutputShaftRatio() {
+        return 5.0;
+    }
+
+    @Override
+    public double getHoodAngleToleranceRotations() {
+        return 5.0 / 360.0;
+    }
+
+    @Override
+    public double getFlywheelVelocityToleranceRPS() {
+        return 3.0;
+    }
+
+    @Override
+    public double getFeederVelocityToleranceRPS() {
+        return 5.0;
+    }
+
+    @Override
+    public double getIndexerVelocityToleranceRPS() {
         return 5.0;
     }
 }
