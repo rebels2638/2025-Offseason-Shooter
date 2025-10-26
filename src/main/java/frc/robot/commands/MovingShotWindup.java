@@ -98,7 +98,7 @@ public class MovingShotWindup extends Command {
         double targetY = targetTranslation.getY();
         
         // Iterate to converge (robot frame: shot velocity is relative to robot, target appears to move)
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < 30; i++) {
             Logger.recordOutput("MovingShotWindup/iteration", i);
             Logger.recordOutput("MovingShotWindup/iterationDistance", shooterDistanceToTarget);
             
@@ -123,7 +123,7 @@ public class MovingShotWindup extends Command {
             double deltaHeight = this.targetHeight - shooterHeight;
             
             // Flight time from vertical motion (projectile hits target height)
-            double discriminant = exitVelocityVertical * exitVelocityVertical + 2 * GRAVITY * deltaHeight;
+            double discriminant = exitVelocityVertical * exitVelocityVertical - 2 * GRAVITY * deltaHeight;
             if (discriminant < 0) {
                 // Can't reach target (would require negative time), use simplified calculation
                 shotFlightTime = shooterDistanceToTarget / exitVelocityHorizontal;
