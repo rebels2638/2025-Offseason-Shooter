@@ -132,12 +132,13 @@ public class RobotState {
             VecBuilder.fill(
                 robotStateConfig.getOdomTranslationDevBase(),
                 robotStateConfig.getOdomTranslationDevBase(),
-                0
+                robotStateConfig.getOdomRotationDevBase()
+
             ),
             VecBuilder.fill(
                 robotStateConfig.getVisionTranslationDevBase(),
                 robotStateConfig.getVisionTranslationDevBase(),
-                9999999
+                robotStateConfig.getVisionRotationDevBase()
             )
         );  
     }   

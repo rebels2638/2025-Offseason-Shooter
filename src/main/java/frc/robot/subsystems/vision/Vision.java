@@ -209,8 +209,8 @@ public class Vision extends SubsystemBase {
                 // Calculate standard deviations
                 double stdDevFactor =
                     Math.pow(observation.averageTagDistance(), 2.0) / observation.tagCount();
-                double linearStdDev = linearStdDevBaseline * stdDevFactor;
-                double angularStdDev = angularStdDevBaseline * stdDevFactor;
+                double linearStdDev = linearStdDevBaseline.get() * stdDevFactor;
+                double angularStdDev = angularStdDevBaseline.get() * stdDevFactor;
                 if (observation.type() == PoseObservationType.MEGATAG_2) {
                     linearStdDev *= linearStdDevMegatag2Factor;
                     angularStdDev *= angularStdDevMegatag2Factor;
@@ -218,6 +218,11 @@ public class Vision extends SubsystemBase {
                 if (cameraIndex < cameraStdDevFactors.length) {
                     linearStdDev *= cameraStdDevFactors[cameraIndex];
                     angularStdDev *= cameraStdDevFactors[cameraIndex];
+                }
+
+                if (!Double.isFinite(linearStdDev) || !Double.isFinite(angularStdDev)) {
+                    robotPosesRejected.add(observation.pose());
+                    continue;
                 }
 
                 // Send vision observation

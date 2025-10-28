@@ -20,7 +20,7 @@ import edu.wpi.first.wpilibj.DriverStation;
  * constants are needed, to reduce verbosity.
  */
 public final class Constants {
-    public static final Mode currentMode = Mode.SIM; // TODO: change this if sim
+    public static final Mode currentMode = Mode.COMP; // TODO: change this if sim
     // public static final boolean isSYSID = true; // TODO: change this if sysid
 
     public static enum Mode {
@@ -91,7 +91,7 @@ public final class Constants {
     }
 
     public static final class FieldConstants {
-        public static final Translation3d kSHOOTER_TARGET = new Translation3d(-2, -2, 0);
+        public static final Translation3d kSHOOTER_TARGET = new Translation3d(49.85, 50.0, 0.46);
         private FieldConstants() {}
     }
 

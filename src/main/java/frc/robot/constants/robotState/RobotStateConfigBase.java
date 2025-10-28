@@ -2,11 +2,9 @@ package frc.robot.constants.robotState;
 
 public abstract class RobotStateConfigBase {
     public abstract double getOdomTranslationDevBase();
-    public abstract double getVisionTranslationDevBase();
+    public abstract double getOdomRotationDevBase();
 
-    public abstract double getMaxElevatorExtensionVelocityMeterPerSec();
-    public abstract double getMaxElevatorExtensionAccelerationMetersPerSecPerSec();
-    public abstract double getMaxRotationalVelocityRadPerSecPerSec();
-    public abstract int getMinLocalVisionObservationCount();
+    public abstract double getVisionTranslationDevBase();
+    public abstract double getVisionRotationDevBase();
 
 }

@@ -81,7 +81,8 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public PIDController getRotationController() {
-        PIDController controller = new PIDController(5.0, 0.0, 0);
+        PIDController controller = new PIDController(11.0, 0.6, 0.4);
+        controller.setIZone(Math.toRadians(10));
         controller.enableContinuousInput(-Math.PI, Math.PI);
         controller.setTolerance(Math.toRadians(getRotationToleranceDeg()), Math.toRadians(getRotationVelocityToleranceDegPerSec()));
 
@@ -100,7 +101,7 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getRotationToleranceDeg() {
-        return 4.0;
+        return 3.5;
     }
 
     @Override
