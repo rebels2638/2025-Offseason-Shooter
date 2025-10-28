@@ -1,6 +1,8 @@
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -51,16 +53,16 @@ public class RobotContainer {
         swerveDrive.setDefaultCommand(absoluteFieldDrive);
         // shooter.setDefaultCommand(movingShotWindup);
 
-        // this.xboxDriver.getAButton().whileTrue(
-        //     new WindupAndShoot(absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier())
-        // );
+        this.xboxDriver.getAButton().whileTrue(
+            new WindupAndShoot(absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier())
+        );
 
-        this.xboxDriver.getAButton().onTrue(
-            new TunableShotWindup()
-        );
-        this.xboxDriver.getBButton().onTrue(
-            new TunableShotFire()
-        );
+        // this.xboxDriver.getAButton().onTrue(
+        //     new TunableShotWindup()
+        // );
+        // this.xboxDriver.getBButton().onTrue(
+        //     new TunableShotFire()
+        // );
 
         // xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
     }
@@ -71,10 +73,12 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        return new SequentialCommandGroup(
-            new DistanceShotWindup(),
-            new TunableShotFire()
-        );
+        // return new SequentialCommandGroup(
+        //     new DistanceShotWindup(),
+        //     new TunableShotFire()
+        // );
+
+        return new InstantCommand(() -> robotState.resetPose(new Pose2d(new Translation2d(52,50), new Rotation2d(Math.PI))) );
         // return new SequentialCommandGroup(
         //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(40))),
         //     new InstantCommand(() -> shooter.setShotVelocity(1)),

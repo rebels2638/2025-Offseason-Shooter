@@ -26,107 +26,42 @@ public class ShooterConfigComp extends ShooterConfigBase {
     // angle rotations, flywheel velocity in rotations per second
     // distance is distance from shooter itself to target in meters
     public InterpolatingMatrixTreeMap<Double, N2, N1> getLerpTable() {
-        // Calculated using projectile motion with:
+        // Calculated using idealized projectile motion physics with:
         // - Flywheel radius: 0.0508m (2 inches)
-        // - Shooter height: 0.2m above ground
-        // - Exit velocity = flywheelRPS * π * radius
+        // - Shooter height: 0.46m above ground (from getShooterPose3d)
+        // - Target height: 0.46m above ground (from Constants.FieldConstants.kSHOOTER_TARGET)
+        // - Exit velocity = flywheelRPS * π * radius (from Shooter.calculateShotExitVelocityMetersPerSec)
         // - Hood angle relative to horizontal
-        // - Maximum range: 9.54m at 44° with 60 RPS (9.58 m/s exit velocity)
+        // - Robot assumed to be standing still
+        // - Since shooter and target are at same height, optimal angle is 45° (0.125 rotations)
+        // - Range formula for same height: R = v²/g where g = 9.81 m/s²
+        // - Required velocity: v = √(R × g)
+        // - Required RPS: RPS = v / (π × 0.0508)
         InterpolatingMatrixTreeMap<Double, N2, N1> table = new InterpolatingMatrixTreeMap<>();
         
-        table.put(0.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.08888889, // hood angle = 32.00° (exit velocity = 1.81 m/s)
-            11.37 // flywheel velocity in RPS
+        table.put(0.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00° (optimal for flat trajectory)
+            11.78 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
         }));
         
-        table.put(1.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.09444444, // hood angle = 34.00° (exit velocity = 2.84 m/s)
-            17.82 // flywheel velocity in RPS
+        table.put(1.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00°
+            22.87 // flywheel velocity in RPS (exit velocity = 3.65 m/s)
         }));
         
-        table.put(1.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11111111, // hood angle = 40.00° (exit velocity = 3.58 m/s)
-            22.43 // flywheel velocity in RPS
+        table.put(2.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00°
+            30.14 // flywheel velocity in RPS (exit velocity = 4.81 m/s)
         }));
         
-        table.put(2.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11388889, // hood angle = 41.00° (exit velocity = 4.21 m/s)
-            26.35 // flywheel velocity in RPS
+        table.put(3.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00°
+            35.97 // flywheel velocity in RPS (exit velocity = 5.74 m/s)
         }));
         
-        table.put(2.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11388889, // hood angle = 41.00° (exit velocity = 4.76 m/s)
-            29.81 // flywheel velocity in RPS
-        }));
-        
-        table.put(3.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11111111, // hood angle = 40.00° (exit velocity = 5.25 m/s)
-            32.92 // flywheel velocity in RPS
-        }));
-        
-        table.put(3.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11666667, // hood angle = 42.00° (exit velocity = 5.70 m/s)
-            35.69 // flywheel velocity in RPS
-        }));
-        
-        table.put(4.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.12222222, // hood angle = 44.00° (exit velocity = 6.11 m/s)
-            38.28 // flywheel velocity in RPS
-        }));
-        
-        table.put(4.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11666667, // hood angle = 42.00° (exit velocity = 6.50 m/s)
-            40.76 // flywheel velocity in RPS
-        }));
-        
-        table.put(5.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.12222222, // hood angle = 44.00° (exit velocity = 6.86 m/s)
-            43.00 // flywheel velocity in RPS
-        }));
-        
-        table.put(5.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.12222222, // hood angle = 44.00° (exit velocity = 7.21 m/s)
-            45.19 // flywheel velocity in RPS
-        }));
-        
-        table.put(6.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.12222222, // hood angle = 44.00° (exit velocity = 7.54 m/s)
-            47.27 // flywheel velocity in RPS
-        }));
-        
-        table.put(6.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11944444, // hood angle = 43.00° (exit velocity = 7.87 m/s)
-            49.28 // flywheel velocity in RPS
-        }));
-        
-        table.put(7.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.12222222, // hood angle = 44.00° (exit velocity = 8.17 m/s)
-            51.18 // flywheel velocity in RPS
-        }));
-        
-        table.put(7.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.12222222, // hood angle = 44.00° (exit velocity = 8.46 m/s)
-            53.03 // flywheel velocity in RPS
-        }));
-        
-        table.put(8.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11944444, // hood angle = 43.00° (exit velocity = 8.75 m/s)
-            54.81 // flywheel velocity in RPS
-        }));
-        
-        table.put(8.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.12222222, // hood angle = 44.00° (exit velocity = 9.02 m/s)
-            56.54 // flywheel velocity in RPS
-        }));
-        
-        table.put(9.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.12222222, // hood angle = 44.00° (exit velocity = 9.29 m/s)
-            58.21 // flywheel velocity in RPS
-        }));
-        
-        table.put(9.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.11944444, // hood angle = 43.00° (exit velocity = 9.56 m/s)
-            59.88 // flywheel velocity in RPS
+        table.put(4.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00°
+            40.98 // flywheel velocity in RPS (exit velocity = 6.54 m/s)
         }));
         
         return table;
@@ -134,15 +69,14 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getMinShotDistFromShooterMeters() {
-        return 0.5;
+        return 0.36;
     }
 
     @Override
     public double getMaxShotDistFromShooterMeters() {
-        return 9.5;
+        return 4.36;
     }
-
-
+    
     @Override
     public String getCanBusName() {
         return "drivetrain";
@@ -328,7 +262,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
         // Y: left/right offset (meters, positive = left)
         // Z: height above ground (meters)
         return new Pose3d(
-            new Translation3d(0.13, 0.0, 0.47),
+            new Translation3d(0.11, 0.0, 0.46),
             new Rotation3d(0.0, 0.0, 0.0)
         );
     }

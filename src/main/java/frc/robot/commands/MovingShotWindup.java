@@ -10,6 +10,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -180,7 +181,7 @@ public class MovingShotWindup extends Command {
         // Log diagnostic information
         Logger.recordOutput("MovingShotWindup/shooterAngleToTarget", shooterAngleToTarget);
         Logger.recordOutput("MovingShotWindup/shooterDistanceToTarget", shooterDistanceToTarget);
-        Logger.recordOutput("MovingShotWindup/inputTargetPosition", new Pose2d(targetTranslation, new Rotation2d()));
+        Logger.recordOutput("MovingShotWindup/inputTargetPosition", new Pose3d(new Translation3d(targetTranslation.getX(), targetTranslation.getY(), targetHeight), new Rotation3d()));
         Logger.recordOutput("MovingShotWindup/offsetTargetPosition", new Pose2d(new Translation2d(targetX, targetY), new Rotation2d()));
         Logger.recordOutput("MovingShotWindup/shotFlightTime", shotFlightTime);
         Logger.recordOutput("MovingShotWindup/shooterHeight", shooterPose.getZ());
