@@ -19,27 +19,17 @@ public class RobotStateConfigComp extends RobotStateConfigBase {
     }
 
     @Override
+    public double getVisionRotationDevBase() {
+        return 0.02;
+    }
+
+    @Override
     public double getOdomTranslationDevBase() {
         return 0.005;
     }
 
     @Override
-    public double getMaxElevatorExtensionVelocityMeterPerSec() {
-        return 1;
-    }
-    
-    @Override
-    public double getMaxElevatorExtensionAccelerationMetersPerSecPerSec() {
-        return 1;
-    }
-
-    @Override
-    public double getMaxRotationalVelocityRadPerSecPerSec() {
-        return 1;
-    }
-
-    @Override
-    public int getMinLocalVisionObservationCount() {
-        return 20;
+    public double getOdomRotationDevBase() {
+        return 0.005;
     }
 }
