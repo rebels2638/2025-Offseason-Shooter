@@ -91,7 +91,7 @@ public final class Constants {
     }
 
     public static final class FieldConstants {
-        public static final Translation3d kSHOOTER_TARGET = new Translation3d(-2, -2, 0);
+        public static final Translation3d kSHOOTER_TARGET = new Translation3d(49.85, 50.0, 0.46);
         private FieldConstants() {}
     }
 
