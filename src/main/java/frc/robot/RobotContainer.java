@@ -51,8 +51,15 @@ public class RobotContainer {
         swerveDrive.setDefaultCommand(absoluteFieldDrive);
         // shooter.setDefaultCommand(movingShotWindup);
 
-        this.xboxDriver.getAButton().whileTrue(
-            new WindupAndShoot(absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier())
+        // this.xboxDriver.getAButton().whileTrue(
+        //     new WindupAndShoot(absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier())
+        // );
+
+        this.xboxDriver.getAButton().onTrue(
+            new TunableShotWindup()
+        );
+        this.xboxDriver.getBButton().onTrue(
+            new TunableShotFire()
         );
 
         // xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));

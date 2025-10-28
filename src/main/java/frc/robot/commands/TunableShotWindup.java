@@ -11,14 +11,14 @@ public class TunableShotWindup extends ParallelCommandGroup {
     private static final Shooter shooter = Shooter.getInstance();
 
     private static final LoggedNetworkNumber angleDashboardNumber = new LoggedNetworkNumber("TunableShot/angleDegrees", 55);
-    private static final LoggedNetworkNumber velocityDashboardNumber = new LoggedNetworkNumber("TunableShot/velocityRotationsPerSec", 60);
+    private static final LoggedNetworkNumber velocityDashboardNumber = new LoggedNetworkNumber("TunableShot/flywheelVelocityRotationsPerSec", 60);
     private static final LoggedNetworkNumber feedVelocityDashboardNumber = new LoggedNetworkNumber("TunableShot/feedVelocityRotationsPerSec", 35);
 
     public TunableShotWindup() {
         super(
-            new RunShooterHood(Rotation2d.fromDegrees(angleDashboardNumber.get())),
-            new RunShooterFlywheel(velocityDashboardNumber.get()),
-            new RunShooterFeeder(feedVelocityDashboardNumber.get())
+            new RunShooterHood(() -> Rotation2d.fromDegrees(angleDashboardNumber.get())),
+            new RunShooterFlywheel(() -> velocityDashboardNumber.get()),
+            new RunShooterFeeder(() -> feedVelocityDashboardNumber.get())
         );
         addRequirements(shooter);
     }

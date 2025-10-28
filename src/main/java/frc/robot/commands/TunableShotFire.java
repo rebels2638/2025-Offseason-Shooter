@@ -18,11 +18,13 @@ public class TunableShotFire extends SequentialCommandGroup {
         super(
             // new InstantCommand(() -> System.out.println("TunableShotFire")),
             new ParallelDeadlineGroup(
-                new WaitCommand(0.25),
-                new RunShooterIndexer(indexerVelocityDashboardNumber.get())
+                new WaitCommand(0.5),
+                new RunShooterIndexer(() -> indexerVelocityDashboardNumber.get())
             ),
             new InstantCommand(() -> new VisualizeShot()),
-            new RunShooterIndexer(0)
+            new RunShooterIndexer(0),
+            new RunShooterFlywheel(0),
+            new RunShooterFeeder(0)
         );
         addRequirements(shooter);
     }
