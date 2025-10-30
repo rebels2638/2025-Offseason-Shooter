@@ -61,10 +61,13 @@ public class RobotContainer {
             new WindupAndShoot(absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier())
         ).onFalse(
             new SequentialCommandGroup(
-                new RunShooterIndexer(0),
-                new RunShooterFlywheel(0),
-                new RunShooterFeeder(0),
-                new RunShooterHood(Rotation2d.fromDegrees(45))
+                new WaitCommand(1),
+                new ParallelCommandGroup(
+                    new RunShooterIndexer(0),
+                    new RunShooterFlywheel(0),
+                    new RunShooterFeeder(0),
+                    new RunShooterHood(Rotation2d.fromDegrees(45))
+                )
             )
         );
 
