@@ -25,7 +25,7 @@ public class WindupAndShoot extends SequentialCommandGroup {
                 4.0
             ).asProxy(),
             new ParallelDeadlineGroup(
-                new WaitCommand(0.25),
+                new WaitCommand(0.12),
                 new MovingShotWindup(
                     Constants.FieldConstants.kSHOOTER_TARGET,
                     desiredFieldRelativeSwerveSpeedsSupplier,
@@ -34,7 +34,10 @@ public class WindupAndShoot extends SequentialCommandGroup {
                 new InstantCommand(() -> new VisualizeShot()),
                 new RunShooterIndexer(35).asProxy()
             ),
-            new RunShooterIndexer(0).asProxy()
+            new RunShooterIndexer(0),
+            new WaitCommand(1),
+            new RunShooterFlywheel(0),
+            new RunShooterFeeder(0)
             
         );
     }

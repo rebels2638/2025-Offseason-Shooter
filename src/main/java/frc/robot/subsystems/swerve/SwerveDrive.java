@@ -374,6 +374,10 @@ public class SwerveDrive extends SubsystemBase {
         gyroIO.resetGyro(yaw);
     }
 
+    public Rotation2d getGyroAngle() {
+        return gyroInputs.yawPosition;
+    }
+
     public void setWheelCoast(boolean isCoast) {
         for (ModuleIO module : modules) {
             module.setWheelCoast(isCoast);

@@ -40,29 +40,25 @@ public class ShooterConfigComp extends ShooterConfigBase {
         InterpolatingMatrixTreeMap<Double, N2, N1> table = new InterpolatingMatrixTreeMap<>();
         
         table.put(0.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.125, // hood angle = 45.00° (optimal for flat trajectory)
+            45.0/360.0, // hood angle = 45.00° (optimal for flat trajectory)
             11.78 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
         }));
-        
-        table.put(1.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.125, // hood angle = 45.00°
-            22.87 // flywheel velocity in RPS (exit velocity = 3.65 m/s)
+
+        table.put(0.79, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            50.0/360.0, // hood angle = 45.00° (optimal for flat trajectory)
+            18.0 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
+        }));
+
+        table.put(1.60, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            45.0/360.0, // hood angle = 45.00° (optimal for flat trajectory)
+            30.0 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
+        }));
+
+        table.put(2.29, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            40.0/360, // hood angle = 45.00°
+            32.0 // flywheel velocity in RPS (exit velocity = 3.65 m/s)
         }));
         
-        table.put(2.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.125, // hood angle = 45.00°
-            30.14 // flywheel velocity in RPS (exit velocity = 4.81 m/s)
-        }));
-        
-        table.put(3.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.125, // hood angle = 45.00°
-            35.97 // flywheel velocity in RPS (exit velocity = 5.74 m/s)
-        }));
-        
-        table.put(4.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.125, // hood angle = 45.00°
-            40.98 // flywheel velocity in RPS (exit velocity = 6.54 m/s)
-        }));
         
         return table;
     }
@@ -74,7 +70,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getMaxShotDistFromShooterMeters() {
-        return 4.36;
+        return 2.29;
     }
     
     @Override
@@ -232,7 +228,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getFlywheelKP() {
-        return 0.2;
+        return 0.5;
     }
 
     @Override
@@ -262,8 +258,8 @@ public class ShooterConfigComp extends ShooterConfigBase {
         // Y: left/right offset (meters, positive = left)
         // Z: height above ground (meters)
         return new Pose3d(
-            new Translation3d(0.11, 0.0, 0.46),
-            new Rotation3d(0.0, 0.0, 0.0)
+            new Translation3d(-0.11, 0.0, 0.46),
+            new Rotation3d(0.0, 0.0, Math.PI)
         );
     }
 

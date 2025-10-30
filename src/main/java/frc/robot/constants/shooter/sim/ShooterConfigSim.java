@@ -262,8 +262,8 @@ public class ShooterConfigSim extends ShooterConfigBase {
         // Y: left/right offset (meters, positive = left)
         // Z: height above ground (meters)
         return new Pose3d(
-            new Translation3d(0.11, 0.0, 0.46),
-            new Rotation3d(0.0, 0.0, 0.0)
+            new Translation3d(-0.11, 0.0, 0.46),
+            new Rotation3d(0.0, 0.0, Math.PI)
         );
     }
     // Feeder motor config

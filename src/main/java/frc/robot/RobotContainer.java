@@ -12,6 +12,10 @@ import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.robot.commands.AbsoluteFieldDrive;
 import frc.robot.commands.DistanceShotWindup;
 import frc.robot.commands.MovingShotWindup;
+import frc.robot.commands.RunShooterFeeder;
+import frc.robot.commands.RunShooterFlywheel;
+import frc.robot.commands.RunShooterHood;
+import frc.robot.commands.RunShooterIndexer;
 import frc.robot.commands.TunableShotFire;
 import frc.robot.commands.TunableShotWindup;
 import frc.robot.commands.WindupAndShoot;
@@ -55,6 +59,13 @@ public class RobotContainer {
 
         this.xboxDriver.getAButton().whileTrue(
             new WindupAndShoot(absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier())
+        ).onFalse(
+            new SequentialCommandGroup(
+                new RunShooterIndexer(0),
+                new RunShooterFlywheel(0),
+                new RunShooterFeeder(0),
+                new RunShooterHood(Rotation2d.fromDegrees(45))
+            )
         );
 
         // this.xboxDriver.getAButton().onTrue(

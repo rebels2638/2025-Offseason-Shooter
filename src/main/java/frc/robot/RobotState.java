@@ -10,6 +10,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.constants.Constants;
 import frc.robot.constants.robotState.RobotStateConfigBase;
@@ -61,7 +62,13 @@ public class RobotState {
     private final SwerveDrivePoseEstimator swerveDrivePoseEstimator;
 
     private double lastEstimatedPoseUpdateTime = 0;
-    private int localVisionObservationUpdateCount = 0;
+    private int visionObservationsAccepted = 0;
+    private int visionObservationsRejected = 0;
+
+    private double lastGyroResetTime = Timer.getTimestamp();
+    private double gyroTimeoutSeconds = 1.0;
+
+    private Rotation2d lastGyroAngle = new Rotation2d();
 
     // Odometry
     private final SwerveDriveKinematics kinematics;
@@ -77,11 +84,6 @@ public class RobotState {
 
     private final SwerveDrivetrainConfigBase drivetrainConfig;
     private final RobotStateConfigBase robotStateConfig;
-
-    private final ArrayList<Runnable> onOdometryUpdateRunnables = new ArrayList<Runnable>();
-    private final ArrayList<Consumer<Translation2d>> onLocalVisionEstimateRunnables = new ArrayList<Consumer<Translation2d>>();
-    private final ArrayList<Runnable> onGlobalVisionEstimateRunnables = new ArrayList<Runnable>();
-
 
     private RobotState() {
         switch (Constants.currentMode) {
@@ -173,37 +175,57 @@ public class RobotState {
                 new Rotation2d(
                     swerveDrivePoseEstimator.getEstimatedPosition().getRotation().getRadians() + 
                     kinematics.toTwist2d(lastWheelPositions, observation.modulePositions()).dtheta
-                ), 
+                ),
             observation.modulePositions()
         );
+
+        lastGyroAngle = observation.isGyroConnected() ? observation.yawPosition() : swerveDrivePoseEstimator.getEstimatedPosition().getRotation();
+
         lastWheelPositions = observation.modulePositions();
 
-        lastEstimatedPoseUpdateTime = Timer.getTimestamp();
+        lastEstimatedPoseUpdateTime = observation.timestampsSeconds();
+
 
         // Add pose to buffer at timestamp
         poseBuffer.addSample(lastEstimatedPoseUpdateTime, swerveDrivePoseEstimator.getEstimatedPosition()); 
-
-        for (Runnable runnable : onOdometryUpdateRunnables) {
-            runnable.run();
-        }
-
-        Logger.recordOutput("RobotState/vision/localVisionObservationUpdateCount", localVisionObservationUpdateCount);
     }
 
     public void addVisionObservation(VisionObservation observation) {
         // If measurement is old enough to be outside the pose buffer's timespan, skip.
         try {
             if (poseBuffer.getInternalBuffer().lastKey() - poseBufferSizeSeconds > observation.timestampSeconds()) {
+                visionObservationsRejected++;
+                Logger.recordOutput("RobotState/vision/visionObservationsRejected", visionObservationsRejected);
                 return;
             }
         } 
         
         catch (NoSuchElementException ex) {
+            visionObservationsRejected++;
+            Logger.recordOutput("RobotState/vision/visionObservationsRejected", visionObservationsRejected);
             return;
         }
 
+        visionObservationsAccepted++;
+
         Logger.recordOutput("RobotState/vision/stdDevTranslation", observation.visionMeasurementStdDevs().get(0,0));
+        Logger.recordOutput("RobotState/vision/stdDevRotation", observation.visionMeasurementStdDevs().get(2,0));
         Logger.recordOutput("RobotState/vision/visionPose", observation.visionRobotPoseMeters());
+        Logger.recordOutput("RobotState/vision/visionObservationsAccepted", visionObservationsAccepted);
+        Logger.recordOutput("RobotState/vision/visionObservationsRejected", visionObservationsRejected);
+        Logger.recordOutput("RobotState/vision/visionLatency", Timer.getFPGATimestamp() - observation.timestampSeconds());
+
+
+        if (DriverStation.isDisabled() && Timer.getTimestamp() - lastGyroResetTime > gyroTimeoutSeconds && observation.visionMeasurementStdDevs().get(2,0) < 300) {
+                resetPose(new Pose2d(getEstimatedPose().getTranslation(), observation.visionRobotPoseMeters().getRotation()));
+                lastGyroResetTime = Timer.getTimestamp();
+                
+                Logger.recordOutput("RobotState/vision/gyroReset", true);
+                Logger.recordOutput("RobotState/vision/gyroRestRotation", observation.visionRobotPoseMeters().getRotation());
+            
+        } else {
+            Logger.recordOutput("RobotState/vision/gyroReset", false);
+        }
 
         swerveDrivePoseEstimator.addVisionMeasurement(observation.visionRobotPoseMeters(), observation.timestampSeconds(), observation.visionMeasurementStdDevs());
         lastEstimatedPoseUpdateTime = Timer.getTimestamp();
@@ -215,7 +237,7 @@ public class RobotState {
      */
     public void resetPose(Pose2d initialPose) {
         SwerveDrive.getInstance().resetGyro(initialPose.getRotation());
-        swerveDrivePoseEstimator.resetPosition(initialPose.getRotation(), lastWheelPositions, initialPose);
+        swerveDrivePoseEstimator.resetPosition(lastGyroAngle, lastWheelPositions, initialPose);
 
         poseBuffer.clear();
     }
@@ -256,4 +278,6 @@ public class RobotState {
     public Pose2d getPredictedPose(double timestamp) {
         return getPredictedPose(timestamp - lastEstimatedPoseUpdateTime, timestamp - lastEstimatedPoseUpdateTime);
     }
+
+
 }

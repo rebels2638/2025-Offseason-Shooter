@@ -13,16 +13,20 @@ public class TunableShotFire extends SequentialCommandGroup {
     
     private static final Shooter shooter = Shooter.getInstance();
     private static final LoggedNetworkNumber indexerVelocityDashboardNumber = new LoggedNetworkNumber("TunableShot/indexerVelocityRotationsPerSec", 35);
+    private static final LoggedNetworkNumber indexerRunTimeDashboardNumber = new LoggedNetworkNumber("TunableShot/indexerRunTimeSecDashboardNumber", 0.12);
+    private static final LoggedNetworkNumber stopDelayTimeDashboardNumber = new LoggedNetworkNumber("TunableShot/stopDelayTimeSecDashboardNumber", 0.5);
+
 
     public TunableShotFire() {
         super(
             // new InstantCommand(() -> System.out.println("TunableShotFire")),
             new ParallelDeadlineGroup(
-                new WaitCommand(0.5),
+                new WaitCommand(indexerRunTimeDashboardNumber.get()),
                 new RunShooterIndexer(() -> indexerVelocityDashboardNumber.get())
             ),
             new InstantCommand(() -> new VisualizeShot()),
             new RunShooterIndexer(0),
+            new WaitCommand(stopDelayTimeDashboardNumber.get()),
             new RunShooterFlywheel(0),
             new RunShooterFeeder(0)
         );
