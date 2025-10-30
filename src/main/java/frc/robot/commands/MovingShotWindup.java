@@ -219,12 +219,6 @@ public class MovingShotWindup extends Command {
         // ChassisSpeeds desiredSwerveSpeeds = desiredSwerveSpeedsSupplier.get();
         // desiredSwerveSpeeds.omegaRadiansPerSecond = 0.0;
         // swerveDrive.driveFieldRelative(desiredSwerveSpeeds);
-        if (interrupted) {
-            swerveDrive.driveFieldRelative(new ChassisSpeeds(0, 0, 0));
-            shooter.setFeedVelocity(0);
-            shooter.setShotVelocity(0);
-            shooter.setAngle(new Rotation2d(0));
-        }
 
         isShotValid = false; 
         Logger.recordOutput("MovingShotWindup/endTime", Timer.getFPGATimestamp());
