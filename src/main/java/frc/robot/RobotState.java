@@ -237,7 +237,7 @@ public class RobotState {
      */
     public void resetPose(Pose2d initialPose) {
         SwerveDrive.getInstance().resetGyro(initialPose.getRotation());
-        swerveDrivePoseEstimator.resetPosition(lastGyroAngle, lastWheelPositions, initialPose);
+        swerveDrivePoseEstimator.resetPosition(initialPose.getRotation(), lastWheelPositions, initialPose);
 
         poseBuffer.clear();
     }
@@ -278,6 +278,5 @@ public class RobotState {
     public Pose2d getPredictedPose(double timestamp) {
         return getPredictedPose(timestamp - lastEstimatedPoseUpdateTime, timestamp - lastEstimatedPoseUpdateTime);
     }
-
 
 }
