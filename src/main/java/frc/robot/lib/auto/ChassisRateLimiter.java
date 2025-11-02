@@ -6,7 +6,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 public class ChassisRateLimiter {
     public static ChassisSpeeds limit(
         ChassisSpeeds desiredFieldRelativeSpeeds, 
-        ChassisSpeeds lastFieldRelativeSpeeds, 
+        ChassisSpeeds lastFieldRelativeSpeeds,
         double dt,
         double maxTranslationalAccelerationMetersPerSec2,
         double maxAngularAccelerationRadiansPerSec2,

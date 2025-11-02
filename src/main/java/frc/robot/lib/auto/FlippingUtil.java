@@ -6,7 +6,11 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 
-
+/*
+* Utility class for flipping positions/rotations to the other side of the field 
+ * This is a copy of the FlippingUtil class from Pathplanner.
+ * The file can be found at: https://github.com/mjansen4857/pathplanner/blob/main/pathplannerlib/src/main/java/com/pathplanner/lib/util/FlippingUtil.java
+*/
 public class FlippingUtil {
   /** The type of symmetry for the current field */
   public static FieldSymmetry symmetryType = FieldSymmetry.kRotational;
