@@ -23,10 +23,7 @@ import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigProto;
 import frc.robot.constants.swerve.drivetrainConfigs.SwerveDrivetrainConfigSim;
 import frc.robot.subsystems.swerve.SwerveDrive;
 
-import java.util.ArrayList;
 import java.util.NoSuchElementException;
-import java.util.function.Consumer;
-
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
