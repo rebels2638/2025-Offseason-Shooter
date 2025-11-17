@@ -148,75 +148,91 @@ public class JsonUtils {
     }
 
     public static List<PathElement> loadPathElements(File autosPathFile) {
-        AutosPathDTO dto = loadFromFile(autosPathFile, new TypeReference<AutosPathDTO>() {});
-        List<PathElement> out = new ArrayList<>();
-        for (PathElementDTO e : dto.pathElements()) {
-            if (e instanceof WaypointDTO w) out.add(w.toWaypoint());
-            else if (e instanceof TranslationTargetDTO t) out.add(t.toTranslationTarget());
-            else if (e instanceof RotationTargetDTO r) out.add(r.toRotationTarget());
-            else throw new IllegalArgumentException("Unknown PathElementDTO type: " + e.getClass().getName());
+        try {
+            AutosPathDTO dto = loadFromFile(autosPathFile, new TypeReference<AutosPathDTO>() {});
+            List<PathElement> out = new ArrayList<>();
+            for (PathElementDTO e : dto.pathElements()) {
+                if (e instanceof WaypointDTO w) out.add(w.toWaypoint());
+                else if (e instanceof TranslationTargetDTO t) out.add(t.toTranslationTarget());
+                else if (e instanceof RotationTargetDTO r) out.add(r.toRotationTarget());
+                else throw new IllegalArgumentException("Unknown PathElementDTO type: " + e.getClass().getName());
+            }
+            return out;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load path elements from " + autosPathFile.getPath(), e);
         }
-        return out;
     }
 
     public static Path.DefaultGlobalConstraints loadGlobalConstraints(File autosDir) {
-        File config = new File(autosDir, "config.json");
-        AutosConfigDTO cfg = loadFromFile(config, new TypeReference<AutosConfigDTO>() {});
-        return new Path.DefaultGlobalConstraints(
-            cfg.defaultMaxVelocityMetersPerSec(),
-            cfg.defaultMaxAccelerationMetersPerSec2(),
-            cfg.defaultMaxVelocityDegPerSec(),
-            cfg.defaultMaxAccelerationDegPerSec2(),
-            cfg.defaultEndTranslationToleranceMeters(),
-            cfg.defaultEndRotationToleranceDeg(),
-            cfg.defaultIntermediateHandoffRadiusMeters()
-        );
+        try {
+            File config = new File(autosDir, "config.json");
+            AutosConfigDTO cfg = loadFromFile(config, new TypeReference<AutosConfigDTO>() {});
+            return new Path.DefaultGlobalConstraints(
+                cfg.defaultMaxVelocityMetersPerSec(),
+                cfg.defaultMaxAccelerationMetersPerSec2(),
+                cfg.defaultMaxVelocityDegPerSec(),
+                cfg.defaultMaxAccelerationDegPerSec2(),
+                cfg.defaultEndTranslationToleranceMeters(),
+                cfg.defaultEndRotationToleranceDeg(),
+                cfg.defaultIntermediateHandoffRadiusMeters()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load global constraints from " + autosDir.getPath() + "/config.json", e);
+        }
     }
 
     public static Path.PathConstraints loadPathConstraints(File autosPathFile) {
-        AutosPathDTO dto = loadFromFile(autosPathFile, new TypeReference<AutosPathDTO>() {});
-        Path.PathConstraints constraints = new Path.PathConstraints();
-        Map<String, List<RangedConstraintDTO>> rc = dto.constraints();
-        if (rc != null) {
-            List<RangedConstraintDTO> v;
-            v = rc.get("max_velocity_meters_per_sec");
-            if (v != null && !v.isEmpty()) {
-                ArrayList<Path.RangedConstraint> list = v.stream()
-                    .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
-                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-                constraints.setMaxVelocityMetersPerSec(Optional.of(list));
+        try {
+            AutosPathDTO dto = loadFromFile(autosPathFile, new TypeReference<AutosPathDTO>() {});
+            Path.PathConstraints constraints = new Path.PathConstraints();
+            Map<String, List<RangedConstraintDTO>> rc = dto.constraints();
+            if (rc != null) {
+                List<RangedConstraintDTO> v;
+                v = rc.get("max_velocity_meters_per_sec");
+                if (v != null && !v.isEmpty()) {
+                    ArrayList<Path.RangedConstraint> list = v.stream()
+                        .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                    constraints.setMaxVelocityMetersPerSec(Optional.of(list));
+                }
+                v = rc.get("max_acceleration_meters_per_sec2");
+                if (v != null && !v.isEmpty()) {
+                    ArrayList<Path.RangedConstraint> list = v.stream()
+                        .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                    constraints.setMaxAccelerationMetersPerSec2(Optional.of(list));
+                }
+                v = rc.get("max_velocity_deg_per_sec");
+                if (v != null && !v.isEmpty()) {
+                    ArrayList<Path.RangedConstraint> list = v.stream()
+                        .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                    constraints.setMaxVelocityDegPerSec(Optional.of(list));
+                }
+                v = rc.get("max_acceleration_deg_per_sec2");
+                if (v != null && !v.isEmpty()) {
+                    ArrayList<Path.RangedConstraint> list = v.stream()
+                        .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                    constraints.setMaxAccelerationDegPerSec2(Optional.of(list));
+                }
             }
-            v = rc.get("max_acceleration_meters_per_sec2");
-            if (v != null && !v.isEmpty()) {
-                ArrayList<Path.RangedConstraint> list = v.stream()
-                    .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
-                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-                constraints.setMaxAccelerationMetersPerSec2(Optional.of(list));
-            }
-            v = rc.get("max_velocity_deg_per_sec");
-            if (v != null && !v.isEmpty()) {
-                ArrayList<Path.RangedConstraint> list = v.stream()
-                    .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
-                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-                constraints.setMaxVelocityDegPerSec(Optional.of(list));
-            }
-            v = rc.get("max_acceleration_deg_per_sec2");
-            if (v != null && !v.isEmpty()) {
-                ArrayList<Path.RangedConstraint> list = v.stream()
-                    .map(rcDto -> new Path.RangedConstraint(rcDto.value(), rcDto.startOrdinal(), rcDto.endOrdinal()))
-                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-                constraints.setMaxAccelerationDegPerSec2(Optional.of(list));
-            }
+            return constraints;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load path constraints from " + autosPathFile.getPath(), e);
         }
-        return constraints;
     }
 
     public static Path loadPath(File autosDir, String pathFileName) {
-        File pathFile = new File(new File(autosDir, "paths"), pathFileName);
-        List<PathElement> elements = loadPathElements(pathFile);
-        Path.PathConstraints constraints = loadPathConstraints(pathFile);
-        Path.DefaultGlobalConstraints globals = loadGlobalConstraints(autosDir);
-        return new Path(elements, constraints, globals);
+        try {
+            File pathFile = new File(new File(autosDir, "paths"), pathFileName);
+            List<PathElement> elements = loadPathElements(pathFile);
+            Path.PathConstraints constraints = loadPathConstraints(pathFile);
+            Path.DefaultGlobalConstraints globals = loadGlobalConstraints(autosDir);
+            return new Path(elements, constraints, globals);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load path from " + autosDir.getPath() + "/paths/" + pathFileName, e);
+        }
     }
 
     public static Path loadPath(String pathFileName) {

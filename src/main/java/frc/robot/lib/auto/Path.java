@@ -41,6 +41,22 @@ public class Path {
         public Waypoint copy() {
             return new Waypoint(translationTarget.copy(), rotationTarget.copy());
         }
+        
+        // Constructor: (Translation2d, double handoffRadius, Rotation2d)
+        public Waypoint(Translation2d translation, double handoffRadius, Rotation2d rotation) {
+            this(
+                new TranslationTarget(translation, Optional.of(handoffRadius)),
+                new RotationTarget(rotation, 1.0, true)
+            );
+        }
+        
+        // Constructor: (Translation2d, Rotation2d)
+        public Waypoint(Translation2d translation, Rotation2d rotation) {
+            this(
+                new TranslationTarget(translation, Optional.empty()),
+                new RotationTarget(rotation, 1.0, true)
+            );
+        }
     }
 
     public static record TranslationTarget(
@@ -49,6 +65,11 @@ public class Path {
     ) implements PathElement {
         public TranslationTarget copy() {
             return new TranslationTarget(translation, intermediateHandoffRadiusMeters);
+        }
+        
+        // Constructor: (Translation2d) - defaults handoff radius to Optional.empty()
+        public TranslationTarget(Translation2d translation) {
+            this(translation, Optional.empty());
         }
     }
 
@@ -59,6 +80,11 @@ public class Path {
     ) implements PathElement {
         public RotationTarget copy() {
             return new RotationTarget(rotation, t_ratio, profiledRotation);
+        }
+        
+        // Constructor: (Rotation2d, double t_ratio) - defaults profiledRotation to true
+        public RotationTarget(Rotation2d rotation, double t_ratio) {
+            this(rotation, t_ratio, true);
         }
     }
 
@@ -169,18 +195,37 @@ public class Path {
             throw new IllegalArgumentException("pathElements cannot be null");
         }
         if (constraints == null) {
-            throw new IllegalArgumentException("constraints cannot be null");
+            constraints = new PathConstraints();
         }
         if (defaultGlobalConstraints == null) {
-            throw new IllegalArgumentException("defaultGlobalConstraints must be set before creating a path and defaultGlobalConstraints cannot be null");
+            try {
+                defaultGlobalConstraints = JsonUtils.loadGlobalConstraints(JsonUtils.PROJECT_ROOT);
+            } catch (RuntimeException e) {
+                // Allow defaultGlobalConstraints to remain null if loading fails
+                throw new RuntimeException("Failed to load default global constraints", e);
+            }
         }
         
         this.pathElements = new ArrayList<>(pathElements);
         this.pathConstraints = constraints.copy();
-        Path.defaultGlobalConstraints = defaultGlobalConstraints.copy();
+        if (defaultGlobalConstraints != null) {
+            Path.defaultGlobalConstraints = defaultGlobalConstraints.copy();
+        }
         
         // Validate that first and last elements are both either waypoints or translation targets
         validatePathEndpoints();
+    }
+
+    public Path(PathElement... pathElements) {
+        this(List.of(pathElements), null, Path.defaultGlobalConstraints);
+    }
+
+    public Path(PathElement[] pathElements, PathConstraints constraints, DefaultGlobalConstraints defaultGlobalConstraints) {
+        this(List.of(pathElements), constraints, defaultGlobalConstraints);
+    }
+
+    public Path(List<PathElement> pathElements) {
+        this(pathElements, null, Path.defaultGlobalConstraints);
     }
 
     public Path(List<PathElement> pathElements, PathConstraints constraints) {
