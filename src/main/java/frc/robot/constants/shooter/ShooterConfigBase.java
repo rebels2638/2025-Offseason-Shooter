@@ -36,6 +36,35 @@ public abstract class ShooterConfigBase {
     public abstract double getHoodMinAngleRotations();
     public abstract double getHoodMaxAngleRotations();
 
+    // Turret motor config (positional control)
+    public abstract int getTurretCanId();
+    public abstract boolean getIsTurretInverted();
+
+    public abstract double getTurretSupplyCurrentLimit();
+    public abstract double getTurretSupplyCurrentLimitLowerTime();
+    public abstract double getTurretSupplyCurrentLimitLowerLimit();
+    public abstract double getTurretStatorCurrentLimit();
+    public abstract double getTurretPeakForwardTorqueCurrent();
+    public abstract double getTurretPeakReverseTorqueCurrent();
+
+    public abstract double getTurretKS();
+    public abstract double getTurretKV();
+    public abstract double getTurretKA();
+    public abstract double getTurretKP();
+    public abstract double getTurretKI();
+    public abstract double getTurretKD();
+
+    public abstract double getTurretMotorToOutputShaftRatio();
+
+    // Turret angle limits and starting position (degrees)
+    public abstract double getTurretStartingAngleDeg();
+    public abstract double getTurretMinAngleDeg();
+    public abstract double getTurretMaxAngleDeg();
+
+    // Turret motion profile constraints (configured in degrees / sec and degrees / sec^2)
+    public abstract double getTurretMaxVelocityDegPerSec();
+    public abstract double getTurretMaxAccelerationDegPerSec2();
+
     // Flywheel motor config (velocity control)
     public abstract int getFlywheelCanId();
     public abstract boolean getIsFlywheelInverted();
@@ -102,6 +131,7 @@ public abstract class ShooterConfigBase {
 
     // Tolerances
     public abstract double getHoodAngleToleranceRotations();
+    public abstract double getTurretAngleToleranceRotations();
     public abstract double getFlywheelVelocityToleranceRPS();
     public abstract double getFeederVelocityToleranceRPS();
     public abstract double getIndexerVelocityToleranceRPS();

@@ -14,6 +14,7 @@ import frc.robot.lib.util.DashboardMotorControlLoopConfigurator.MotorControlLoop
 
 public class ShooterIOSim implements ShooterIO {
     private final DCMotor hoodMotorModel = DCMotor.getKrakenX60Foc(1);
+    private final DCMotor turretMotorModel = DCMotor.getKrakenX60Foc(1);
     private final DCMotor flywheelMotorModel = DCMotor.getKrakenX60Foc(1);
     private final DCMotor feederMotorModel = DCMotor.getKrakenX60Foc(1);
     private final DCMotor indexerMotorModel = DCMotor.getKrakenX60Foc(1);
@@ -22,6 +23,11 @@ public class ShooterIOSim implements ShooterIO {
         new DCMotorSim(
             LinearSystemId.createDCMotorSystem(hoodMotorModel, 0.00015, 21.428), // magic number because hood is not important
             hoodMotorModel
+        );
+    private final DCMotorSim turretSim =
+        new DCMotorSim(
+            LinearSystemId.createDCMotorSystem(turretMotorModel, 0.00015, 21.428),
+            turretMotorModel
         );
     private final DCMotorSim flywheelSim =
         new DCMotorSim(
@@ -40,6 +46,7 @@ public class ShooterIOSim implements ShooterIO {
         );
 
     private PIDController hoodFeedback;
+    private ProfiledPIDController turretFeedback;
     private PIDController flywheelFeedback;
     private PIDController feederFeedback;
     private PIDController indexerFeedback;
@@ -49,6 +56,7 @@ public class ShooterIOSim implements ShooterIO {
     private SimpleMotorFeedforward indexerFeedforward;
 
     private boolean isHoodClosedLoop = true;
+    private boolean isTurretClosedLoop = true;
     private boolean isFlywheelClosedLoop = true;
     private boolean isFeederClosedLoop = true;
     private boolean isIndexerClosedLoop = true;
@@ -66,6 +74,18 @@ public class ShooterIOSim implements ShooterIO {
 
         // Initialize PID controllers with config values
         hoodFeedback = new PIDController(config.getHoodKP(), config.getHoodKI(), config.getHoodKD());
+
+        // Turret uses a profiled PID controller in radians with trapezoidal constraints
+        double turretMaxVelRadPerSec = Math.toRadians(config.getTurretMaxVelocityDegPerSec());
+        double turretMaxAccelRadPerSec2 = Math.toRadians(config.getTurretMaxAccelerationDegPerSec2());
+        turretFeedback =
+            new ProfiledPIDController(
+                config.getTurretKP(),
+                config.getTurretKI(),
+                config.getTurretKD(),
+                new TrapezoidProfile.Constraints(turretMaxVelRadPerSec, turretMaxAccelRadPerSec2)
+            );
+
         flywheelFeedback = new PIDController(config.getFlywheelKP(), config.getFlywheelKI(), config.getFlywheelKD());
         feederFeedback = new PIDController(config.getFeederKP(), config.getFeederKI(), config.getFeederKD());
         indexerFeedback = new PIDController(config.getIndexerKP(), config.getIndexerKI(), config.getIndexerKD());
@@ -75,8 +95,12 @@ public class ShooterIOSim implements ShooterIO {
         feederFeedforward = new SimpleMotorFeedforward(config.getFeederKS(), config.getFeederKV(), config.getFeederKA());
         indexerFeedforward = new SimpleMotorFeedforward(config.getIndexerKS(), config.getIndexerKV(), config.getIndexerKA());
 
-        // Initialize hood position to starting angle
+        // Initialize hood position to starting angle (config gives rotations)
         hoodSim.setState(config.getHoodStartingAngleRotations() * 2 * Math.PI, 0);
+
+        // Initialize turret position to starting angle (config gives degrees)
+        double turretStartRad = Math.toRadians(config.getTurretStartingAngleDeg());
+        turretSim.setState(turretStartRad, 0);
     }
 
     @Override
@@ -88,6 +112,16 @@ public class ShooterIOSim implements ShooterIO {
             hoodSim.setInputVoltage(
                 MathUtil.clamp(
                     hoodFeedback.calculate(hoodSim.getAngularPositionRad()),
+                    -12,
+                    12
+                )
+            );
+        }
+
+        if (isTurretClosedLoop) {
+            turretSim.setInputVoltage(
+                MathUtil.clamp(
+                    turretFeedback.calculate(turretSim.getAngularPositionRad()),
                     -12,
                     12
                 )
@@ -128,12 +162,16 @@ public class ShooterIOSim implements ShooterIO {
         }
 
         hoodSim.update(dt);
+        turretSim.update(dt);
         flywheelSim.update(dt);
         feederSim.update(dt);
         indexerSim.update(dt);
 
         inputs.hoodAngleRotations = hoodSim.getAngularPositionRotations();
         inputs.hoodVelocityRotationsPerSec = hoodSim.getAngularVelocityRadPerSec();
+
+        inputs.turretAngleRotations = turretSim.getAngularPositionRotations();
+        inputs.turretVelocityRotationsPerSec = turretSim.getAngularVelocityRadPerSec();
 
         inputs.flywheelVelocityRotationsPerSec = flywheelSim.getAngularVelocityRadPerSec();
         inputs.flywheelAppliedVolts = flywheelSim.getInputVoltage();
@@ -164,6 +202,17 @@ public class ShooterIOSim implements ShooterIO {
     }
 
     @Override
+    public void setTurretAngle(double angleRotations) {
+        // Clamp angle within software limits
+        double minRot = config.getTurretMinAngleDeg() / 360.0;
+        double maxRot = config.getTurretMaxAngleDeg() / 360.0;
+        double clampedAngle = MathUtil.clamp(angleRotations, minRot, maxRot);
+        double goalRadians = clampedAngle * (2 * Math.PI);
+        turretFeedback.setGoal(goalRadians);
+        isTurretClosedLoop = true;
+    }
+
+    @Override
     public void setShotVelocity(double velocityRotationsPerSec) {
         flywheelFeedback.setSetpoint(velocityRotationsPerSec);
         desiredFlywheelVelocityRotationsPerSec = velocityRotationsPerSec;
@@ -181,6 +230,12 @@ public class ShooterIOSim implements ShooterIO {
     public void setHoodTorqueCurrentFOC(double torqueCurrentFOC) {
         hoodSim.setInputVoltage(torqueCurrentFOC);
         isHoodClosedLoop = false;
+    }
+
+    @Override
+    public void setTurretTorqueCurrentFOC(double torqueCurrentFOC) {
+        turretSim.setInputVoltage(torqueCurrentFOC);
+        isTurretClosedLoop = false;
     }
 
     @Override
@@ -213,6 +268,13 @@ public class ShooterIOSim implements ShooterIO {
         hoodFeedback.setP(config.kP());
         hoodFeedback.setI(config.kI());
         hoodFeedback.setD(config.kD());
+    }
+
+    @Override
+    public void configureTurretControlLoop(MotorControlLoopConfig config) {
+        turretFeedback.setP(config.kP());
+        turretFeedback.setI(config.kI());
+        turretFeedback.setD(config.kD());
     }
 
     @Override

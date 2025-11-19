@@ -59,7 +59,7 @@ public class VisionConstants {
       };
 
   // Multipliers to apply for MegaTag 2 observations. less than 1 means more stable than full 3D solve (more weight)
-  public static double linearStdDevMegatag2Factor = Double.POSITIVE_INFINITY;; // More stable than full 3D solve but we reject for now
+  public static double linearStdDevMegatag2Factor = 0.6; 
   public static double angularStdDevMegatag2Factor = Double.POSITIVE_INFINITY; // No rotation data available
 
   // Rotation rate rejection thresholds

@@ -64,13 +64,11 @@ public class MovingShotWindup extends Command {
     @Override
     public void initialize() {
         isShotValid = false;
-        // System.out.println("MovingShotWindup: Command initialized!");
         Logger.recordOutput("MovingShotWindup/isActive", true);
     }
 
     @Override
     public void execute() {
-        // System.out.println("MovingShotWindup: execute() called");
         
         Pose2d currentPose = robotState.getEstimatedPose();
         ChassisSpeeds currentSpeeds = robotState.getFieldRelativeSpeeds();
@@ -210,20 +208,16 @@ public class MovingShotWindup extends Command {
         
         Logger.recordOutput("MovingShotWindup/isRotationControllerAtSetpoint", rotationController.atSetpoint());
         
-        // System.out.println("MovingShotWindup: isFinished = " + finished);
         return finished;
     }
     
     @Override
     public void end(boolean interrupted) {
-        // ChassisSpeeds desiredSwerveSpeeds = desiredSwerveSpeedsSupplier.get();
-        // desiredSwerveSpeeds.omegaRadiansPerSecond = 0.0;
-        // swerveDrive.driveFieldRelative(desiredSwerveSpeeds);
+
 
         isShotValid = false; 
         Logger.recordOutput("MovingShotWindup/endTime", Timer.getFPGATimestamp());
 
-        // System.out.println("MovingShotWindup: Command ended. Interrupted = " + interrupted);
         Logger.recordOutput("MovingShotWindup/isActive", false);
     }
 }
