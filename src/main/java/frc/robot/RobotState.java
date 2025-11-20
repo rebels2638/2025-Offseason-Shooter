@@ -112,9 +112,8 @@ public class RobotState {
                 drivetrainConfig = SwerveDrivetrainConfigComp.getInstance();
                 robotStateConfig = RobotStateConfigComp.getInstance();
 
-
                 break;
-    }
+        }
 
         kinematics = new SwerveDriveKinematics(
             drivetrainConfig.getFrontLeftPositionMeters(),
