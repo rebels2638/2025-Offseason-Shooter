@@ -12,7 +12,6 @@ Before running tests, ensure the Python environment is ready.
 
 ```bash
 source venv/bin/activate
-
 ```
 
 ---
@@ -77,28 +76,31 @@ Use `list_keys.py` to find the exact key names in the log.
 python3 agent/tools/list_keys.py --filter "Shooter"
 ```
 
-**3. Analyze specific data:**
-Use `log_tool.py` to query data from the latest log.
+**3. Preliminary Analysis (Log Tool):**
+Use `log_tool.py` to identify key timestamps and data ranges of interest.
+```bash
+python3 agent/tools/log_tool.py --mode values --key "Test/MyMetric"
+python3 agent/tools/log_tool.py --mode minmax --key "Test/MyMetric"
+```
 
-*   **Check average value:**
+**4. Deep Analysis (Graphing):**
+Once you have identified the data points and time ranges, use `graph_tool.py` to visualize the behavior.
+*   **Generate a graph:**
     ```bash
-    python3 agent/tools/log_tool.py --mode avg --key "Test/MyMetric" --start 2.0 --end 14.0
+    python3 agent/tools/graph_tool.py --key "Test/Setpoint" --key "Test/Measured" --output "flywheel_response.png"
+    ```
+*   **Graph Derivative:**
+    ```bash
+    python3 agent/tools/graph_tool.py --mode deriv --key "Test/Position"
     ```
 
-*   **Check min/max values:**
-    ```bash
-    python3 agent/tools/log_tool.py --mode minmax --key "Test/MyMetric"
-    ```
+### Step E: Cleanup
+After completing the verification and any necessary debugging, **delete the generated logs and visualizations** to keep the workspace clean.
 
-*   **Dump values to console:**
-    ```bash
-    python3 agent/tools/log_tool.py --mode values --key "Test/MyMetric"
-    ```
-
-*   **Check Driver Station state:**
-    ```bash
-    python3 agent/tools/log_tool.py --mode ds --start 5.0
-    ```
+```bash
+rm agent/logs/*.wpilog
+rm agent/visualizations/*.png
+```
 
 ---
 
@@ -118,6 +120,15 @@ Use `log_tool.py` to query data from the latest log.
     *   `deriv`: Rate of change (derivative).
     *   `ds`: Driver Station state.
 
+### `agent/tools/graph_tool.py`
+*   **Usage:** `python3 agent/tools/graph_tool.py --key KEY [--key KEY2] [--output FILENAME] [OPTIONS]`
+*   **Function:** Generates graphs (line or scatter) from log data and saves them to `agent/visualizations/`.
+*   **Options:**
+    *   `--mode`: `values` (default), `deriv`, `integral`.
+    *   `--scatter`: Use scatter plot instead of line plot.
+    *   `--start`, `--end`: Time range to graph.
+    *   `--title`: Custom title for the graph.
+
 ### `agent/tools/list_keys.py`
 *   **Usage:** `python3 agent/tools/list_keys.py [--file PATH] [--filter TEXT]`
 *   **Function:** Lists all keys in the log file (default: latest). Use `--filter` to search for specific substrings (e.g., "Shooter").
@@ -125,4 +136,4 @@ Use `log_tool.py` to query data from the latest log.
 ### `agent/tools/open_in_viewer.py`
 *   **Usage:** `python3 agent/tools/open_in_viewer.py`
 *   **Function:** Opens the latest log in the **AdvantageScope** GUI application (macOS only).
-*   **Note:** This tool is for **manual human inspection** only. Agents should use `log_tool.py` to verify data programmatically.
+*   **Note:** This tool is for **manual human inspection** only. Agents should use `log_tool.py` and `graph_tool.py` to verify data programmatically.

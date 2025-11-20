@@ -13,12 +13,16 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 
 import com.ctre.phoenix6.SignalLogger;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.net.WebServer;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import frc.robot.commands.RunShooterFlywheel;
 import frc.robot.constants.Constants;
+import frc.robot.subsystems.shooter.Shooter;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -144,7 +148,7 @@ public class Robot extends LoggedRobot {
     @Override
     public void autonomousInit() {
         if (Constants.agentMode) {
-            m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+            m_autonomousCommand = new RunShooterFlywheel(50);
         } else {
             m_autonomousCommand = m_robotContainer.getAutonomousCommand();
         }
