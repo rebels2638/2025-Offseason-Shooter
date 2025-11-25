@@ -7,5 +7,6 @@
         "setpoint",
         "Setpoints",
         "teleop"
-    ]
+    ],
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
