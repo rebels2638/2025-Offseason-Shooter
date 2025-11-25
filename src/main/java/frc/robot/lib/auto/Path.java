@@ -49,12 +49,26 @@ public class Path {
                 new RotationTarget(rotation, 1.0, true)
             );
         }
+
+        public Waypoint(Translation2d translation, double handoffRadius, Rotation2d rotation, boolean profiledRotation) {
+            this(
+                new TranslationTarget(translation, Optional.of(handoffRadius)),
+                new RotationTarget(rotation, 1.0, profiledRotation)
+            );
+        }
         
         // Constructor: (Translation2d, Rotation2d)
         public Waypoint(Translation2d translation, Rotation2d rotation) {
             this(
                 new TranslationTarget(translation, Optional.empty()),
                 new RotationTarget(rotation, 1.0, true)
+            );
+        }
+
+        public Waypoint(Translation2d translation, Rotation2d rotation, boolean profiledRotation) {
+            this(
+                new TranslationTarget(translation, Optional.empty()),
+                new RotationTarget(rotation, 1.0, profiledRotation)
             );
         }
     }
@@ -288,7 +302,8 @@ public class Path {
     public DefaultGlobalConstraints getDefaultGlobalConstraints() {
         return defaultGlobalConstraints.copy();
     }
-    public void setDefaultGlobalConstraints(DefaultGlobalConstraints defaultGlobalConstraints) {
+
+    public static void setDefaultGlobalConstraints(DefaultGlobalConstraints defaultGlobalConstraints) {
         if (defaultGlobalConstraints == null) {
             throw new IllegalArgumentException("defaultGlobalConstraints cannot be null");
         }
@@ -600,15 +615,60 @@ public class Path {
         flipped = false;
     }
 
-    public static Rotation2d getInitialModuleDirection(Path path, Supplier<Pose2d> poseSupplier) {
+    
+    public Pose2d getStartPose() {
+        return getStartPose(new Rotation2d());
+    }
+
+    public Pose2d getStartPose(Rotation2d fallbackRotation) {
+        if (!isValid()) {
+            throw new IllegalStateException("Path invalid - cannot compute start pose");
+        }
+
+        List<Pair<PathElement, PathElementConstraint>> elements = getPathElementsWithConstraintsNoWaypoints();
+        if (elements.isEmpty()) {
+            throw new IllegalStateException("Path must contain at least one element");
+        }
+
+        Translation2d resetTranslation = null;
+        for (Pair<PathElement, PathElementConstraint> element : elements) {
+            if (element.getFirst() instanceof TranslationTarget) {
+                resetTranslation = ((TranslationTarget) element.getFirst()).translation();
+                break;
+            }
+        }
+        if (resetTranslation == null) {
+            throw new IllegalStateException("Path must contain at least one translation target");
+        }
+
+        Rotation2d resetRotation = fallbackRotation;
+        for (int i = 0; i < elements.size(); i++) {
+            if (elements.get(i).getFirst() instanceof RotationTarget) {
+                resetRotation = ((RotationTarget) elements.get(i).getFirst()).rotation();
+                break;
+            }
+        }
+
+        return new Pose2d(resetTranslation, resetRotation);
+    }
+
+    public Rotation2d getInitialModuleDirection() {
+        return getInitialModuleDirection(this::getStartPose);
+    }
+
+    public Rotation2d getInitialModuleDirection(Rotation2d fallbackRotation) {
+        return getInitialModuleDirection(() -> getStartPose(fallbackRotation));
+    }
+
+    public Rotation2d getInitialModuleDirection(Supplier<Pose2d> poseSupplier) {
         Pose2d robotPose = poseSupplier.get();
         
-        if (!path.isValid()) {
+        if (!isValid()) {
             return new Rotation2d(0);
         }
 
         // Get all translation targets from the path
-        List<Pair<PathElement, PathElementConstraint>> pathElements = path.getPathElementsWithConstraintsNoWaypoints();
+        List<Pair<PathElement, PathElementConstraint>> pathElements = getPathElementsWithConstraintsNoWaypoints();
         List<TranslationTarget> translationTargets = new ArrayList<>();
         for (Pair<PathElement, PathElementConstraint> element : pathElements) {
             if (element.getFirst() instanceof TranslationTarget) {
@@ -633,7 +693,7 @@ public class Path {
         // if there is more than one translation target, choose the first target which's handoff radius does not intersect robot pose and return direction of that target from robot pose
         for (TranslationTarget target : translationTargets) {
             double handoffRadius = target.intermediateHandoffRadiusMeters()
-                .orElse(path.getDefaultGlobalConstraints().getIntermediateHandoffRadiusMeters());
+                .orElse(getDefaultGlobalConstraints().getIntermediateHandoffRadiusMeters());
             double distanceToTarget = robotPose.getTranslation().getDistance(target.translation());
 
             // If handoff radius exists and robot pose is outside the handoff radius, use this target
@@ -660,6 +720,9 @@ public class Path {
         for (PathElement element : pathElements) {
             deepCopiedElements.add(element.copy());
         }
-        return new Path(deepCopiedElements, pathConstraints.copy(), defaultGlobalConstraints.copy());
+        Path copiedPath = new Path(deepCopiedElements, pathConstraints.copy(), defaultGlobalConstraints.copy());
+        copiedPath.flipped = this.flipped;
+        copiedPath.isValid = this.isValid;
+        return copiedPath;
     }
 }   

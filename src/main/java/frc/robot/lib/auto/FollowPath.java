@@ -10,6 +10,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.constants.Constants;
 import frc.robot.lib.auto.Path.PathElement;
 import frc.robot.lib.auto.Path.PathElementConstraint;
 import frc.robot.lib.auto.Path.RotationTarget;
@@ -19,6 +20,7 @@ import frc.robot.lib.auto.Path.TranslationTargetConstraint;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -28,6 +30,18 @@ public class FollowPath extends Command {
     private static Consumer<Pair<String, Translation2d[]>> translationListLoggingConsumer = value -> {};
     private static Consumer<Pair<String, Double>> doubleLoggingConsumer = value -> {};
     private static Consumer<Pair<String, Boolean>> booleanLoggingConsumer = value -> {};
+
+    private static void logDouble(String key, double value) {
+        doubleLoggingConsumer.accept(new Pair<>(key, value));
+    }
+
+    private static void logBoolean(String key, boolean value) {
+        booleanLoggingConsumer.accept(new Pair<>(key, value));
+    }
+
+    private static void logPose(String key, Pose2d value) {
+        poseLoggingConsumer.accept(new Pair<>(key, value));
+    }
 
     private static PIDController translationController = null;
     private static PIDController rotationController = null;
@@ -113,7 +127,7 @@ public class FollowPath extends Command {
     private final Consumer<ChassisSpeeds> robotRelativeSpeedsConsumer;
     private final Supplier<Boolean> shouldFlipPathSupplier;
     private final Consumer<Pose2d> poseResetConsumer;
-
+    
     private int rotationElementIndex = 0;
     private int translationElementIndex = 0;
     private int prevTranslationElementIndex = 0;
@@ -173,6 +187,7 @@ public class FollowPath extends Command {
         this(path, driveSubsystem, poseSupplier, robotRelativeSpeedsSupplier, robotRelativeSpeedsConsumer, shouldFlipPathSupplier, poseResetConsumer, translationController, rotationController, crossTrackController);
     }
 
+
     @Override
     public void initialize() {
         if (translationController == null || rotationController == null) {
@@ -195,25 +210,8 @@ public class FollowPath extends Command {
             throw new IllegalStateException("Path must contain at least one element");
         }
 
-        // Find first translation target
-        Translation2d resetTranslation = null;
-        for (Pair<PathElement, PathElementConstraint> element : pathElementsWithConstraints) {
-            if (element.getFirst() instanceof TranslationTarget) {
-                resetTranslation = ((TranslationTarget) element.getFirst()).translation();
-                break;
-            }
-        }
-        if (resetTranslation == null) {
-            throw new IllegalStateException("Path must contain at least one translation target");
-        }
-        Rotation2d resetRotation = pathInitStartPose.getRotation();
-        for (int i = 0; i < pathElementsWithConstraints.size(); i++) {
-            if (pathElementsWithConstraints.get(i).getFirst() instanceof RotationTarget) {
-                resetRotation = ((RotationTarget) pathElementsWithConstraints.get(i).getFirst()).rotation();
-                break;
-            }
-        }
-        poseResetConsumer.accept(new Pose2d(resetTranslation, resetRotation));
+        Pose2d startPose = path.getStartPose(poseSupplier.get().getRotation());
+        poseResetConsumer.accept(startPose);
 
         rotationElementIndex = 0;
         translationElementIndex = 0;
@@ -245,7 +243,6 @@ public class FollowPath extends Command {
             logger.log(java.util.logging.Level.WARNING, "FollowPath: Path invalid - skipping execution");
             return;
         }
-        
         double dt = Timer.getTimestamp() - lastTimestamp;
         lastTimestamp = Timer.getTimestamp();
 
@@ -298,7 +295,7 @@ public class FollowPath extends Command {
                 break;
             } else {
                 // We've passed this target's t_ratio, log and move to next
-                doubleLoggingConsumer.accept(new Pair<>("FollowPath/rotationElementIndex", (double) rotationElementIndex));
+                logDouble("FollowPath/rotationElementIndex", (double) rotationElementIndex);
                 rotationElementIndex++;
 
                 // If we've reached the end, stop
@@ -359,8 +356,8 @@ public class FollowPath extends Command {
                 double remainingRotationDistance = calculateRemainingDistanceToRotationTarget();
                 double rotationSegmentDistance = calculateRotationTargetSegmentDistance();
 
-                doubleLoggingConsumer.accept(new Pair<>("FollowPath/remainingRotationDistance", remainingRotationDistance));
-                doubleLoggingConsumer.accept(new Pair<>("FollowPath/rotationSegmentDistance", rotationSegmentDistance));
+                logDouble("FollowPath/remainingRotationDistance", remainingRotationDistance);
+                logDouble("FollowPath/rotationSegmentDistance", rotationSegmentDistance);
 
                 // Avoid divide by zero and handle edge cases
                 double segmentProgress = 0.0;
@@ -368,11 +365,21 @@ public class FollowPath extends Command {
                     segmentProgress = 1 - remainingRotationDistance / rotationSegmentDistance;
                     // Clamp to valid range
                     segmentProgress = Math.max(0.0, Math.min(1.0, segmentProgress));
+
+                    double endTranslationTolerance = path.getEndTranslationToleranceMeters();
+                    if (endTranslationTolerance > 0) {
+                        // Treat the rotation as complete once we are within the linear tolerance of the target.
+                        // This prevents us from undershooting the final rotation when translation stops early.
+                        double effectiveTolerance = Math.min(endTranslationTolerance, rotationSegmentDistance);
+                        if (remainingRotationDistance <= effectiveTolerance) {
+                            segmentProgress = 1.0;
+                        }
+                    }
                 } else if (rotationSegmentDistance < 0) {
                     logger.warning("FollowPath: Negative rotation segment distance: " + rotationSegmentDistance);
                     segmentProgress = 0.0;
                 }
-                doubleLoggingConsumer.accept(new Pair<>("FollowPath/segmentProgress", segmentProgress));
+                logDouble("FollowPath/segmentProgress", segmentProgress);
 
                 // Calculate the shortest angular path from current robot rotation to target
                 double endRotation = currentRotationTarget.rotation().getRadians();
@@ -420,21 +427,22 @@ public class FollowPath extends Command {
             robotTranslations.add(currentPose.getTranslation());
 
             // Limit memory usage by keeping only the most recent points
-            if (robotTranslations.size() > 100) {
-                // Remove oldest entries to keep only the last 75 points
-                robotTranslations.subList(0, robotTranslations.size() - 75).clear();
+            if (robotTranslations.size() > 300) {
+                // Remove oldest entries to keep only the last 300 points
+                robotTranslations.subList(0, robotTranslations.size() - 250).clear();
             }
 
             translationListLoggingConsumer.accept(new Pair<>("FollowPath/robotTranslations", robotTranslations.toArray(Translation2d[]::new)));
         }
+        
 
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/calculateRemainingPathDistance", cachedRemainingDistance));
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/translationElementIndex", (double) translationElementIndex));
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/rotationElementIndex", (double) rotationElementIndex));
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/targetRotation", targetRotation));
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/rotationControllerOutput", omega));
+        logDouble("FollowPath/calculateRemainingPathDistance", cachedRemainingDistance);
+        logDouble("FollowPath/translationElementIndex", (double) translationElementIndex);
+        logDouble("FollowPath/rotationElementIndex", (double) rotationElementIndex);
+        logDouble("FollowPath/targetRotation", targetRotation);
+        logDouble("FollowPath/rotationControllerOutput", omega);
 
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/currentRotationTargetInitRad", currentRotationTargetInitRad));
+        logDouble("FollowPath/currentRotationTargetInitRad", currentRotationTargetInitRad);
 
     }
     
@@ -563,8 +571,8 @@ public class FollowPath extends Command {
         }
         // Right of path = positive (crossProduct > 0), so no change needed
 
-        poseLoggingConsumer.accept(new Pair<>("FollowPath/closestPoint", new Pose2d(closestPoint, currentPose.getRotation())));
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/crossTrackError", signedError));
+        logPose("FollowPath/closestPoint", new Pose2d(closestPoint, currentPose.getRotation()));
+        logDouble("FollowPath/crossTrackError", signedError);
 
         return signedError;
     }
@@ -604,7 +612,8 @@ public class FollowPath extends Command {
         // If the two translation points are at the same location, return that location
         double segmentLength = translationA.getDistance(translationB);
         if (segmentLength == 0) {
-            poseLoggingConsumer.accept(new Pair<>("FollowPath/calculateRotationTargetTranslation", new Pose2d(translationA, new Rotation2d())));
+            logPose("FollowPath/calculateRotationTargetTranslation", new Pose2d(translationA, new Rotation2d()));
+            
             return translationA;
         }
 
@@ -630,7 +639,8 @@ public class FollowPath extends Command {
             translationA.getY() + Math.sin(angle) * interpolatedDistance
         );
 
-        poseLoggingConsumer.accept(new Pair<>("FollowPath/calculateRotationTargetTranslation", new Pose2d(pointOnSegment, new Rotation2d())));
+        logPose("FollowPath/calculateRotationTargetTranslation", new Pose2d(pointOnSegment, new Rotation2d()));
+        
         return pointOnSegment;
     }
 
@@ -668,6 +678,7 @@ public class FollowPath extends Command {
             return true; // Stay at current rotation target
         }
 
+        // TODO: ADD HANDELING FOR VERY SMALL SEGMENTS
         double segmentLength = translationA.getDistance(translationB);
         if (segmentLength < 1e-6) {
             return true; // Avoid division by zero or very small segments
@@ -685,9 +696,9 @@ public class FollowPath extends Command {
         // Return true if we haven't reached the target t_ratio yet (should stay at current target)
         boolean shouldStayAtCurrentTarget = segmentProgress < targetTRatio;
 
-        booleanLoggingConsumer.accept(new Pair<>("FollowPath/isRotationTRatioGreater", shouldStayAtCurrentTarget));
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/segmentProgress", segmentProgress));
-        doubleLoggingConsumer.accept(new Pair<>("FollowPath/targetTRatio", targetTRatio));
+        logBoolean("FollowPath/isRotationTRatioGreater", shouldStayAtCurrentTarget);
+        logDouble("FollowPath/segmentProgress", segmentProgress);
+        logDouble("FollowPath/targetTRatio", targetTRatio);
 
         return shouldStayAtCurrentTarget;
     }
@@ -734,7 +745,7 @@ public class FollowPath extends Command {
             translationController.atSetpoint() && 
             Math.abs(currentRotationTargetRad.minus(poseSupplier.get().getRotation()).getRadians()) < Math.toRadians(path.getEndRotationToleranceDeg());
 
-        booleanLoggingConsumer.accept(new Pair<>("FollowPath/finished", finished));
+        logBoolean("FollowPath/finished", finished);
         return finished;
     }
 

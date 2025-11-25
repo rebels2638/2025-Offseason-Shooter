@@ -1,5 +1,6 @@
 package frc.robot;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -9,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
+import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import frc.robot.commands.AbsoluteFieldDrive;
 import frc.robot.commands.DistanceShotWindup;
 import frc.robot.commands.MovingShotWindup;
@@ -19,6 +21,8 @@ import frc.robot.commands.RunShooterIndexer;
 import frc.robot.commands.TunableShotFire;
 import frc.robot.commands.TunableShotWindup;
 import frc.robot.commands.WindupAndShoot;
+import frc.robot.lib.auto.FollowPath;
+import frc.robot.lib.auto.Path;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.swerve.SwerveDrive;
@@ -51,6 +55,10 @@ public class RobotContainer {
         this.xboxOperator = new XboxController(2);
         this.xboxDriver = new XboxController(3);
 
+        FollowPath.setTranslationController(new PIDController(6.3, 0, 0));
+        FollowPath.setRotationController(new PIDController(12, 0, 1.1));
+        FollowPath.setCrossTrackController(new PIDController(3, 0, 0));
+        
         AbsoluteFieldDrive absoluteFieldDrive = new AbsoluteFieldDrive(xboxDriver);
         this.absoluteFieldDrive = absoluteFieldDrive;
         // Command movingShotWindup = new MovingShotWindup(new Translation3d(5, 10, 0), absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier(), 5);
@@ -87,12 +95,24 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
+        Path path = new Path("blinexample");
+
+        return new FollowPath(
+            path,
+            swerveDrive, 
+            robotState::getEstimatedPose, 
+            robotState::resetPose, 
+            () -> false, 
+            robotState::getRobotRelativeSpeeds, 
+            swerveDrive::driveRobotRelative);
+
+
         // return new SequentialCommandGroup(
         //     new DistanceShotWindup(),
         //     new TunableShotFire()
         // );
 
-        return new InstantCommand(() -> robotState.resetPose(new Pose2d(new Translation2d(52,50), new Rotation2d(Math.PI))) );
+        // return new InstantCommand(() -> robotState.resetPose(new Pose2d(new Translation2d(52,50), new Rotation2d(Math.PI))) );
         // return new SequentialCommandGroup(
         //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(40))),
         //     new InstantCommand(() -> shooter.setShotVelocity(1)),

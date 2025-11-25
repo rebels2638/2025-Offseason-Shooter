@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import frc.robot.commands.RunShooterFlywheel;
 import frc.robot.constants.Constants;
+import frc.robot.lib.auto.FollowPath;
 import frc.robot.subsystems.shooter.Shooter;
 
 /**
@@ -107,6 +108,8 @@ public class Robot extends LoggedRobot {
         WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
 
         m_robotContainer = RobotContainer.getInstance();
+
+        linkFollowPathLogging();
     }
 
     /**
@@ -141,6 +144,28 @@ public class Robot extends LoggedRobot {
     public void disabledPeriodic() {
     }
 
+    private void linkFollowPathLogging() {
+        // Pose logging consumer
+        FollowPath.setPoseLoggingConsumer(pair -> {
+            Logger.recordOutput(pair.getFirst(), pair.getSecond());
+        });
+
+        // Translation list logging consumer
+        FollowPath.setTranslationListLoggingConsumer(pair -> {
+            Logger.recordOutput(pair.getFirst(), pair.getSecond());
+        });
+
+        // Double logging consumer
+        FollowPath.setDoubleLoggingConsumer(pair -> {
+            Logger.recordOutput(pair.getFirst(), pair.getSecond());
+        });
+
+        // Boolean logging consumer
+        FollowPath.setBooleanLoggingConsumer(pair -> {
+            Logger.recordOutput(pair.getFirst(), pair.getSecond());
+        });
+    }
+    
     /**
      * This autonomous runs the autonomous command selected by your
      * {@link RobotContainer} class.
