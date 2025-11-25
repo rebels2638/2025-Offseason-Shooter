@@ -22,7 +22,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import frc.robot.commands.RunShooterFlywheel;
 import frc.robot.constants.Constants;
-import frc.robot.lib.auto.FollowPath;
+import frc.robot.lib.BLine.FollowPath;
 import frc.robot.subsystems.shooter.Shooter;
 
 /**

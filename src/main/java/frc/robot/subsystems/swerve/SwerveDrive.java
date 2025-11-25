@@ -42,7 +42,7 @@ import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleGeneralConfigP
 import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleSpecificBLConfigProto;
 import frc.robot.constants.swerve.moduleConfigs.proto.SwerveModuleSpecificFRConfigProto;
 import frc.robot.constants.swerve.moduleConfigs.sim.SwerveModuleGeneralConfigSim;
-import frc.robot.lib.auto.ChassisRateLimiter;
+import frc.robot.lib.BLine.ChassisRateLimiter;
 import frc.robot.subsystems.swerve.gyro.GyroIO;
 import frc.robot.subsystems.swerve.gyro.GyroIOInputsAutoLogged;
 import frc.robot.subsystems.swerve.gyro.GyroIOPigeon2;
