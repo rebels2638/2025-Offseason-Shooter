@@ -1,13 +1,7 @@
 package frc.robot.constants.swerve.drivetrainConfigs;
 
-import com.pathplanner.lib.config.ModuleConfig;
-import com.pathplanner.lib.config.PIDConstants;
-import com.pathplanner.lib.config.RobotConfig;
-
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.system.plant.DCMotor;
-import frc.robot.constants.swerve.moduleConfigs.sim.SwerveModuleGeneralConfigSim;
 
 public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 

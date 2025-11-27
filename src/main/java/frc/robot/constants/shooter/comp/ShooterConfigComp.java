@@ -39,22 +39,22 @@ public class ShooterConfigComp extends ShooterConfigBase {
         // - Required RPS: RPS = v / (π × 0.0508)
         InterpolatingMatrixTreeMap<Double, N2, N1> table = new InterpolatingMatrixTreeMap<>();
         
-        table.put(0.38, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+        table.put(0.48, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             45.0/360.0, // hood angle = 45.00° (optimal for flat trajectory)
             12 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
         }));
 
-        table.put(0.61, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+        table.put(0.71, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             45.0/360.0, // hood angle = 45.00° (optimal for flat trajectory)
             15.0 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
         }));
 
-        table.put(1.22 , new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+        table.put(1.32 , new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             40.0/360.0, // hood angle = 45.00° (optimal for flat trajectory)
             23.0 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
         }));
 
-        table.put(2.032, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+        table.put(2.132, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             40.0/360, // hood angle = 45.00°
             30.0 // flywheel velocity in RPS (exit velocity = 3.65 m/s)
         }));
@@ -65,12 +65,12 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getMinShotDistFromShooterMeters() {
-        return 0.38;
+        return 0.48;
     }
 
     @Override
     public double getMaxShotDistFromShooterMeters() {
-        return 2.032;
+        return 2.132;
     }
     
     @Override

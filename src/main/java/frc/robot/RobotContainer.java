@@ -1,33 +1,34 @@
 package frc.robot;
 
+import java.util.Arrays;
+
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import frc.robot.commands.AbsoluteFieldDrive;
-import frc.robot.commands.DistanceShotWindup;
-import frc.robot.commands.MovingShotWindup;
 import frc.robot.commands.RunShooterFeeder;
 import frc.robot.commands.RunShooterFlywheel;
 import frc.robot.commands.RunShooterHood;
 import frc.robot.commands.RunShooterIndexer;
-import frc.robot.commands.TunableShotFire;
-import frc.robot.commands.TunableShotWindup;
 import frc.robot.commands.WindupAndShoot;
+import frc.robot.constants.Constants;
 import frc.robot.lib.BLine.FollowPath;
+import frc.robot.lib.BLine.FollowPath.Builder;
 import frc.robot.lib.BLine.Path;
+import frc.robot.lib.BLine.Path.PathConstraints;
+import frc.robot.lib.BLine.Path.RangedConstraint;
+import frc.robot.lib.BLine.Path.TranslationTarget;
+import frc.robot.lib.BLine.Path.Waypoint;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.swerve.SwerveDrive;
 import frc.robot.subsystems.vision.Vision;
-
 
 public class RobotContainer {
     public static RobotContainer instance = null;
@@ -54,10 +55,6 @@ public class RobotContainer {
         this.xboxTester = new XboxController(1);
         this.xboxOperator = new XboxController(2);
         this.xboxDriver = new XboxController(3);
-
-        FollowPath.setTranslationController(new PIDController(6.3, 0, 0));
-        FollowPath.setRotationController(new PIDController(12, 0, 1.1));
-        FollowPath.setCrossTrackController(new PIDController(3, 0, 0));
         
         AbsoluteFieldDrive absoluteFieldDrive = new AbsoluteFieldDrive(xboxDriver);
         this.absoluteFieldDrive = absoluteFieldDrive;
@@ -79,6 +76,31 @@ public class RobotContainer {
             )
         );
 
+        FollowPath.Builder onTheFlyBuilder = new Builder(
+            swerveDrive,
+            robotState::getEstimatedPose,
+            robotState::getRobotRelativeSpeeds,
+            swerveDrive::driveRobotRelative,
+            new PIDController(6.3, 0, 0),
+            new PIDController(12, 0, 1.1),
+            new PIDController(3, 0, 0)
+        ).withDefaultShouldFlip();
+
+
+
+        Path p = new Path(
+            new PathConstraints().setMaxVelocityMetersPerSec(3),
+            new TranslationTarget(5.4, 5.4),
+            new Waypoint(new Translation2d(5, 5), 0.05, new Rotation2d(0))
+
+        );
+
+        this.xboxDriver.getBButton().whileTrue(
+            onTheFlyBuilder.build(p)
+        );
+
+       
+
         // this.xboxDriver.getAButton().onTrue(
         //     new TunableShotWindup()
         // );
@@ -94,67 +116,23 @@ public class RobotContainer {
         // command.schedule();
     }
 
+    public Command getAlignModulesCommand(Path path) {
+        return new WaitUntilCommand(() -> swerveDrive.alignModules(path.getInitialModuleDirection(), 15).get());
+    }
+    
     public Command getAutonomousCommand() {
-        Path path = new Path("blinexample");
+        Path path = new Path("new_path");
 
-        return new FollowPath(
-            path,
-            swerveDrive, 
-            robotState::getEstimatedPose, 
-            robotState::resetPose, 
-            () -> false, 
-            robotState::getRobotRelativeSpeeds, 
-            swerveDrive::driveRobotRelative);
+        FollowPath.Builder autoBuilder = new Builder(
+            swerveDrive,
+            robotState::getEstimatedPose,
+            robotState::getRobotRelativeSpeeds,
+            swerveDrive::driveRobotRelative,
+            new PIDController(6.3, 0, 0),
+            new PIDController(12, 0, 1.1),
+            new PIDController(3, 0, 0)
+        ).withDefaultShouldFlip().withPoseReset(robotState::resetPose);
 
-
-        // return new SequentialCommandGroup(
-        //     new DistanceShotWindup(),
-        //     new TunableShotFire()
-        // );
-
-        // return new InstantCommand(() -> robotState.resetPose(new Pose2d(new Translation2d(52,50), new Rotation2d(Math.PI))) );
-        // return new SequentialCommandGroup(
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(40))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(1)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(1)),
-        //     new InstantCommand(() -> shooter.setIndexerVelocity(5)),
-
-        //     new WaitCommand(1.5),
-
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(50))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(5)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(2)),
-        //     new InstantCommand(() -> shooter.setIndexerVelocity(5)),
-        //     new WaitCommand(1.5),
-
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(60))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(20)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(10)),
-        //     new InstantCommand(() -> shooter.setIndexerVelocity(10)),
-        //     new WaitCommand(1.5),
-
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(100))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(40)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(15)),
-        //     new InstantCommand(() -> shooter.setIndexerVelocity(15)),
-        //     new WaitCommand(1.5),
-            
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(125))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(50)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(25)),
-        //     new InstantCommand(() -> shooter.setIndexerVelocity(25)),
-        //     new WaitCommand(1.5),
-
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(170))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(60)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(30)),
-        //     new InstantCommand(() -> shooter.setIndexerVelocity(30)),
-        //     new WaitCommand(1.5),
-
-        //     new InstantCommand(() -> shooter.setAngle(Rotation2d.fromDegrees(38))),
-        //     new InstantCommand(() -> shooter.setShotVelocity(0)),
-        //     new InstantCommand(() -> shooter.setFeedVelocity(0)),
-        //     new InstantCommand(() -> shooter.setIndexerVelocity(0))
-        // );   
+        return getAlignModulesCommand(path).andThen(autoBuilder.build(path));
     }
 }
