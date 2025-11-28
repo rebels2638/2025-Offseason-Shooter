@@ -11,6 +11,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotState;
 import frc.robot.constants.Constants;
@@ -49,6 +50,8 @@ public class Superstructure extends SubsystemBase {
     private final Shooter shooter = Shooter.getInstance();
     private final RobotState robotState = RobotState.getInstance();
 
+    private double lastShotTime = 0;
+
     private Superstructure() {}
 
     @Override
@@ -66,7 +69,7 @@ public class Superstructure extends SubsystemBase {
                         handleTrackingIdleState();
                         break;
                     case TRACKING_READY:
-                        handleTrackingReadyState();
+                        handleTrackingWindupState();
                         break;
                     case SHOOTING:
                         handleTrackingWindupState();
@@ -86,7 +89,7 @@ public class Superstructure extends SubsystemBase {
                         handleTrackingIdleState();
                         break;
                     case TRACKING_READY:
-                        handleTrackingReadyState();
+                        handleTrackingWindupState();
                         break;
                     case SHOOTING:
                         handleTrackingWindupState();
@@ -106,7 +109,7 @@ public class Superstructure extends SubsystemBase {
                         handleTrackingIdleState();
                         break;
                     case TRACKING_READY:
-                        handleTrackingReadyState();
+                        handleTrackingWindupState();
                         break;
                     case SHOOTING:
                         handleTrackingWindupState();
@@ -126,7 +129,7 @@ public class Superstructure extends SubsystemBase {
                         handleTrackingIdleState();
                         break;
                     case TRACKING_READY:
-                        handleTrackingReadyState();
+                        handleTrackingWindupState();
                         break;
                     case SHOOTING:
                         handleTrackingWindupState();
@@ -211,6 +214,7 @@ public class Superstructure extends SubsystemBase {
 
         ) {
             currentSuperstructureState = CurrentSuperstructureState.TRACKING_READY;
+            lastShotTime = Timer.getFPGATimestamp();
         }
     }
 
@@ -235,6 +239,8 @@ public class Superstructure extends SubsystemBase {
             //TODO: AND ROBOT STATE READY TO SHOOT (swerve is within tolerance for the turret yaw)
         )) {
             currentSuperstructureState = CurrentSuperstructureState.TRACKING_WINDUP;
+        } else {
+            lastShotTime = Timer.getFPGATimestamp();
         }
     }
 
@@ -250,10 +256,11 @@ public class Superstructure extends SubsystemBase {
         shooter.setHoodAngle(shotData.hoodPitch());
         shooter.setTurretAngle(turretShotYaw);
 
-        //TODO: Detect when note has left (beam break, flywheel velocity drop, or timer)
-        // For now, transition back to TRACKING_READY immediately after shot cycle
-        // In practice, you'd check: if (shooter.hasNoteExited()) { ... }
-        currentSuperstructureState = CurrentSuperstructureState.TRACKING_READY;
+        if (Timer.getFPGATimestamp() - lastShotTime > 1.0) {
+            currentSuperstructureState = CurrentSuperstructureState.TRACKING_READY;
+            desiredSuperstructureState = DesiredSuperstructureState.TRACKING_READY;
+            lastShotTime = Timer.getFPGATimestamp();
+        }
     }
 
     private ShotData calculateShotData() {
