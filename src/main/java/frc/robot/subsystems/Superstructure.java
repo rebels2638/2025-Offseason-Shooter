@@ -1,254 +1,296 @@
-// package frc.robot.subsystems;
+package frc.robot.subsystems;
 
-// import java.util.function.Supplier;
+import java.util.function.DoubleUnaryOperator;
 
-// import org.littletonrobotics.junction.Logger;
-// import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
+import edu.wpi.first.math.InterpolatingMatrixTreeMap;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.RobotState;
+import frc.robot.constants.Constants;
+import frc.robot.lib.util.ShotCalculator;
+import frc.robot.lib.util.ShotCalculator.ShotData;
+import frc.robot.subsystems.shooter.Shooter;
 
-// import edu.wpi.first.math.InterpolatingMatrixTreeMap;
-// import edu.wpi.first.math.controller.PIDController;
-// import edu.wpi.first.math.geometry.Pose2d;
-// import edu.wpi.first.math.geometry.Pose3d;
-// import edu.wpi.first.math.geometry.Rotation2d;
-// import edu.wpi.first.math.geometry.Rotation3d;
-// import edu.wpi.first.math.geometry.Transform3d;
-// import edu.wpi.first.math.geometry.Translation2d;
-// import edu.wpi.first.math.geometry.Translation3d;
-// import edu.wpi.first.math.kinematics.ChassisSpeeds;
-// import edu.wpi.first.math.numbers.N1;
-// import edu.wpi.first.math.numbers.N2;
-// import edu.wpi.first.wpilibj2.command.SubsystemBase;
-// import frc.robot.RobotState;
-// import frc.robot.constants.Constants;
-// import frc.robot.constants.Constants.FieldConstants;
-// import frc.robot.subsystems.shooter.Shooter;
-// import frc.robot.subsystems.swerve.SwerveDrive;
-// import frc.robot.constants.Constants.FieldConstants.*;
+public class Superstructure extends SubsystemBase {
+    private static Superstructure instance;
+    public static Superstructure getInstance() {
+        if (instance == null) {
+            instance = new Superstructure();
+        }
+        return instance;
+    }
 
-// public class Superstructure extends SubsystemBase {
-//     private static Superstructure instance = null;
-//     public static Superstructure getInstance() {
-//         if (instance == null) {
-//             instance = new Superstructure();
-//         }
-//         return instance;
-//     }
-    
-//     public enum DesiredSuperState {
-//         HOME,
-//         STOPPED,
-//         TURRET_TRACKING,
-//         WINDUP,
-//         SHOOTING
-//     }
+    public enum CurrentSuperstructureState {
+        DISABLED,
+        IDLE,
+        TRACKING_IDLE,
+        TRACKING_WINDUP,
+        TRACKING_READY,
+        SHOOTING
+    }
+    public enum DesiredSuperstructureState {
+        DISABLED,
+        IDLE,
+        TRACKING_IDLE,
+        TRACKING_READY,
+        SHOOTING
+    }
 
-//     public enum CurrentSuperState {
-//         HOME,
-//         STOPPED,
-//         TURRET_TRACKING,
-//         WINDUP,
-//         SHOOTING
-//     }
+    private CurrentSuperstructureState currentSuperstructureState = CurrentSuperstructureState.DISABLED;
+    private DesiredSuperstructureState desiredSuperstructureState = DesiredSuperstructureState.DISABLED;
 
-//     private DesiredSuperState desiredState = DesiredSuperState.STOPPED;
-//     private CurrentSuperState currentState = CurrentSuperState.STOPPED;
+    private final Shooter shooter = Shooter.getInstance();
+    private final RobotState robotState = RobotState.getInstance();
 
-//     private final Shooter shooter = Shooter.getInstance();
-//     private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
-//     private final RobotState robotState = RobotState.getInstance();
+    private Superstructure() {}
 
-//     private static final double GRAVITY = 9.81; // m/s^2
-//     private static final LoggedNetworkNumber LATENCY_COMPENSATION_SECONDS = new LoggedNetworkNumber("MovingShotWindup/latencyCompensationSeconds", 
-//         switch (Constants.currentMode) {
-//             case COMP -> 0.0;
-//             case SIM -> 0.0;
-//             case PROTO -> 0.0;
-//             case REPLAY -> 0.0;
-//             default -> 0.0;
-//         }
-//     );
+    @Override
+    public void periodic() {
+        switch (currentSuperstructureState) {
+            case DISABLED:
+                switch (desiredSuperstructureState) {
+                    case DISABLED:
+                        handleDisabledState();
+                        break;
+                    case IDLE:
+                        handleIdleState();
+                        break;
+                    case TRACKING_IDLE:
+                        handleTrackingIdleState();
+                        break;
+                    case TRACKING_READY:
+                        handleTrackingReadyState();
+                        break;
+                    case SHOOTING:
+                        handleTrackingWindupState();
+                        break;
+                }
+                break;
 
-//     private final InterpolatingMatrixTreeMap<Double, N2, N1> lerpTable = shooter.getLerpTable();
-//     private final PIDController rotationController = swerveDrive.getRotationController();
+            case IDLE:
+                switch (desiredSuperstructureState) {
+                    case DISABLED:
+                        handleDisabledState();
+                        break;
+                    case IDLE:
+                        handleIdleState();
+                        break;
+                    case TRACKING_IDLE:
+                        handleTrackingIdleState();
+                        break;
+                    case TRACKING_READY:
+                        handleTrackingReadyState();
+                        break;
+                    case SHOOTING:
+                        handleTrackingWindupState();
+                        break;
+                }
+                break;
 
-    
-//     private boolean isShotValid = false;
-//     private double maxRobotTranslationalVeloDuringShot;
-    
+            case TRACKING_IDLE:
+                switch (desiredSuperstructureState) {
+                    case DISABLED:
+                        handleDisabledState();
+                        break;
+                    case IDLE:
+                        handleIdleState();
+                        break;
+                    case TRACKING_IDLE:
+                        handleTrackingIdleState();
+                        break;
+                    case TRACKING_READY:
+                        handleTrackingReadyState();
+                        break;
+                    case SHOOTING:
+                        handleTrackingWindupState();
+                        break;
+                }
+                break;
 
-//     public void setDesiredState(DesiredSuperState desiredState) {
-//         this.desiredState = desiredState;
-//     }
+            case TRACKING_WINDUP:
+                switch (desiredSuperstructureState) {
+                    case DISABLED:
+                        handleDisabledState();
+                        break;
+                    case IDLE:
+                        handleIdleState();
+                        break;
+                    case TRACKING_IDLE:
+                        handleTrackingIdleState();
+                        break;
+                    case TRACKING_READY:
+                        handleTrackingReadyState();
+                        break;
+                    case SHOOTING:
+                        handleTrackingWindupState();
+                        break;
+                }
+                break;
 
-//     public void setCurrentState(CurrentSuperState currentState) {
-//         this.currentState = currentState;
-//     }
+            case TRACKING_READY:
+                switch (desiredSuperstructureState) {
+                    case DISABLED:
+                        handleDisabledState();
+                        break;
+                    case IDLE:
+                        handleIdleState();
+                        break;
+                    case TRACKING_IDLE:
+                        handleTrackingIdleState();
+                        break;
+                    case TRACKING_READY:
+                        handleTrackingReadyState();
+                        break;
+                    case SHOOTING:
+                        handleShootingState();
+                        break;
+                }
+                break;
 
-//     @Override
-//     public void periodic() {
-//         switch (desiredState) {
-//             case HOME:
-                
-//             case STOPPED:
-//                 break;
-//             case TURRET_TRACKING:
-//                 break;
-//             case WINDUP:
-//                 break;
-//             case SHOOTING:
-//                 break;
-//         }
-//     }
+            case SHOOTING:
+                // Stay in shooting until shot completes, then returns to TRACKING_READY
+                handleShootingState();
+                break;
+        }
+    }
 
-//     private void home() {
-//         shooter.setAngle(Rotation2d.fromDegrees(55));
-//         shooter.setShotVelocity(0);
-//         shooter.setFeedVelocity(0);
-//         shooter.setIndexerVelocity(0);
-//         shooter.setTurretAngle(Rotation2d.fromDegrees(180));
-//     }
+    private void handleDisabledState() {
+        currentSuperstructureState = CurrentSuperstructureState.DISABLED;
 
-//     private void stopped() {
-//         shooter.setAngle(Rotation2d.fromDegrees(55));
-//         shooter.setShotVelocity(0);
-//         shooter.setFeedVelocity(0);
-//         shooter.setIndexerVelocity(0);
-//         shooter.setTurretAngle(Rotation2d.fromDegrees(180));
-//     }
+        //TODO: Switch motors to coast or something TBD
+    }
 
-//     private void turretTracking() {
-//         shooter.setAngle(Rotation2d.fromDegrees(55));
-//         shooter.setShotVelocity(0);
-//         shooter.setFeedVelocity(0);
-//         shooter.setIndexerVelocity(0);
-//         shooter.setTurretAngle(turretAngleSupplier.get());    
-//     }
+    private void handleIdleState() {
+        currentSuperstructureState = CurrentSuperstructureState.IDLE;
 
-//     private void windup() {
-//         Pose2d currentPose = robotState.getEstimatedPose();
-//         ChassisSpeeds currentSpeeds = robotState.getFieldRelativeSpeeds();
-        
-//         Logger.recordOutput("MovingShotWindup/currentPose", currentPose);
-//         Logger.recordOutput("MovingShotWindup/currentSpeeds", currentSpeeds);
+        shooter.setShotVelocity(0);
+        shooter.setFeedVelocity(0);
+        shooter.setIndexerVelocity(0);
+        shooter.setHoodAngle(Rotation2d.fromDegrees(45.0));
+        shooter.setTurretAngle(new Rotation2d(0));
+    }
 
-//         double speedsMagnitude = Math.hypot(currentSpeeds.vxMetersPerSecond, currentSpeeds.vyMetersPerSecond);
+    private void handleTrackingIdleState() {
+        currentSuperstructureState = CurrentSuperstructureState.TRACKING_IDLE;
 
-//         // Get shooter position without hood angle rotation
-//         Pose3d robotPose3d = new Pose3d(robotState.getEstimatedPose());
-//         Pose3d shooterPose = robotPose3d.plus(
-//             new Transform3d(new Pose3d(), shooter.getShooterRelativePose())
-//         );
-        
-//         // Iteratively solve for correct distance and flight time (robot reference frame approach)
-//         // Use HORIZONTAL distance (2D) as that's what the lerp table expects
-//         double shooterDistanceToTarget = shooterPose.getTranslation().toTranslation2d().getDistance(FieldConstants.kSHOOTER_TARGET.toTranslation2d());
-        
-//         Logger.recordOutput("MovingShotWindup/initialShooterToTargetDistance2D", shooterDistanceToTarget);
-//         Logger.recordOutput("MovingShotWindup/initialShooterToTargetDistance3D", 
-//             shooterPose.getTranslation().getDistance(FieldConstants.kSHOOTER_TARGET));
-        
-//         double shotFlightTime = 0.0;
-//         double targetX = FieldConstants.kSHOOTER_TARGET.getX();
-//         double targetY = FieldConstants.kSHOOTER_TARGET.getY();
-        
-//         // Iterate to converge (robot frame: shot velocity is relative to robot, target appears to move)
-//         for (int i = 0; i < 30; i++) {
-//             Logger.recordOutput("MovingShotWindup/iteration", i);
-//             Logger.recordOutput("MovingShotWindup/iterationDistance", shooterDistanceToTarget);
-            
-//             // Get shooter settings for current distance estimate
-//             double hoodAngleRotations = lerpTable.get(shooterDistanceToTarget).get(0, 0);
-//             double flywheelRPS = lerpTable.get(shooterDistanceToTarget).get(1, 0);
-//             double exitVelocity = shooter.calculateShotExitVelocityMetersPerSec(flywheelRPS);
-//             double launchAngle = hoodAngleRotations * 2 * Math.PI; // Convert to radians
-            
-//             Logger.recordOutput("MovingShotWindup/iterationHoodAngleDeg", hoodAngleRotations * 360);
-//             Logger.recordOutput("MovingShotWindup/iterationExitVelocity", exitVelocity);
-            
-//             // Calculate velocity components (relative to robot)
-//             double exitVelocityHorizontal = exitVelocity * Math.cos(launchAngle);
-//             double exitVelocityVertical = exitVelocity * Math.sin(launchAngle);
-            
-//             // Calculate flight time using projectile motion physics
-//             // Solve: targetHeight = shooterHeight + vz0*t - 0.5*g*t^2
-//             // Rearranged: 0.5*g*t^2 - vz0*t + (shooterHeight - targetHeight) = 0
-//             // Using quadratic formula: t = (vz0 + sqrt(vz0^2 - 2*g*(shooterHeight - targetHeight))) / g
-//             double shooterHeight = shooterPose.getZ();
-//             double deltaHeight = FieldConstants.kSHOOTER_TARGET.getZ() - shooterHeight;
-            
-//             // Flight time from vertical motion (projectile hits target height)
-//             double discriminant = exitVelocityVertical * exitVelocityVertical - 2 * GRAVITY * deltaHeight;
-//             if (discriminant < 0) {
-//                 // Can't reach target (would require negative time), use simplified calculation
-//                 shotFlightTime = shooterDistanceToTarget / exitVelocityHorizontal;
-//                 Logger.recordOutput("MovingShotWindup/discriminantZero", true);
-//             } else {
-//                 shotFlightTime = (exitVelocityVertical + Math.sqrt(discriminant)) / GRAVITY;
-//                 Logger.recordOutput("MovingShotWindup/discriminantZero", false);
-//             }
-            
-//             Logger.recordOutput("MovingShotWindup/iterationFlightTime", shotFlightTime);
-            
-            
-//             // In robot frame, target appears to move. Predict where it will appear to be
-//             double vxDisplacement = shotFlightTime * currentSpeeds.vxMetersPerSecond + LATENCY_COMPENSATION_SECONDS.get() * currentSpeeds.vxMetersPerSecond;
-//             double vyDisplacement = shotFlightTime * currentSpeeds.vyMetersPerSecond + LATENCY_COMPENSATION_SECONDS.get() * currentSpeeds.vyMetersPerSecond;
-            
-//             targetX = FieldConstants.kSHOOTER_TARGET.getX() - vxDisplacement;
-//             targetY = FieldConstants.kSHOOTER_TARGET.getY() - vyDisplacement;
-            
-//             // Recalculate distance to compensated target
-//             double oldDistance = shooterDistanceToTarget;
-//             shooterDistanceToTarget = shooterPose.getTranslation().toTranslation2d().getDistance(new Translation2d(targetX, targetY));
-            
-//             double distanceChange = Math.abs(shooterDistanceToTarget - oldDistance);
-//             Logger.recordOutput("MovingShotWindup/iterationDistanceChange", distanceChange);
-            
-//             // Stop iterating if converged (distance change < 1cm)
-//             if (distanceChange < 0.01) {
-//                 Logger.recordOutput("MovingShotWindup/iterationsUsed", i + 1);
-//                 break;
-//             }
-//         }
-        
-//         double shooterAngleToTarget = Math.atan2(targetY - shooterPose.getTranslation().getY(), targetX - shooterPose.getTranslation().getX());
-        
-//         // Set shooter to optimal settings for this distance
-//         double hoodAngleRotations = lerpTable.get(shooterDistanceToTarget).get(0, 0);
-//         double flywheelVelocityRPS = lerpTable.get(shooterDistanceToTarget).get(1, 0);
-        
-//         shooter.setAngle(new Rotation2d((Math.PI*2)*hoodAngleRotations));
-//         shooter.setShotVelocity(flywheelVelocityRPS);
-//         shooter.setFeedVelocity(35);
+        ShotData shotData = calculateShotData();
+        Rotation2d turretShotYaw = shotData.targetFieldYaw().minus(robotState.getEstimatedPose().getRotation());
 
-//         // Aim robot at predicted target
-//         ChassisSpeeds speeds = desiredSwerveSpeedsSupplier.get();
-//         speeds.omegaRadiansPerSecond = rotationController.calculate(shooterPose.getRotation().getZ(), shooterAngleToTarget);
+        shooter.setShotVelocity(0);
+        shooter.setFeedVelocity(0);
+        shooter.setIndexerVelocity(0);
+        shooter.setHoodAngle(shotData.hoodPitch());
+        shooter.setTurretAngle(turretShotYaw);
+    }
 
-//         swerveDrive.driveFieldRelative(speeds);        
+    private void handleTrackingWindupState() {
+        currentSuperstructureState = CurrentSuperstructureState.TRACKING_WINDUP;
 
-//         isShotValid = speedsMagnitude <= maxRobotTranslationalVeloDuringShot && 
-//             shooterDistanceToTarget >= shooter.getMinShotDistFromShooterMeters() &&
-//             shooterDistanceToTarget <= shooter.getMaxShotDistFromShooterMeters();
+        ShotData shotData = calculateShotData();
+        Rotation2d turretShotYaw = shotData.targetFieldYaw().minus(robotState.getEstimatedPose().getRotation());
 
-//         // Log diagnostic information
-//         Logger.recordOutput("MovingShotWindup/shooterAngleToTarget", shooterAngleToTarget);
-//         Logger.recordOutput("MovingShotWindup/shooterDistanceToTarget", shooterDistanceToTarget);
-//         Logger.recordOutput("MovingShotWindup/inputTargetPosition", new Pose3d(new Translation3d(targetTranslation.getX(), targetTranslation.getY(), targetHeight), new Rotation3d()));
-//         Logger.recordOutput("MovingShotWindup/offsetTargetPosition", new Pose2d(new Translation2d(targetX, targetY), new Rotation2d()));
-//         Logger.recordOutput("MovingShotWindup/shotFlightTime", shotFlightTime);
-//         Logger.recordOutput("MovingShotWindup/shooterHeight", shooterPose.getZ());
-//         Logger.recordOutput("MovingShotWindup/shooterYaw", shooterPose.getRotation().getZ());
-//         Logger.recordOutput("MovingShotWindup/targetHeight", this.targetHeight);
-//         Logger.recordOutput("MovingShotWindup/deltaHeight", this.targetHeight - shooterPose.getZ());
-//         Logger.recordOutput("MovingShotWindup/compensatedTargetX", targetX);
-//         Logger.recordOutput("MovingShotWindup/compensatedTargetY", targetY);
-//         Logger.recordOutput("MovingShotWindup/hoodAngleRotations", hoodAngleRotations);
-//         Logger.recordOutput("MovingShotWindup/hoodAngleDegrees", hoodAngleRotations * 360);
-//         Logger.recordOutput("MovingShotWindup/flywheelVelocityRPS", flywheelVelocityRPS);
-//         Logger.recordOutput("MovingShotWindup/exitVelocity", shooter.calculateShotExitVelocityMetersPerSec(flywheelVelocityRPS));
-//         Logger.recordOutput("MovingShotWindup/isShotValid", isShotValid);
-//         Logger.recordOutput("MovingShotWindup/isFinished", isFinished());
-//     }
+        shooter.setShotVelocity(shotData.flywheelRPS());
+        shooter.setFeedVelocity(35);
+        shooter.setIndexerVelocity(0);
+        shooter.setHoodAngle(shotData.hoodPitch());
+        shooter.setTurretAngle(turretShotYaw);
 
-// }
+        if (
+            shooter.isFlywheelAtSetpoint() && 
+            shooter.isFeederAtSetpoint() && 
+            shooter.isHoodAtSetpoint() && 
+            shooter.isTurretAtSetpoint() 
+            //TODO: AND ROBOT STATE READY TO SHOOT (swerve is within tolerance for the turret yaw)
+
+        ) {
+            currentSuperstructureState = CurrentSuperstructureState.TRACKING_READY;
+        }
+    }
+
+    private void handleTrackingReadyState() {
+        currentSuperstructureState = CurrentSuperstructureState.TRACKING_READY;
+
+        ShotData shotData = calculateShotData();
+        Rotation2d turretShotYaw = shotData.targetFieldYaw().minus(robotState.getEstimatedPose().getRotation());
+
+        shooter.setShotVelocity(shotData.flywheelRPS());
+        shooter.setFeedVelocity(35);
+        shooter.setIndexerVelocity(0);
+        shooter.setHoodAngle(shotData.hoodPitch());
+        shooter.setTurretAngle(turretShotYaw);
+
+        // If setpoints are lost, fall back to TRACKING_WINDUP
+        if (!(
+            shooter.isFlywheelAtSetpoint() && 
+            shooter.isFeederAtSetpoint() && 
+            shooter.isHoodAtSetpoint() && 
+            shooter.isTurretAtSetpoint()
+            //TODO: AND ROBOT STATE READY TO SHOOT (swerve is within tolerance for the turret yaw)
+        )) {
+            currentSuperstructureState = CurrentSuperstructureState.TRACKING_WINDUP;
+        }
+    }
+
+    private void handleShootingState() {
+        currentSuperstructureState = CurrentSuperstructureState.SHOOTING;
+
+        ShotData shotData = calculateShotData();
+        Rotation2d turretShotYaw = shotData.targetFieldYaw().minus(robotState.getEstimatedPose().getRotation());
+
+        shooter.setShotVelocity(shotData.flywheelRPS());
+        shooter.setFeedVelocity(35);
+        shooter.setIndexerVelocity(35);
+        shooter.setHoodAngle(shotData.hoodPitch());
+        shooter.setTurretAngle(turretShotYaw);
+
+        //TODO: Detect when note has left (beam break, flywheel velocity drop, or timer)
+        // For now, transition back to TRACKING_READY immediately after shot cycle
+        // In practice, you'd check: if (shooter.hasNoteExited()) { ... }
+        currentSuperstructureState = CurrentSuperstructureState.TRACKING_READY;
+    }
+
+    private ShotData calculateShotData() {
+        Translation3d targetLocation = Constants.FieldConstants.kSHOOTER_TARGET;
+        Pose3d shooterPose = 
+            new Pose3d(
+                new Translation3d(
+                    robotState.getEstimatedPose().getX(), 
+                    robotState.getEstimatedPose().getY(), 
+                    0
+                ),
+                new Rotation3d(0, 0, robotState.getEstimatedPose().getRotation().getRadians())
+            ).plus(new Transform3d(new Pose3d(), shooter.getShooterRelativePose()));
+        ChassisSpeeds speeds = robotState.getFieldRelativeSpeeds();
+        InterpolatingMatrixTreeMap<Double, N2, N1> lerpTable = shooter.getLerpTable();
+        double latencyCompensationSeconds = shooter.getLatencyCompensationSeconds();
+        DoubleUnaryOperator rpsToExitVelocity = shooter::calculateShotExitVelocityMetersPerSec;
+
+        return ShotCalculator.calculate(
+            targetLocation,
+            shooterPose,
+            speeds,
+            lerpTable,
+            latencyCompensationSeconds,
+            rpsToExitVelocity
+        );
+    }
+
+    public void setDesiredSuperstructureState(DesiredSuperstructureState desiredSuperstructureState) {
+        this.desiredSuperstructureState = desiredSuperstructureState;
+    }
+
+    public CurrentSuperstructureState getCurrentSuperstructureState() {
+        return currentSuperstructureState;
+    }
+
+    public DesiredSuperstructureState getDesiredSuperstructureState() {
+        return desiredSuperstructureState;
+    }
+}

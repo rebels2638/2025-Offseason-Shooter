@@ -78,6 +78,11 @@ public class ShooterConfigSim extends ShooterConfigBase {
     }
 
     @Override
+    public double getLatencyCompensationSeconds() {
+        return 0.0;
+    }
+
+    @Override
     public String getCanBusName() {
         return "rio";
     }

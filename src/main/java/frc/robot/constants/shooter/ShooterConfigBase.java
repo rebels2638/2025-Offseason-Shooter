@@ -139,4 +139,7 @@ public abstract class ShooterConfigBase {
     // Shot distance limits (from shooter, not robot center)
     public abstract double getMinShotDistFromShooterMeters();
     public abstract double getMaxShotDistFromShooterMeters();
+
+    // Latency compensation for shot calculation (seconds)
+    public abstract double getLatencyCompensationSeconds();
 }

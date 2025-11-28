@@ -162,7 +162,7 @@ public class MovingShotWindup extends Command {
         double hoodAngleRotations = lerpTable.get(shooterDistanceToTarget).get(0, 0);
         double flywheelVelocityRPS = lerpTable.get(shooterDistanceToTarget).get(1, 0);
         
-        shooter.setAngle(new Rotation2d((Math.PI*2)*hoodAngleRotations));
+        shooter.setHoodAngle(new Rotation2d((Math.PI*2)*hoodAngleRotations));
         shooter.setShotVelocity(flywheelVelocityRPS);
         shooter.setFeedVelocity(35);
 

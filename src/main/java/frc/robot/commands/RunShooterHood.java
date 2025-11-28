@@ -23,12 +23,12 @@ public class RunShooterHood extends Command {
 
     @Override
     public void initialize() {
-        shooter.setAngle(angle.get());
+        shooter.setHoodAngle(angle.get());
     }
 
     @Override
     public void execute() {
-        shooter.setAngle(angle.get());
+        shooter.setHoodAngle(angle.get());
     }
 
     @Override

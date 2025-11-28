@@ -72,7 +72,12 @@ public class ShooterConfigComp extends ShooterConfigBase {
     public double getMaxShotDistFromShooterMeters() {
         return 2.132;
     }
-    
+
+    @Override
+    public double getLatencyCompensationSeconds() {
+        return 0.0;
+    }
+
     @Override
     public String getCanBusName() {
         return "drivetrain";

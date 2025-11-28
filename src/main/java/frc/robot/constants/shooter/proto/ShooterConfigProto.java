@@ -73,7 +73,12 @@ public class ShooterConfigProto extends ShooterConfigBase {
     public double getMaxShotDistFromShooterMeters() {
         return 1.8;
     }
-    
+
+    @Override
+    public double getLatencyCompensationSeconds() {
+        return 0.0;
+    }
+
     @Override
     public String getCanBusName() {
         return "rio";

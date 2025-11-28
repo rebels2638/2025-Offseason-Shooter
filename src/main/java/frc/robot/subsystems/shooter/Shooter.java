@@ -146,7 +146,7 @@ public class Shooter extends SubsystemBase {
         }
     }
 
-    public void setAngle(Rotation2d angle) {
+    public void setHoodAngle(Rotation2d angle) {
         double clampedAngle = MathUtil.clamp(angle.getRotations(), config.getHoodMinAngleRotations(), config.getHoodMaxAngleRotations()); 
 
         hoodSetpointRotations = clampedAngle;
@@ -251,5 +251,9 @@ public class Shooter extends SubsystemBase {
 
     public double getMaxShotDistFromShooterMeters() {
         return config.getMaxShotDistFromShooterMeters();
+    }
+
+    public double getLatencyCompensationSeconds() {
+        return config.getLatencyCompensationSeconds();
     }
 }

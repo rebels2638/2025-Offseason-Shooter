@@ -1,0 +1,109 @@
+package frc.robot.lib.util;
+
+import edu.wpi.first.math.InterpolatingMatrixTreeMap;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
+import java.util.function.DoubleUnaryOperator;
+
+public class ShotCalculator {
+
+    private static final double GRAVITY = 9.81; // m/s^2
+
+    public record ShotData(
+        Rotation2d targetFieldYaw,
+        Rotation2d hoodPitch,
+        double flywheelRPS,
+        double exitVelocity,
+        double flightTime,
+        double effectiveDistance,
+        Translation2d compensatedTargetPosition
+    ) {}
+
+    public static ShotData calculate(
+        Translation3d targetLocation,
+        Pose3d shooterPose, 
+        ChassisSpeeds fieldRelativeSpeeds,
+        InterpolatingMatrixTreeMap<Double, N2, N1> lerpTable,
+        double latencyCompensationSeconds,
+        DoubleUnaryOperator rpsToExitVelocity
+    ) {
+        // Iteratively solve for correct distance and flight time (robot reference frame approach)
+        // Use HORIZONTAL distance (2D) as that's what the lerp table expects
+        double shooterDistanceToTarget = shooterPose.getTranslation().toTranslation2d().getDistance(targetLocation.toTranslation2d());
+        
+        double shotFlightTime = 0.0;
+        double targetX = targetLocation.getX();
+        double targetY = targetLocation.getY();
+        double targetHeight = targetLocation.getZ();
+        
+        // Iterate to converge (robot frame: shot velocity is relative to robot, target appears to move)
+        for (int i = 0; i < 30; i++) {
+            
+            // Get shooter settings for current distance estimate
+            double hoodAngleRotations = lerpTable.get(shooterDistanceToTarget).get(0, 0);
+            double flywheelRPS = lerpTable.get(shooterDistanceToTarget).get(1, 0);
+            double exitVelocity = rpsToExitVelocity.applyAsDouble(flywheelRPS);
+            double launchAngle = hoodAngleRotations * 2 * Math.PI; // Convert to radians
+            
+            // Calculate velocity components (relative to robot)
+            double exitVelocityHorizontal = exitVelocity * Math.cos(launchAngle);
+            double exitVelocityVertical = exitVelocity * Math.sin(launchAngle);
+            
+            // Calculate flight time using projectile motion physics
+            // Solve: targetHeight = shooterHeight + vz0*t - 0.5*g*t^2
+            // Rearranged: 0.5*g*t^2 - vz0*t + (shooterHeight - targetHeight) = 0
+            // Using quadratic formula: t = (vz0 + sqrt(vz0^2 - 2*g*(shooterHeight - targetHeight))) / g
+            double shooterHeight = shooterPose.getZ();
+            double deltaHeight = targetHeight - shooterHeight;
+            
+            // Flight time from vertical motion (projectile hits target height)
+            double discriminant = exitVelocityVertical * exitVelocityVertical - 2 * GRAVITY * deltaHeight;
+            if (discriminant < 0) {
+                // Can't reach target (would require negative time), use simplified calculation
+                shotFlightTime = shooterDistanceToTarget / exitVelocityHorizontal;
+            } else {
+                shotFlightTime = (exitVelocityVertical + Math.sqrt(discriminant)) / GRAVITY;
+            }
+            
+            // In robot frame, target appears to move. Predict where it will appear to be
+            double vxDisplacement = shotFlightTime * fieldRelativeSpeeds.vxMetersPerSecond + latencyCompensationSeconds * fieldRelativeSpeeds.vxMetersPerSecond;
+            double vyDisplacement = shotFlightTime * fieldRelativeSpeeds.vyMetersPerSecond + latencyCompensationSeconds * fieldRelativeSpeeds.vyMetersPerSecond;
+            
+            targetX = targetLocation.getX() - vxDisplacement;
+            targetY = targetLocation.getY() - vyDisplacement;
+            
+            // Recalculate distance to compensated target
+            double oldDistance = shooterDistanceToTarget;
+            shooterDistanceToTarget = shooterPose.getTranslation().toTranslation2d().getDistance(new Translation2d(targetX, targetY));
+            
+            double distanceChange = Math.abs(shooterDistanceToTarget - oldDistance);
+            
+            // Stop iterating if converged (distance change < 1cm)
+            if (distanceChange < 0.01) {
+                break;
+            }
+        }
+        
+        double shooterAngleToTarget = Math.atan2(targetY - shooterPose.getTranslation().getY(), targetX - shooterPose.getTranslation().getX());
+        
+        // Get final settings for this distance
+        double hoodAngleRotations = lerpTable.get(shooterDistanceToTarget).get(0, 0);
+        double flywheelVelocityRPS = lerpTable.get(shooterDistanceToTarget).get(1, 0);
+        double exitVelocity = rpsToExitVelocity.applyAsDouble(flywheelVelocityRPS);
+        
+        return new ShotData(
+            new Rotation2d(shooterAngleToTarget),
+            new Rotation2d(hoodAngleRotations * 2 * Math.PI),
+            flywheelVelocityRPS,
+            exitVelocity,
+            shotFlightTime,
+            shooterDistanceToTarget,
+            new Translation2d(targetX, targetY)
+        );
+    }
+}
