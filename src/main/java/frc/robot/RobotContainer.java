@@ -1,9 +1,6 @@
 package frc.robot;
 
-import java.util.Arrays;
-
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -17,12 +14,10 @@ import frc.robot.commands.RunShooterFlywheel;
 import frc.robot.commands.RunShooterHood;
 import frc.robot.commands.RunShooterIndexer;
 import frc.robot.commands.WindupAndShoot;
-import frc.robot.constants.Constants;
 import frc.robot.lib.BLine.FollowPath;
 import frc.robot.lib.BLine.FollowPath.Builder;
 import frc.robot.lib.BLine.Path;
 import frc.robot.lib.BLine.Path.PathConstraints;
-import frc.robot.lib.BLine.Path.RangedConstraint;
 import frc.robot.lib.BLine.Path.TranslationTarget;
 import frc.robot.lib.BLine.Path.Waypoint;
 import frc.robot.lib.input.XboxController;
