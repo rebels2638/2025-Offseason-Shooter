@@ -2,6 +2,7 @@ package frc.robot.subsystems;
 
 import java.util.function.DoubleUnaryOperator;
 
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.InterpolatingMatrixTreeMap;
@@ -9,6 +10,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
@@ -16,6 +18,7 @@ import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotState;
+import frc.robot.VisualizeShot;
 import frc.robot.constants.Constants;
 import frc.robot.lib.util.ShotCalculator;
 import frc.robot.lib.util.ShotCalculator.ShotData;
@@ -58,6 +61,7 @@ public class Superstructure extends SubsystemBase {
     private final RobotState robotState = RobotState.getInstance();
 
     private double lastShotTime = 0;
+    private static final double SHOT_DURATION_SECONDS = 0.5; // Time to complete one shot
 
     // Margin for swerve rotation range (degrees)
     private static final double SWERVE_ROTATION_MARGIN_DEG = 20.0;
@@ -73,9 +77,6 @@ public class Superstructure extends SubsystemBase {
     public void periodic() {
         handleStateTransitions();
         handleCurrentState();
-
-        Logger.recordOutput("Superstructure/CurrentState", currentState.toString());
-        Logger.recordOutput("Superstructure/DesiredState", desiredState.toString());
     }
 
     /**
@@ -83,6 +84,8 @@ public class Superstructure extends SubsystemBase {
      * Handles transitions between states with proper validation.
      */
     private void handleStateTransitions() {
+        CurrentState previousState = currentState;
+
         switch (desiredState) {
             case STOPPED:
                 currentState = CurrentState.STOPPED;
@@ -101,7 +104,7 @@ public class Superstructure extends SubsystemBase {
                 // Otherwise we're in PREPARING_FOR_SHOT
                 if (isReadyForShot()) {
                     currentState = CurrentState.READY_FOR_SHOT;
-                    lastShotTime = Timer.getFPGATimestamp();
+                    lastShotTime = Timer.getTimestamp();
                 } else {
                     currentState = CurrentState.PREPARING_FOR_SHOT;
                 }
@@ -113,20 +116,39 @@ public class Superstructure extends SubsystemBase {
                     currentState = CurrentState.SHOOTING;
                 } else if (currentState == CurrentState.SHOOTING) {
                     // Stay in shooting, check if shot is complete
-                    if (Timer.getFPGATimestamp() - lastShotTime > 1.0) {
+                    if (Timer.getTimestamp() - lastShotTime > SHOT_DURATION_SECONDS) {
                         currentState = CurrentState.READY_FOR_SHOT;
                         desiredState = DesiredState.READY_FOR_SHOT;
-                        lastShotTime = Timer.getFPGATimestamp();
+                        lastShotTime = Timer.getTimestamp();
                     }
                 } else {
                     // Not ready yet, go to preparing
                     if (isReadyForShot()) {
                         currentState = CurrentState.READY_FOR_SHOT;
-                        lastShotTime = Timer.getFPGATimestamp();
+                        lastShotTime = Timer.getTimestamp();
                     } else {
                         currentState = CurrentState.PREPARING_FOR_SHOT;
                     }
                 }
+                break;
+        }
+
+        // Handle state transition actions
+        if (previousState != currentState) {
+            handleStateEntry(currentState);
+        }
+    }
+
+    /**
+     * Handle setup when entering a state.
+     */
+    private void handleStateEntry(CurrentState enteringState) {
+        switch (enteringState) {
+            case SHOOTING:
+                // Visualize the shot trajectory
+                new VisualizeShot();
+                break;
+            default:
                 break;
         }
     }
@@ -255,6 +277,7 @@ public class Superstructure extends SubsystemBase {
      */
     private void updateSwerveRotationRange() {
         ShotData shotData = calculateShotData();
+        Logger.recordOutput("Superstructure/shotData", shotData);
         Rotation2d targetFieldYaw = shotData.targetFieldYaw();
         
         // Get turret physical limits
@@ -309,6 +332,10 @@ public class Superstructure extends SubsystemBase {
         InterpolatingMatrixTreeMap<Double, N2, N1> lerpTable = shooter.getLerpTable();
         double latencyCompensationSeconds = shooter.getLatencyCompensationSeconds();
         DoubleUnaryOperator rpsToExitVelocity = shooter::calculateShotExitVelocityMetersPerSec;
+        
+        // Get shooter offset from robot center (for omega compensation)
+        Translation2d shooterOffsetFromRobotCenter = shooter.getShooterRelativePose().getTranslation().toTranslation2d();
+        Rotation2d robotHeading = robotState.getEstimatedPose().getRotation();
 
         return ShotCalculator.calculate(
             targetLocation,
@@ -316,7 +343,9 @@ public class Superstructure extends SubsystemBase {
             speeds,
             lerpTable,
             latencyCompensationSeconds,
-            rpsToExitVelocity
+            rpsToExitVelocity,
+            shooterOffsetFromRobotCenter,
+            robotHeading
         );
     }
 
@@ -325,10 +354,12 @@ public class Superstructure extends SubsystemBase {
         this.desiredState = desiredState;
     }
 
+    @AutoLogOutput(key = "Superstructure/currentState")
     public CurrentState getCurrentState() {
         return currentState;
     }
 
+    @AutoLogOutput(key = "Superstructure/desiredState")
     public DesiredState getDesiredState() {
         return desiredState;
     }

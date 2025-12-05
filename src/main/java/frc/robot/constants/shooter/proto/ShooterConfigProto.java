@@ -368,9 +368,10 @@ public class ShooterConfigProto extends ShooterConfigBase {
         // X: forward from robot center (meters)
         // Y: left/right offset (meters, positive = left)
         // Z: height above ground (meters)
+        // Yaw: 0 means turret angle 0 points forward relative to robot
         return new Pose3d(
             new Translation3d(-0.11, 0.0, 0.46),
-            new Rotation3d(0.0, 0.0, Math.PI)
+            new Rotation3d(0.0, 0.0, 0.0)
         );
     }
 

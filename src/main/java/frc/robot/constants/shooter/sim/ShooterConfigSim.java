@@ -24,57 +24,86 @@ public class ShooterConfigSim extends ShooterConfigBase {
     
     @Override
     // angle rotations, flywheel velocity in rotations per second
-    // distance is distance from shooter itself to target in meters
+    // distance is HORIZONTAL distance from shooter itself to target in meters
     public InterpolatingMatrixTreeMap<Double, N2, N1> getLerpTable() {
         // Calculated using idealized projectile motion physics with:
         // - Flywheel radius: 0.0508m (2 inches)
         // - Shooter height: 0.46m above ground (from getShooterPose3d)
         // - Target height: 0.46m above ground (from Constants.FieldConstants.kSHOOTER_TARGET)
-        // - Exit velocity = flywheelRPS * π * radius (from Shooter.calculateShotExitVelocityMetersPerSec)
+        // - Exit velocity = flywheelRPS * π * radius (accounting for /2 physical factor)
         // - Hood angle relative to horizontal
         // - Robot assumed to be standing still
         // - Since shooter and target are at same height, optimal angle is 45° (0.125 rotations)
-        // - Range formula for same height: R = v²/g where g = 9.81 m/s²
-        // - Required velocity: v = √(R × g)
-        // - Required RPS: RPS = v / (π × 0.0508)
+        // - Range formula for same height at 45°: R = v² / g where g = 9.81 m/s²
+        // - Required exit velocity: v = √(R × g)
+        // - Required RPS: RPS = v / (π × 0.0508) [accounting for /2 factor in velocity calc]
         InterpolatingMatrixTreeMap<Double, N2, N1> table = new InterpolatingMatrixTreeMap<>();
-        
-        table.put(0.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
-            0.125, // hood angle = 45.00° (optimal for flat trajectory)
-            11.78 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
+
+        // Distance 0.5m: v = √(0.5 × 9.81) = 2.215 m/s, RPS = 2.215 / (π × 0.0508) = 13.88
+        table.put(0.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00° (optimal for same-height trajectory)
+            13.88  // flywheel velocity in RPS
         }));
-        
-        table.put(1.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+
+        // Distance 1.0m: v = √(1.0 × 9.81) = 3.132 m/s, RPS = 3.132 / (π × 0.0508) = 19.62
+        table.put(1.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             0.125, // hood angle = 45.00°
-            22.87 // flywheel velocity in RPS (exit velocity = 3.65 m/s)
+            19.62  // flywheel velocity in RPS
         }));
-        
-        table.put(2.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+
+        // Distance 1.5m: v = √(1.5 × 9.81) = 3.836 m/s, RPS = 3.836 / (π × 0.0508) = 24.03
+        table.put(1.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             0.125, // hood angle = 45.00°
-            30.14 // flywheel velocity in RPS (exit velocity = 4.81 m/s)
+            24.03  // flywheel velocity in RPS
         }));
-        
-        table.put(3.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+
+        // Distance 2.0m: v = √(2.0 × 9.81) = 4.429 m/s, RPS = 4.429 / (π × 0.0508) = 27.75
+        table.put(2.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             0.125, // hood angle = 45.00°
-            35.97 // flywheel velocity in RPS (exit velocity = 5.74 m/s)
+            27.75  // flywheel velocity in RPS
         }));
-        
-        table.put(4.36, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+
+        // Distance 2.5m: v = √(2.5 × 9.81) = 4.952 m/s, RPS = 4.952 / (π × 0.0508) = 31.03
+        table.put(2.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             0.125, // hood angle = 45.00°
-            40.98 // flywheel velocity in RPS (exit velocity = 6.54 m/s)
+            31.03  // flywheel velocity in RPS
         }));
-        
+
+        // Distance 3.0m: v = √(3.0 × 9.81) = 5.425 m/s, RPS = 5.425 / (π × 0.0508) = 33.99
+        table.put(3.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00°
+            33.99  // flywheel velocity in RPS
+        }));
+
+        // Distance 3.5m: v = √(3.5 × 9.81) = 5.860 m/s, RPS = 5.860 / (π × 0.0508) = 36.71
+        table.put(3.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00°
+            36.71  // flywheel velocity in RPS
+        }));
+
+        // Distance 4.0m: v = √(4.0 × 9.81) = 6.264 m/s, RPS = 6.264 / (π × 0.0508) = 39.25
+        table.put(4.0, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00°
+            39.25  // flywheel velocity in RPS
+        }));
+
+        // Distance 4.5m: v = √(4.5 × 9.81) = 6.644 m/s, RPS = 6.644 / (π × 0.0508) = 41.63
+        table.put(4.5, new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            0.125, // hood angle = 45.00°
+            41.63  // flywheel velocity in RPS
+        }));
+
         return table;
     }
 
     @Override
     public double getMinShotDistFromShooterMeters() {
-        return 0.36;
+        return 0.5;
     }
 
     @Override
     public double getMaxShotDistFromShooterMeters() {
-        return 4.36;
+        return 4.5;
     }
 
     @Override
@@ -265,24 +294,24 @@ public class ShooterConfigSim extends ShooterConfigBase {
     @Override
     public double getTurretMinAngleDeg() {
         // +/- 180 degrees by default
-        return -180.0;
+        return -100.0;
     }
 
     @Override
     public double getTurretMaxAngleDeg() {
-        return 180.0;
+        return 100.0;
     }
 
     @Override
     public double getTurretMaxVelocityDegPerSec() {
         // Default turret cruise velocity (deg/s), tune as needed
-        return 180.0;
+        return 900.0;
     }
 
     @Override
     public double getTurretMaxAccelerationDegPerSec2() {
         // Default turret acceleration (deg/s^2), tune as needed
-        return 360.0;
+        return 3000.0;
     }
 
     // Flywheel motor config
@@ -372,9 +401,10 @@ public class ShooterConfigSim extends ShooterConfigBase {
         // X: forward from robot center (meters)
         // Y: left/right offset (meters, positive = left)
         // Z: height above ground (meters)
+        // Yaw: 0 means turret angle 0 points forward relative to robot
         return new Pose3d(
             new Translation3d(-0.11, 0.0, 0.46),
-            new Rotation3d(0.0, 0.0, Math.PI)
+            new Rotation3d(0.0, 0.0, 0.0)
         );
     }
     // Feeder motor config
@@ -537,7 +567,7 @@ public class ShooterConfigSim extends ShooterConfigBase {
     @Override
     public double getTurretAngleToleranceRotations() {
         // Match hood tolerance by default
-        return getHoodAngleToleranceRotations();
+        return 2.0 / 360.0;
     }
 
     @Override

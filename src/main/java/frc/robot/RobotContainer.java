@@ -1,6 +1,7 @@
 package frc.robot;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -119,6 +120,6 @@ public class RobotContainer {
         //     autoBuilder.build(path)
         // );
 
-        return null;
+        return new InstantCommand(() -> robotState.resetPose(new Pose2d(50, 50, new Rotation2d())));
     }
 }

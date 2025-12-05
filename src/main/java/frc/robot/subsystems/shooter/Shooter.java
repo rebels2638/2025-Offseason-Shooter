@@ -60,10 +60,6 @@ public class Shooter extends SubsystemBase {
     // Internal constants for feeder/indexer (these stay constant based on state)
     private static final double FEEDER_RPS_ACTIVE = 35.0;
     private static final double INDEXER_RPS_SHOOTING = 35.0;
-    private static final double SHOT_DURATION_SECONDS = 0.5; // Time to complete one shot
-
-    // Shot timing
-    private double shotStartTime = 0;
 
     private final ShooterIO shooterIO;
     private final ShooterIOInputsAutoLogged shooterInputs = new ShooterIOInputsAutoLogged();
@@ -187,9 +183,6 @@ public class Shooter extends SubsystemBase {
         // FSM processing
         handleStateTransitions();
         handleCurrentState();
-
-        Logger.recordOutput("Shooter/CurrentState", currentState.toString());
-        Logger.recordOutput("Shooter/DesiredState", desiredState.toString());
     }
 
     /**
@@ -220,8 +213,7 @@ public class Shooter extends SubsystemBase {
                 } else {
                     currentState = ShooterCurrentState.PREPARING_FOR_SHOT;
                 }
-                // No break here so that the SHOOTING case is checked *after* READY_FOR_SHOT
-                // This allows falling through to check if SHOOTING is now appropriate
+                break;
 
             case SHOOTING:
                 // Update setpoints in case we entered SHOOTING directly (not via fall-through)
@@ -229,15 +221,6 @@ public class Shooter extends SubsystemBase {
                 // SHOOTING only allowed when we're in READY_FOR_SHOT
                 if (currentState == ShooterCurrentState.READY_FOR_SHOT) {
                     currentState = ShooterCurrentState.SHOOTING;
-                    shotStartTime = Timer.getTimestamp();
-                } else if (currentState == ShooterCurrentState.SHOOTING) {
-                    // Check if shot duration has elapsed
-                    if (Timer.getTimestamp() - shotStartTime >= SHOT_DURATION_SECONDS) {
-                        // Shot complete, transition back to READY_FOR_SHOT and desired state as to not shoot again immediately
-                        currentState = ShooterCurrentState.READY_FOR_SHOT;
-                        desiredState = ShooterDesiredState.READY_FOR_SHOT;
-                    }
-                    // Otherwise stay in shooting state
                 } else {
                     // Not ready yet, go to preparing
                     if (isReadyForShot()) {
@@ -375,10 +358,12 @@ public class Shooter extends SubsystemBase {
     }
 
     // State getters/setters
+    @AutoLogOutput(key = "Shooter/currentState")
     public ShooterCurrentState getCurrentState() {
         return currentState;
     }
 
+    @AutoLogOutput(key = "Shooter/desiredState")
     public ShooterDesiredState getDesiredState() {
         return desiredState;
     }

@@ -29,8 +29,30 @@ public class ShotCalculator {
         ChassisSpeeds fieldRelativeSpeeds,
         InterpolatingMatrixTreeMap<Double, N2, N1> lerpTable,
         double latencyCompensationSeconds,
-        DoubleUnaryOperator rpsToExitVelocity
+        DoubleUnaryOperator rpsToExitVelocity,
+        Translation2d shooterOffsetFromRobotCenter,
+        Rotation2d robotHeading
     ) {
+        // Calculate shooter's tangential velocity due to robot rotation (omega)
+        // In robot frame: v_tangential = omega cross r = (-omega * dy, omega * dx)
+        double omega = fieldRelativeSpeeds.omegaRadiansPerSecond;
+        double dx = shooterOffsetFromRobotCenter.getX();
+        double dy = shooterOffsetFromRobotCenter.getY();
+        
+        // Tangential velocity in robot frame
+        double tangentialVxRobot = -omega * dy;
+        double tangentialVyRobot = omega * dx;
+        
+        // Rotate tangential velocity to field frame
+        double cos = robotHeading.getCos();
+        double sin = robotHeading.getSin();
+        double tangentialVxField = tangentialVxRobot * cos - tangentialVyRobot * sin;
+        double tangentialVyField = tangentialVxRobot * sin + tangentialVyRobot * cos;
+        
+        // Total shooter velocity in field frame (linear + tangential from rotation)
+        double shooterVxField = fieldRelativeSpeeds.vxMetersPerSecond + tangentialVxField;
+        double shooterVyField = fieldRelativeSpeeds.vyMetersPerSecond + tangentialVyField;
+        
         // Iteratively solve for correct distance and flight time (robot reference frame approach)
         // Use HORIZONTAL distance (2D) as that's what the lerp table expects
         double shooterDistanceToTarget = shooterPosition.toTranslation2d().getDistance(targetLocation.toTranslation2d());
@@ -70,8 +92,9 @@ public class ShotCalculator {
             }
             
             // In robot frame, target appears to move. Predict where it will appear to be
-            double vxDisplacement = shotFlightTime * fieldRelativeSpeeds.vxMetersPerSecond + latencyCompensationSeconds * fieldRelativeSpeeds.vxMetersPerSecond;
-            double vyDisplacement = shotFlightTime * fieldRelativeSpeeds.vyMetersPerSecond + latencyCompensationSeconds * fieldRelativeSpeeds.vyMetersPerSecond;
+            // Use total shooter velocity (includes tangential component from omega)
+            double vxDisplacement = shotFlightTime * shooterVxField + latencyCompensationSeconds * shooterVxField;
+            double vyDisplacement = shotFlightTime * shooterVyField + latencyCompensationSeconds * shooterVyField;
             
             targetX = targetLocation.getX() - vxDisplacement;
             targetY = targetLocation.getY() - vyDisplacement;

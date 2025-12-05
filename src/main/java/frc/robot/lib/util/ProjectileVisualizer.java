@@ -127,6 +127,6 @@ public class ProjectileVisualizer extends Command {
     @Override
     public boolean isFinished() {
         // End when projectile reaches negative z (hits the ground)
-        return currentPosition.getZ() <= 0;
+        return currentPosition.getZ() <= 0.46;
     }
 }

@@ -76,8 +76,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public PIDController getRotationController() {
-        PIDController controller = new PIDController(6.0, 0.0, 0.0);
-        controller.setIZone(Math.toRadians(10));
+        PIDController controller = new PIDController(12.0, 0.0, 1.1);
         controller.enableContinuousInput(-Math.PI, Math.PI);
         controller.setTolerance(Math.toRadians(getRotationToleranceDeg()), Math.toRadians(getRotationVelocityToleranceDegPerSec()));
 
@@ -106,7 +105,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getRangedRotationKP() {
-        return 5.0;
+        return 12.0;
     }
 
     @Override
@@ -116,7 +115,12 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getRangedRotationKD() {
-        return 0.0;
+        return 1.1;
+    }
+
+    @Override
+    public double getRangedRotationToleranceDeg() {
+        return 10.0;
     }
 
     @Override
@@ -136,7 +140,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getFollowPathRotationKP() {
-        return 3.0;
+        return 12.0;
     }
 
     @Override
@@ -146,12 +150,12 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getFollowPathRotationKD() {
-        return 0.0;
+        return 1.1;
     }
 
     @Override
     public double getFollowPathCrossTrackKP() {
-        return 12.0;
+        return 3.0;
     }
 
     @Override
@@ -161,6 +165,6 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getFollowPathCrossTrackKD() {
-        return 1.1;
+        return 0.0;
     }
 }

@@ -10,6 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.MathUtil;
@@ -106,6 +107,7 @@ public class SwerveDrive extends SubsystemBase {
     private Rotation2d rotationRangeMax = Rotation2d.fromDegrees(180);
     private PIDController rangedRotationPIDController;
     private static final double RANGED_ROTATION_MAX_VELOCITY_FACTOR = 0.6;
+    private static final double RANGED_ROTATION_BUFFER_RAD = Math.toRadians(5.0); // Buffer to prevent oscillation at boundaries
 
     // Omega override for drive shim (used for ranged rotation during path following)
     private Double omegaOverride = null;
@@ -305,6 +307,8 @@ public class SwerveDrive extends SubsystemBase {
             drivetrainConfig.getRangedRotationKD()
         );
         rangedRotationPIDController.enableContinuousInput(-Math.PI, Math.PI);
+        rangedRotationPIDController.setTolerance(Math.toRadians(drivetrainConfig.getRangedRotationToleranceDeg()));
+
     }
 
     @Override
@@ -370,8 +374,6 @@ public class SwerveDrive extends SubsystemBase {
         handleStateTransitions();
         handleCurrentState();
 
-        Logger.recordOutput("SwerveDrive/DesiredState", desiredState.toString());
-        Logger.recordOutput("SwerveDrive/CurrentState", currentState.toString());
         Logger.recordOutput("SwerveDrive/CurrentCommand", this.getCurrentCommand() == null ? "" : this.getCurrentCommand().toString());
     }
 
@@ -654,6 +656,7 @@ public class SwerveDrive extends SubsystemBase {
 
     /**
      * Calculates omega to return to rotation range using PID with velocity limiting.
+     * Uses an internal buffer to target slightly inside the range to prevent oscillation at boundaries.
      */
     private double calculateReturnToRangeOmega() {
         Rotation2d currentRotation = RobotState.getInstance().getEstimatedPose().getRotation();
@@ -668,9 +671,11 @@ public class SwerveDrive extends SubsystemBase {
         
         double targetAngle;
         if (distToMin < distToMax) {
-            targetAngle = min;
+            // Target slightly inside the min boundary (add buffer)
+            targetAngle = min + RANGED_ROTATION_BUFFER_RAD;
         } else {
-            targetAngle = max;
+            // Target slightly inside the max boundary (subtract buffer)
+            targetAngle = max - RANGED_ROTATION_BUFFER_RAD;
         }
         
         // Calculate PID output
@@ -705,13 +710,18 @@ public class SwerveDrive extends SubsystemBase {
     public void setRotationRange(Rotation2d min, Rotation2d max) {
         this.rotationRangeMin = min;
         this.rotationRangeMax = max;
+
+        Logger.recordOutput("SwerveDrive/rotationRangeMin", min);
+        Logger.recordOutput("SwerveDrive/rotationRangeMax", max);
     }
 
     // State getters/setters
+    @AutoLogOutput(key = "SwerveDrive/desiredState")
     public DesiredState getDesiredState() {
         return desiredState;
     }
 
+    @AutoLogOutput(key = "SwerveDrive/currentState")
     public CurrentState getCurrentState() {
         return currentState;
     }
@@ -845,18 +855,6 @@ public class SwerveDrive extends SubsystemBase {
 
     public Command getQuasistaticSteerCharacterizationSysIdRoutine(Direction direction) {
         return steerCharacterizationSysIdRoutine.quasistatic(direction);
-    }
-
-    public PIDController getRotationController() {
-        return drivetrainConfig.getRotationController();
-    }
-
-    public double getRotationToleranceDeg() {
-        return drivetrainConfig.getRotationToleranceDeg();
-    }
-
-    public double getRotationVelocityToleranceDegPerSec() {
-        return drivetrainConfig.getRotationVelocityToleranceDegPerSec();
     }
 
     public FollowPath.Builder getFollowPathBuilder() {

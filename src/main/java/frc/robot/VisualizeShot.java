@@ -19,29 +19,43 @@ public class VisualizeShot {
             new Transform3d(new Pose3d(), Shooter.getInstance().getShooterRelativePose())
         );
 
-        // Apply hood angle as a local rotation (pitch around the shooter's Y-axis)
+        // Apply hood angle and turret rotation as local rotations
         // This needs to be done by creating a proper rotation that combines:
         // 1. The robot's yaw (Z rotation) - already in shooterPose
-        // 2. The hood's pitch (Y rotation) - needs to be added
+        // 2. The turret's yaw (Z rotation) - needs to be added
+        // 3. The hood's pitch (Y rotation) - needs to be added
         Rotation3d currentRotation = shooterPose.getRotation();
         double hoodAngleRadians = Shooter.getInstance().getHoodAngleRotations() * (2 * Math.PI);
+        double turretAngleRadians = Shooter.getInstance().getTurretAngleRotations() * (2 * Math.PI);
         
-        // Create new rotation: keep the yaw (Z), add pitch (Y), keep roll (X) at 0
+        // Create new rotation: keep roll (X) at 0, add pitch (Y) from hood, combine yaw (Z) from robot + turret
         Rotation3d newRotation = new Rotation3d(
             0,  // roll (X)
-            hoodAngleRadians,  // pitch (Y) 
-            currentRotation.getZ()  // yaw (Z) from robot rotation
+            hoodAngleRadians,  // pitch (Y) from hood
+            currentRotation.getZ() + turretAngleRadians  // yaw (Z) from robot rotation + turret rotation
         );
         
         shooterPose = new Pose3d(shooterPose.getTranslation(), newRotation);
 
+        double exitVelocity = Shooter.getInstance().getShotExitVelocityMetersPerSec();
+        double robotVx = RobotState.getInstance().getFieldRelativeSpeeds().vxMetersPerSecond;
+        double robotVy = RobotState.getInstance().getFieldRelativeSpeeds().vyMetersPerSecond;
+
+        // Debug logging for shot parameters
         Logger.recordOutput("VisualizeShot/shooterPose", shooterPose);
         Logger.recordOutput("VisualizeShot/launchTime", Timer.getFPGATimestamp());
+        Logger.recordOutput("VisualizeShot/hoodAngleDegrees", Math.toDegrees(hoodAngleRadians));
+        Logger.recordOutput("VisualizeShot/turretAngleDegrees", Math.toDegrees(turretAngleRadians));
+        Logger.recordOutput("VisualizeShot/totalYawDegrees", Math.toDegrees(newRotation.getZ()));
+        Logger.recordOutput("VisualizeShot/exitVelocityMPS", exitVelocity);
+        Logger.recordOutput("VisualizeShot/flywheelRPS", Shooter.getInstance().getFlywheelVelocityRotationsPerSec());
+        Logger.recordOutput("VisualizeShot/robotVx", robotVx);
+        Logger.recordOutput("VisualizeShot/robotVy", robotVy);
 
         new ProjectileVisualizer(
-            RobotState.getInstance().getFieldRelativeSpeeds().vxMetersPerSecond,
-            RobotState.getInstance().getFieldRelativeSpeeds().vyMetersPerSecond,
-            Shooter.getInstance().getShotExitVelocityMetersPerSec(),
+            robotVx,
+            robotVy,
+            exitVelocity,
             shooterPose
         ).schedule();
     }

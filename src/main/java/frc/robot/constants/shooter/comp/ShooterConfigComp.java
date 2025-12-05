@@ -178,78 +178,77 @@ public class ShooterConfigComp extends ShooterConfigBase {
     // Turret motor config (mirrors hood defaults; update for real hardware as needed)
     @Override
     public int getTurretCanId() {
-        // TODO: Update to real turret CAN ID
-        return 18;
+        return 33;
     }
 
     @Override
     public boolean getIsTurretInverted() {
-        return getIsHoodInverted();
+        return true;
     }
 
     @Override
     public double getTurretSupplyCurrentLimit() {
-        return getHoodSupplyCurrentLimit();
+        return 90.0;
     }
 
     @Override
     public double getTurretSupplyCurrentLimitLowerTime() {
-        return getHoodSupplyCurrentLimitLowerTime();
+        return 1.0;
     }
 
     @Override
     public double getTurretSupplyCurrentLimitLowerLimit() {
-        return getHoodSupplyCurrentLimitLowerLimit();
+        return 90.0;
     }
 
     @Override
     public double getTurretStatorCurrentLimit() {
-        return getHoodStatorCurrentLimit();
+        return 90.0;
     }
 
     @Override
     public double getTurretPeakForwardTorqueCurrent() {
-        return getHoodPeakForwardTorqueCurrent();
+        return 90.0;
     }
 
     @Override
     public double getTurretPeakReverseTorqueCurrent() {
-        return getHoodPeakReverseTorqueCurrent();
+        return -90.0;
     }
 
     @Override
     public double getTurretKS() {
-        return getHoodKS();
+        return 0.22;
     }
 
     @Override
     public double getTurretKV() {
-        return getHoodKV();
+        return 0.0;
     }
 
     @Override
     public double getTurretKA() {
-        return getHoodKA();
+        return 0.0;
     }
 
     @Override
     public double getTurretKP() {
-        return getHoodKP();
+        return 10;
     }
 
     @Override
     public double getTurretKI() {
-        return getHoodKI();
+        return 0.0;
     }
 
     @Override
     public double getTurretKD() {
-        return getHoodKD();
+        return 0.0;
     }
 
     @Override
     public double getTurretMotorToOutputShaftRatio() {
-        return getHoodMotorToOutputShaftRatio();
+        return 120.0/18.0;
     }
 
     @Override
@@ -261,12 +260,12 @@ public class ShooterConfigComp extends ShooterConfigBase {
     @Override
     public double getTurretMinAngleDeg() {
         // +/- 180 degrees by default
-        return -180.0;
+        return -100.0;
     }
 
     @Override
     public double getTurretMaxAngleDeg() {
-        return 180.0;
+        return 100.0;
     }
 
     @Override
@@ -368,9 +367,10 @@ public class ShooterConfigComp extends ShooterConfigBase {
         // X: forward from robot center (meters)
         // Y: left/right offset (meters, positive = left)
         // Z: height above ground (meters)
+        // Yaw: 0 means turret angle 0 points forward relative to robot
         return new Pose3d(
             new Translation3d(-0.11, 0.0, 0.46),
-            new Rotation3d(0.0, 0.0, Math.PI)
+            new Rotation3d(0.0, 0.0, 0.0)
         );
     }
 
@@ -534,7 +534,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
     @Override
     public double getTurretAngleToleranceRotations() {
         // Match hood tolerance by default
-        return getHoodAngleToleranceRotations();
+        return 2.0/360.0;
     }
 
     @Override
