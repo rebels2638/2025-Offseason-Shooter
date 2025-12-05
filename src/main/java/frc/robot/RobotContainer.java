@@ -1,26 +1,20 @@
 package frc.robot;
 
-import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
-import frc.robot.commands.AbsoluteFieldDrive;
-import frc.robot.commands.RunShooterFeeder;
-import frc.robot.commands.RunShooterFlywheel;
-import frc.robot.commands.RunShooterHood;
-import frc.robot.commands.RunShooterIndexer;
-import frc.robot.commands.WindupAndShoot;
+import frc.robot.constants.Constants;
 import frc.robot.lib.BLine.FollowPath;
-import frc.robot.lib.BLine.FollowPath.Builder;
 import frc.robot.lib.BLine.Path;
 import frc.robot.lib.BLine.Path.PathConstraints;
 import frc.robot.lib.BLine.Path.TranslationTarget;
 import frc.robot.lib.BLine.Path.Waypoint;
 import frc.robot.lib.input.XboxController;
+import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.Superstructure.DesiredState;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.swerve.SwerveDrive;
 import frc.robot.subsystems.vision.Vision;
@@ -42,73 +36,67 @@ public class RobotContainer {
     private final Shooter shooter = Shooter.getInstance();
     private final RobotState robotState = RobotState.getInstance();
     private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
+    private final Superstructure superstructure = Superstructure.getInstance();
     private final Vision vision = Vision.getInstance();
 
-    private final AbsoluteFieldDrive absoluteFieldDrive;
+    // Path for follow path state
+    private Path currentPath = null;
 
     private RobotContainer() {
         this.xboxTester = new XboxController(1);
         this.xboxOperator = new XboxController(2);
         this.xboxDriver = new XboxController(3);
         
-        AbsoluteFieldDrive absoluteFieldDrive = new AbsoluteFieldDrive(xboxDriver);
-        this.absoluteFieldDrive = absoluteFieldDrive;
-        // Command movingShotWindup = new MovingShotWindup(new Translation3d(5, 10, 0), absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier(), 5);
-        swerveDrive.setDefaultCommand(absoluteFieldDrive);
-        // shooter.setDefaultCommand(movingShotWindup);
+        // Configure teleop input suppliers for SwerveDrive FSM
+        // Using normalized inputs (-1 to 1) with deadband applied
+        swerveDrive.setTeleopInputSuppliers(
+            () -> -MathUtil.applyDeadband(xboxDriver.getLeftY(), Constants.OperatorConstants.LEFT_Y_DEADBAND),
+            () -> -MathUtil.applyDeadband(xboxDriver.getLeftX(), Constants.OperatorConstants.LEFT_X_DEADBAND),
+            () -> -MathUtil.applyDeadband(xboxDriver.getRightX(), Constants.OperatorConstants.RIGHT_X_DEADBAND)
+        );
 
-        this.xboxDriver.getAButton().whileTrue(
-            new WindupAndShoot(absoluteFieldDrive.getDesiredFieldRelativeSpeedsSupplier())
+        // Set up path supplier for SwerveDrive
+        swerveDrive.setPathSupplier(() -> currentPath);
+
+        // Set default state to TELEOP
+        swerveDrive.setDesiredState(SwerveDrive.DesiredState.TELEOP);
+        
+        // Set default superstructure state to HOME
+        superstructure.setDesiredState(Superstructure.DesiredState.HOME);
+
+        configureBindings();
+    }
+
+    private void configureBindings() {
+        xboxDriver.getAButton().onTrue(
+            new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.SHOOTING))
         ).onFalse(
-            new SequentialCommandGroup(
-                new WaitCommand(1),
-                new ParallelCommandGroup(
-                    new RunShooterIndexer(0),
-                    new RunShooterFlywheel(0),
-                    new RunShooterFeeder(0),
-                    new RunShooterHood(Rotation2d.fromDegrees(45))
-                )
-            )
+            new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.READY_FOR_SHOT))
         );
 
-        FollowPath.Builder onTheFlyBuilder = new Builder(
-            swerveDrive,
-            robotState::getEstimatedPose,
-            robotState::getRobotRelativeSpeeds,
-            swerveDrive::driveRobotRelative,
-            new PIDController(6.3, 0, 0),
-            new PIDController(12, 0, 1.1),
-            new PIDController(3, 0, 0)
-        ).withDefaultShouldFlip();
-
-
-
-        Path p = new Path(
-            new PathConstraints().setMaxVelocityMetersPerSec(3),
-            new TranslationTarget(5.4, 5.4),
-            new Waypoint(new Translation2d(5, 5), 0.05, new Rotation2d(0))
-
+        xboxDriver.getXButton().onTrue(
+            new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.TRACKING))
         );
 
-        this.xboxDriver.getBButton().whileTrue(
-            onTheFlyBuilder.build(p)
+        xboxDriver.getYButton().onTrue(
+            new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.HOME))
         );
-
-       
-
-        // this.xboxDriver.getAButton().onTrue(
-        //     new TunableShotWindup()
-        // );
-        // this.xboxDriver.getBButton().onTrue(
-        //     new TunableShotFire()
-        // );
-
-        // xboxDriver.getXButton().onTrue(new InstantCommand(() -> robotState.zeroGyro()));
     }
 
     public void teleopInit() {
-        // Command command = 
-        // command.schedule();
+        // Ensure we're in teleop state
+        swerveDrive.setDesiredState(SwerveDrive.DesiredState.TELEOP);
+        superstructure.setDesiredState(Superstructure.DesiredState.HOME);
+    }
+
+    public void autonomousInit() {
+        // Set up for autonomous
+        // swerveDrive.setDesiredState(SwerveDrive.DesiredState.PREPARE_FOR_AUTO);
+    }
+
+    public void disabledInit() {
+        superstructure.setDesiredState(Superstructure.DesiredState.STOPPED);
+        swerveDrive.setDesiredState(SwerveDrive.DesiredState.STOPPED);
     }
 
     public Command getAlignModulesCommand(Path path) {
@@ -116,18 +104,21 @@ public class RobotContainer {
     }
     
     public Command getAutonomousCommand() {
-        Path path = new Path("new_path");
+        // Path path = new Path("new_path");
 
-        FollowPath.Builder autoBuilder = new Builder(
-            swerveDrive,
-            robotState::getEstimatedPose,
-            robotState::getRobotRelativeSpeeds,
-            swerveDrive::driveRobotRelative,
-            new PIDController(6.3, 0, 0),
-            new PIDController(12, 0, 1.1),
-            new PIDController(3, 0, 0)
-        ).withDefaultShouldFlip().withPoseReset(robotState::resetPose);
+        // // Use the builder from SwerveDrive with pose reset
+        // FollowPath.Builder autoBuilder = swerveDrive.getFollowPathBuilder()
+        //     .withPoseReset(robotState::resetPose);
 
-        return getAlignModulesCommand(path).andThen(autoBuilder.build(path));
+        // return getAlignModulesCommand(path).andThen(
+        //     new InstantCommand(() -> {
+        //         currentPath = path;
+        //         swerveDrive.setDesiredState(SwerveDrive.DesiredState.FOLLOW_PATH);
+        //     }),
+        //     // Wait for path to complete or use the builder directly
+        //     autoBuilder.build(path)
+        // );
+
+        return null;
     }
 }

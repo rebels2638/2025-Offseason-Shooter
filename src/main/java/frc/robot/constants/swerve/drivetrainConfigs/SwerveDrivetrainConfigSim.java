@@ -104,4 +104,64 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
     public double getRotationVelocityToleranceDegPerSec() {
         return 5.0;
     }
+
+    @Override
+    public double getRangedRotationKP() {
+        return 5.0;
+    }
+
+    @Override
+    public double getRangedRotationKI() {
+        return 0.0;
+    }
+
+    @Override
+    public double getRangedRotationKD() {
+        return 0.0;
+    }
+
+    @Override
+    public double getFollowPathTranslationKP() {
+        return 6.3;
+    }
+
+    @Override
+    public double getFollowPathTranslationKI() {
+        return 0.0;
+    }
+
+    @Override
+    public double getFollowPathTranslationKD() {
+        return 0.0;
+    }
+
+    @Override
+    public double getFollowPathRotationKP() {
+        return 3.0;
+    }
+
+    @Override
+    public double getFollowPathRotationKI() {
+        return 0.0;
+    }
+
+    @Override
+    public double getFollowPathRotationKD() {
+        return 0.0;
+    }
+
+    @Override
+    public double getFollowPathCrossTrackKP() {
+        return 12.0;
+    }
+
+    @Override
+    public double getFollowPathCrossTrackKI() {
+        return 0.0;
+    }
+
+    @Override
+    public double getFollowPathCrossTrackKD() {
+        return 1.1;
+    }
 }

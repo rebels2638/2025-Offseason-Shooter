@@ -34,4 +34,22 @@ public abstract class SwerveDrivetrainConfigBase {
     public abstract double getRotationToleranceDeg();
     public abstract double getRotationVelocityToleranceDegPerSec();
 
+    // Ranged rotation PID configuration
+    public abstract double getRangedRotationKP();
+    public abstract double getRangedRotationKI();
+    public abstract double getRangedRotationKD();
+
+    // FollowPath PID configuration
+    public abstract double getFollowPathTranslationKP();
+    public abstract double getFollowPathTranslationKI();
+    public abstract double getFollowPathTranslationKD();
+
+    public abstract double getFollowPathRotationKP();
+    public abstract double getFollowPathRotationKI();
+    public abstract double getFollowPathRotationKD();
+
+    public abstract double getFollowPathCrossTrackKP();
+    public abstract double getFollowPathCrossTrackKI();
+    public abstract double getFollowPathCrossTrackKD();
+
 }

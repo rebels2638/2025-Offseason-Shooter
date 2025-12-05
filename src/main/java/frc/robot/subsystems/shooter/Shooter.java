@@ -1,9 +1,12 @@
 package frc.robot.subsystems.shooter;
 
+import java.util.function.Supplier;
+
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.InterpolatingMatrixTreeMap;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -26,6 +29,41 @@ public class Shooter extends SubsystemBase {
         }
         return instance;
     }
+
+    // FSM State Enums
+    public enum ShooterCurrentState {
+        STOPPED,
+        HOME,
+        TRACKING,
+        PREPARING_FOR_SHOT,
+        READY_FOR_SHOT,
+        SHOOTING
+    }
+
+    public enum ShooterDesiredState {
+        STOPPED,
+        HOME,
+        TRACKING,
+        READY_FOR_SHOT,
+        SHOOTING
+    }
+
+    // FSM State Variables
+    private ShooterCurrentState currentState = ShooterCurrentState.STOPPED;
+    private ShooterDesiredState desiredState = ShooterDesiredState.STOPPED;
+
+    // Setpoint Suppliers (set by Superstructure)
+    private Supplier<Rotation2d> hoodAngleSupplier = () -> Rotation2d.fromDegrees(45.0);
+    private Supplier<Rotation2d> turretAngleSupplier = () -> new Rotation2d(0);
+    private Supplier<Double> flywheelRPSSupplier = () -> 0.0;
+
+    // Internal constants for feeder/indexer (these stay constant based on state)
+    private static final double FEEDER_RPS_ACTIVE = 35.0;
+    private static final double INDEXER_RPS_SHOOTING = 35.0;
+    private static final double SHOT_DURATION_SECONDS = 0.5; // Time to complete one shot
+
+    // Shot timing
+    private double shotStartTime = 0;
 
     private final ShooterIO shooterIO;
     private final ShooterIOInputsAutoLogged shooterInputs = new ShooterIOInputsAutoLogged();
@@ -129,6 +167,7 @@ public class Shooter extends SubsystemBase {
         shooterIO.updateInputs(shooterInputs);
         Logger.processInputs("Shooter", shooterInputs);
 
+        // Handle control loop configuration updates
         if (hoodControlLoopConfigurator.hasChanged()) {
             shooterIO.configureHoodControlLoop(hoodControlLoopConfigurator.getConfig());
         }
@@ -144,9 +183,212 @@ public class Shooter extends SubsystemBase {
         if (indexerControlLoopConfigurator.hasChanged()) {
             shooterIO.configureIndexerControlLoop(indexerControlLoopConfigurator.getConfig());
         }
+
+        // FSM processing
+        handleStateTransitions();
+        handleCurrentState();
+
+        Logger.recordOutput("Shooter/CurrentState", currentState.toString());
+        Logger.recordOutput("Shooter/DesiredState", desiredState.toString());
     }
 
-    public void setHoodAngle(Rotation2d angle) {
+    /**
+     * Determines the next measured state based on the desired state.
+     * Handles transitions between states with proper validation.
+     */
+    private void handleStateTransitions() {
+        switch (desiredState) {
+            case STOPPED:
+                currentState = ShooterCurrentState.STOPPED;
+                break;
+
+            case HOME:
+                currentState = ShooterCurrentState.HOME;
+                break;
+
+            case TRACKING:
+                currentState = ShooterCurrentState.TRACKING;
+                break;
+
+            case READY_FOR_SHOT:
+                // Update setpoints from suppliers before checking readiness
+                updateSetpointsForReadyCheck();
+                // READY_FOR_SHOT requires mechanisms to be at setpoints
+                // Otherwise we're in PREPARING_FOR_SHOT
+                if (isReadyForShot()) {
+                    currentState = ShooterCurrentState.READY_FOR_SHOT;
+                } else {
+                    currentState = ShooterCurrentState.PREPARING_FOR_SHOT;
+                }
+                // No break here so that the SHOOTING case is checked *after* READY_FOR_SHOT
+                // This allows falling through to check if SHOOTING is now appropriate
+
+            case SHOOTING:
+                // Update setpoints in case we entered SHOOTING directly (not via fall-through)
+                updateSetpointsForReadyCheck();
+                // SHOOTING only allowed when we're in READY_FOR_SHOT
+                if (currentState == ShooterCurrentState.READY_FOR_SHOT) {
+                    currentState = ShooterCurrentState.SHOOTING;
+                    shotStartTime = Timer.getTimestamp();
+                } else if (currentState == ShooterCurrentState.SHOOTING) {
+                    // Check if shot duration has elapsed
+                    if (Timer.getTimestamp() - shotStartTime >= SHOT_DURATION_SECONDS) {
+                        // Shot complete, transition back to READY_FOR_SHOT and desired state as to not shoot again immediately
+                        currentState = ShooterCurrentState.READY_FOR_SHOT;
+                        desiredState = ShooterDesiredState.READY_FOR_SHOT;
+                    }
+                    // Otherwise stay in shooting state
+                } else {
+                    // Not ready yet, go to preparing
+                    if (isReadyForShot()) {
+                        currentState = ShooterCurrentState.READY_FOR_SHOT;
+                    } else {
+                        currentState = ShooterCurrentState.PREPARING_FOR_SHOT;
+                    }
+                }
+                break;
+        }
+    }
+
+    /**
+     * Executes behavior for the current state - applies setpoints from suppliers.
+     */
+    private void handleCurrentState() {
+        switch (currentState) {
+            case STOPPED:
+                handleStoppedState();
+                break;
+            case HOME:
+                handleHomeState();
+                break;
+            case TRACKING:
+                handleTrackingState();
+                break;
+            case PREPARING_FOR_SHOT:
+                handlePreparingForShotState();
+                break;
+            case READY_FOR_SHOT:
+                handleReadyForShotState();
+                break;
+            case SHOOTING:
+                handleShootingState();
+                break;
+        }
+    }
+
+    private void handleStoppedState() {
+        // All motors stopped/coast
+        setShotVelocity(0);
+        setFeedVelocity(0);
+        setIndexerVelocity(0);
+        // Keep current hood/turret position or go to default
+        setHoodAngle(Rotation2d.fromDegrees(45.0));
+        setTurretAngle(new Rotation2d(0));
+    }
+
+    private void handleHomeState() {
+        // Idle position, no spin
+        setShotVelocity(0);
+        setFeedVelocity(0);
+        setIndexerVelocity(0);
+        setHoodAngle(Rotation2d.fromDegrees(45.0));
+        setTurretAngle(new Rotation2d(0));
+    }
+
+    private void handleTrackingState() {
+        // Track target with hood/turret but don't spin up flywheel
+        setShotVelocity(0);
+        setFeedVelocity(0);
+        setIndexerVelocity(0);
+        setHoodAngle(hoodAngleSupplier.get());
+        setTurretAngle(turretAngleSupplier.get());
+    }
+
+    private void handlePreparingForShotState() {
+        // Spin up flywheel and track target
+        setShotVelocity(flywheelRPSSupplier.get());
+        setFeedVelocity(FEEDER_RPS_ACTIVE);
+        setIndexerVelocity(0);
+        setHoodAngle(hoodAngleSupplier.get());
+        setTurretAngle(turretAngleSupplier.get());
+    }
+
+    private void handleReadyForShotState() {
+        // Maintain ready state
+        setShotVelocity(flywheelRPSSupplier.get());
+        setFeedVelocity(FEEDER_RPS_ACTIVE);
+        setIndexerVelocity(0);
+        setHoodAngle(hoodAngleSupplier.get());
+        setTurretAngle(turretAngleSupplier.get());
+    }
+
+    private void handleShootingState() {
+        // Fire the shot
+        setShotVelocity(flywheelRPSSupplier.get());
+        setFeedVelocity(FEEDER_RPS_ACTIVE);
+        setIndexerVelocity(INDEXER_RPS_SHOOTING);
+        setHoodAngle(hoodAngleSupplier.get());
+        setTurretAngle(turretAngleSupplier.get());
+    }
+
+    /**
+     * Updates the internal setpoint tracking variables from suppliers.
+     * Must be called before isReadyForShot() to ensure we check against current target values.
+     */
+    private void updateSetpointsForReadyCheck() {
+        // Update hood setpoint
+        Rotation2d hoodAngle = hoodAngleSupplier.get();
+        hoodSetpointRotations = MathUtil.clamp(hoodAngle.getRotations(), 
+            config.getHoodMinAngleRotations(), config.getHoodMaxAngleRotations());
+        
+        // Update turret setpoint (stored in degrees to match existing behavior)
+        Rotation2d turretAngle = turretAngleSupplier.get();
+        turretSetpointRotations = MathUtil.clamp(turretAngle.getDegrees(), 
+            config.getTurretMinAngleDeg(), config.getTurretMaxAngleDeg()) / 360.0;
+        
+        // Update flywheel and feeder setpoints
+        flywheelSetpointRPS = flywheelRPSSupplier.get();
+        feederSetpointRPS = FEEDER_RPS_ACTIVE;
+    }
+
+    /**
+     * Checks if all mechanisms are at their setpoints and ready to shoot.
+     */
+    private boolean isReadyForShot() {
+        return isFlywheelAtSetpoint() && 
+               isFeederAtSetpoint() && 
+               isHoodAtSetpoint() && 
+               isTurretAtSetpoint();
+    }
+
+    // Supplier setters (called by Superstructure)
+    public void setHoodAngleSupplier(Supplier<Rotation2d> supplier) {
+        this.hoodAngleSupplier = supplier;
+    }
+
+    public void setTurretAngleSupplier(Supplier<Rotation2d> supplier) {
+        this.turretAngleSupplier = supplier;
+    }
+
+    public void setFlywheelRPSSupplier(Supplier<Double> supplier) {
+        this.flywheelRPSSupplier = supplier;
+    }
+
+    // State getters/setters
+    public ShooterCurrentState getCurrentState() {
+        return currentState;
+    }
+
+    public ShooterDesiredState getDesiredState() {
+        return desiredState;
+    }
+
+    public void setDesiredState(ShooterDesiredState desiredState) {
+        this.desiredState = desiredState;
+    }
+
+    // Direct setters for mechanism control (now private, used internally by state handlers)
+    private void setHoodAngle(Rotation2d angle) {
         double clampedAngle = MathUtil.clamp(angle.getRotations(), config.getHoodMinAngleRotations(), config.getHoodMaxAngleRotations()); 
 
         hoodSetpointRotations = clampedAngle;
@@ -156,10 +398,10 @@ public class Shooter extends SubsystemBase {
         shooterIO.setAngle(clampedAngle);
     }
 
-    public void setTurretAngle(Rotation2d angle) {
-        double minRot = config.getTurretMinAngleDeg() / 360.0;
-        double maxRot = config.getTurretMaxAngleDeg() / 360.0;
-        double clampedAngle = MathUtil.clamp(angle.getRotations(), minRot, maxRot); 
+    private void setTurretAngle(Rotation2d angle) {
+        double minRot = config.getTurretMinAngleDeg();
+        double maxRot = config.getTurretMaxAngleDeg();
+        double clampedAngle = MathUtil.clamp(angle.getDegrees(), minRot, maxRot) / 360.0; 
 
         turretSetpointRotations = clampedAngle;
         Logger.recordOutput("Shooter/turretAngleSetpointRotations", clampedAngle);
@@ -167,24 +409,25 @@ public class Shooter extends SubsystemBase {
         shooterIO.setTurretAngle(clampedAngle);
     }
 
-    public void setShotVelocity(double velocityRotationsPerSec) {
+    private void setShotVelocity(double velocityRotationsPerSec) {
         flywheelSetpointRPS = velocityRotationsPerSec;
         Logger.recordOutput("Shooter/shotVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
         shooterIO.setShotVelocity(velocityRotationsPerSec);
     }
 
-    public void setFeedVelocity(double velocityRotationsPerSec) {
+    private void setFeedVelocity(double velocityRotationsPerSec) {
         feederSetpointRPS = velocityRotationsPerSec;
         Logger.recordOutput("Shooter/feedVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
         shooterIO.setFeedVelocity(velocityRotationsPerSec);
     }
 
-    public void setIndexerVelocity(double velocityRotationsPerSec) {
+    private void setIndexerVelocity(double velocityRotationsPerSec) {
         indexerSetpointRPS = velocityRotationsPerSec;
         Logger.recordOutput("Shooter/indexerVelocitySetpointRotationsPerSec", velocityRotationsPerSec);
         shooterIO.setIndexerVelocity(velocityRotationsPerSec);
     }
 
+    // Mechanism getters
     public double getHoodAngleRotations() {
         return shooterInputs.hoodAngleRotations;
     }
@@ -201,6 +444,7 @@ public class Shooter extends SubsystemBase {
         return flywheelVelocityRotationsPerSec * 2 * Math.PI * config.getFlywheelRadiusMeters() / 2; 
         // divide by 2 because the flywheel is a pulling the ball along the hood radius
     }
+
     public double getShotExitVelocityMetersPerSec() {
         return calculateShotExitVelocityMetersPerSec(shooterInputs.flywheelVelocityRotationsPerSec);
     }
@@ -213,6 +457,7 @@ public class Shooter extends SubsystemBase {
         return shooterInputs.indexerVelocityRotationsPerSec;
     }
 
+    // Setpoint check methods
     @AutoLogOutput(key = "Shooter/isHoodAtSetpoint")
     public boolean isHoodAtSetpoint() {
         return Math.abs(shooterInputs.hoodAngleRotations - hoodSetpointRotations) < config.getHoodAngleToleranceRotations();
@@ -237,6 +482,7 @@ public class Shooter extends SubsystemBase {
         return Math.abs(shooterInputs.indexerVelocityRotationsPerSec - indexerSetpointRPS) < config.getIndexerVelocityToleranceRPS();
     }
 
+    // Config getters
     public InterpolatingMatrixTreeMap<Double, N2, N1> getLerpTable() {
         return config.getLerpTable();
     }
@@ -255,5 +501,17 @@ public class Shooter extends SubsystemBase {
 
     public double getLatencyCompensationSeconds() {
         return config.getLatencyCompensationSeconds();
+    }
+
+    public double getTurretMinAngleDeg() {
+        return config.getTurretMinAngleDeg();
+    }
+
+    public double getTurretMaxAngleDeg() {
+        return config.getTurretMaxAngleDeg();
+    }
+
+    public double getTurretAngleToleranceDeg() {
+        return config.getTurretAngleToleranceRotations() * 360.0;
     }
 }

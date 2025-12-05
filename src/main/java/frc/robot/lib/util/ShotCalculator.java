@@ -1,7 +1,6 @@
 package frc.robot.lib.util;
 
 import edu.wpi.first.math.InterpolatingMatrixTreeMap;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -26,7 +25,7 @@ public class ShotCalculator {
 
     public static ShotData calculate(
         Translation3d targetLocation,
-        Pose3d shooterPose, 
+        Translation3d shooterPosition, 
         ChassisSpeeds fieldRelativeSpeeds,
         InterpolatingMatrixTreeMap<Double, N2, N1> lerpTable,
         double latencyCompensationSeconds,
@@ -34,7 +33,7 @@ public class ShotCalculator {
     ) {
         // Iteratively solve for correct distance and flight time (robot reference frame approach)
         // Use HORIZONTAL distance (2D) as that's what the lerp table expects
-        double shooterDistanceToTarget = shooterPose.getTranslation().toTranslation2d().getDistance(targetLocation.toTranslation2d());
+        double shooterDistanceToTarget = shooterPosition.toTranslation2d().getDistance(targetLocation.toTranslation2d());
         
         double shotFlightTime = 0.0;
         double targetX = targetLocation.getX();
@@ -58,7 +57,7 @@ public class ShotCalculator {
             // Solve: targetHeight = shooterHeight + vz0*t - 0.5*g*t^2
             // Rearranged: 0.5*g*t^2 - vz0*t + (shooterHeight - targetHeight) = 0
             // Using quadratic formula: t = (vz0 + sqrt(vz0^2 - 2*g*(shooterHeight - targetHeight))) / g
-            double shooterHeight = shooterPose.getZ();
+            double shooterHeight = shooterPosition.getZ();
             double deltaHeight = targetHeight - shooterHeight;
             
             // Flight time from vertical motion (projectile hits target height)
@@ -79,7 +78,7 @@ public class ShotCalculator {
             
             // Recalculate distance to compensated target
             double oldDistance = shooterDistanceToTarget;
-            shooterDistanceToTarget = shooterPose.getTranslation().toTranslation2d().getDistance(new Translation2d(targetX, targetY));
+            shooterDistanceToTarget = shooterPosition.toTranslation2d().getDistance(new Translation2d(targetX, targetY));
             
             double distanceChange = Math.abs(shooterDistanceToTarget - oldDistance);
             
@@ -89,7 +88,7 @@ public class ShotCalculator {
             }
         }
         
-        double shooterAngleToTarget = Math.atan2(targetY - shooterPose.getTranslation().getY(), targetX - shooterPose.getTranslation().getX());
+        double shooterAngleToTarget = Math.atan2(targetY - shooterPosition.getY(), targetX - shooterPosition.getX());
         
         // Get final settings for this distance
         double hoodAngleRotations = lerpTable.get(shooterDistanceToTarget).get(0, 0);

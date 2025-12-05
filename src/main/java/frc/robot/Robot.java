@@ -20,7 +20,6 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import frc.robot.commands.RunShooterFlywheel;
 import frc.robot.constants.Constants;
 import frc.robot.lib.BLine.FollowPath;
 import frc.robot.subsystems.shooter.Shooter;
@@ -137,7 +136,7 @@ public class Robot extends LoggedRobot {
     /** This function is called once each time the robot enters Disabled mode. */
     @Override
     public void disabledInit() {
-
+        m_robotContainer.disabledInit();
     }
 
     @Override
@@ -172,8 +171,10 @@ public class Robot extends LoggedRobot {
      */
     @Override
     public void autonomousInit() {
+        m_robotContainer.autonomousInit();
+        
         if (Constants.agentMode) {
-            m_autonomousCommand = new RunShooterFlywheel(50);
+            m_autonomousCommand = null;
         } else {
             m_autonomousCommand = m_robotContainer.getAutonomousCommand();
         }
