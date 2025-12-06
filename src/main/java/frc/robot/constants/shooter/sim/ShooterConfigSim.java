@@ -561,7 +561,7 @@ public class ShooterConfigSim extends ShooterConfigBase {
 
     @Override
     public double getHoodAngleToleranceRotations() {
-        return 5.0 / 360.0;
+        return 2.0 / 360.0;
     }
 
     @Override

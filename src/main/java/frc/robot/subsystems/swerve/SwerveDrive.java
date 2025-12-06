@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
@@ -111,6 +112,18 @@ public class SwerveDrive extends SubsystemBase {
 
     // Omega override for drive shim (used for ranged rotation during path following)
     private Double omegaOverride = null;
+    // Flag to apply limitOmegaForRange in the shim (used when within padded range during path following)
+    private boolean shouldLimitOmegaInShim = false;
+
+    // Translational speed freezing (used during shooting) - only vx/vy are frozen, omega remains controlled
+    private boolean translationalSpeedsFrozen = false;
+    private double frozenVxMetersPerSec = 0.0;
+    private double frozenVyMetersPerSec = 0.0;
+
+    // Shooting velocity cap (limits max translational velocity during shooting)
+    private boolean shootingVelocityCapEnabled = false;
+    private static final LoggedNetworkNumber shootingMaxVelocityMetersPerSec = 
+        new LoggedNetworkNumber("SwerveDrive/shootingMaxVelocityMetersPerSec", 2.0);
 
     // Alliance-based inversion
     private int invert = 1;
@@ -455,8 +468,9 @@ public class SwerveDrive extends SubsystemBase {
                     currentPathCommand.cancel();
                     currentPathCommand = null;
                 }
-                // Clear omega override when leaving ranged rotation follow path states
+                // Clear omega override and limiting flag when leaving ranged rotation follow path states
                 omegaOverride = null;
+                shouldLimitOmegaInShim = false;
                 break;
             default:
                 break;
@@ -521,15 +535,23 @@ public class SwerveDrive extends SubsystemBase {
         // Update alliance inversion
         invert = Constants.shouldFlipPath() ? -1 : 1;
         
-        double desiredOmega = omegaNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxAngularVelocityRadiansPerSec();
-        double limitedOmega = limitOmegaForRange(desiredOmega);
+        double omega;
+        if (isWithinPaddedRotationRange()) {
+            // Within padded range - use limited omega from driver input
+            double desiredOmega = omegaNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxAngularVelocityRadiansPerSec();
+            omega = limitOmegaForRange(desiredOmega);
+        } else {
+            // Outside padded range but within user range - return to padded range
+            omega = calculateReturnToRangeOmega();
+        }
         
         ChassisSpeeds desiredFieldRelativeSpeeds = new ChassisSpeeds(
             vxNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
             vyNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
-            limitedOmega
+            omega
         );
         Logger.recordOutput("SwerveDrive/RangedTeleopDesiredFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
+        Logger.recordOutput("SwerveDrive/RangedTeleopWithinPaddedRange", isWithinPaddedRotationRange());
 
         driveFieldRelative(desiredFieldRelativeSpeeds);
     }
@@ -566,8 +588,17 @@ public class SwerveDrive extends SubsystemBase {
     }
 
     private void handleNominalRangedRotationFollowPathState() {
-        // Clear omega override - the shim will use path's omega but limit it
-        omegaOverride = null;
+        if (isWithinPaddedRotationRange()) {
+            // Within padded range - apply limitOmegaForRange to path's omega via shim
+            omegaOverride = null;
+            shouldLimitOmegaInShim = true;
+        } else {
+            // Outside padded range but within user range - override omega to return to padded range
+            omegaOverride = calculateReturnToRangeOmega();
+            shouldLimitOmegaInShim = false;
+        }
+        
+        Logger.recordOutput("SwerveDrive/RangedFollowPathWithinPaddedRange", isWithinPaddedRotationRange());
         
         // Schedule path command if not already running
         Path path = pathSupplier.get();
@@ -578,8 +609,9 @@ public class SwerveDrive extends SubsystemBase {
     }
 
     private void handleReturningRangedRotationFollowPathState() {
-        // Override omega for the path following shim
+        // Override omega for the path following shim to return to range
         omegaOverride = calculateReturnToRangeOmega();
+        shouldLimitOmegaInShim = false;
         
         // Schedule path command if not already running
         Path path = pathSupplier.get();
@@ -608,12 +640,20 @@ public class SwerveDrive extends SubsystemBase {
      * Checks if robot rotation is within the specified range.
      */
     private boolean isWithinRotationRange() {
+        return isWithinRotationRange(0);
+    }
+
+    /**
+     * Checks if robot rotation is within the specified range with an optional buffer.
+     * @param buffer The buffer in radians to constrict the range by (applied to both min and max)
+     */
+    private boolean isWithinRotationRange(double buffer) {
         Rotation2d currentRotation = RobotState.getInstance().getEstimatedPose().getRotation();
         
         // Normalize angles to -PI to PI for comparison
         double current = MathUtil.angleModulus(currentRotation.getRadians());
-        double min = MathUtil.angleModulus(rotationRangeMin.getRadians());
-        double max = MathUtil.angleModulus(rotationRangeMax.getRadians());
+        double min = MathUtil.angleModulus(rotationRangeMin.getRadians() + buffer);
+        double max = MathUtil.angleModulus(rotationRangeMax.getRadians() - buffer);
         
         // Handle wrap-around case
         if (min <= max) {
@@ -625,7 +665,16 @@ public class SwerveDrive extends SubsystemBase {
     }
 
     /**
-     * Limits omega using sqrt(2*a*d) formula to prevent exceeding rotation bounds.
+     * Checks if robot rotation is within the padded/constricted range.
+     * The padded range is the user-supplied range reduced by RANGED_ROTATION_BUFFER_RAD on each side.
+     */
+    private boolean isWithinPaddedRotationRange() {
+        return isWithinRotationRange(RANGED_ROTATION_BUFFER_RAD);
+    }
+
+    /**
+     * Limits omega using sqrt(2*a*d) formula to prevent exceeding the padded rotation bounds.
+     * Uses the padded range (user range constricted by buffer) as the boundary.
      * Accounts for current robot angular velocity to be more conservative when already
      * moving towards a boundary.
      */
@@ -634,10 +683,11 @@ public class SwerveDrive extends SubsystemBase {
         double currentOmega = RobotState.getInstance().getYawVelocityRadPerSec();
         
         double current = currentRotation.getRadians();
-        double min = rotationRangeMin.getRadians();
-        double max = rotationRangeMax.getRadians();
+        // Use padded range bounds (constricted by buffer)
+        double min = rotationRangeMin.getRadians() + RANGED_ROTATION_BUFFER_RAD;
+        double max = rotationRangeMax.getRadians() - RANGED_ROTATION_BUFFER_RAD;
         
-        // Calculate distance to bounds (using Rotation2d for proper wrapping)
+        // Calculate distance to padded bounds (using Rotation2d for proper wrapping)
         double distToMin = Math.abs(MathUtil.angleModulus(current - min));
         double distToMax = Math.abs(MathUtil.angleModulus(max - current));
         
@@ -734,6 +784,58 @@ public class SwerveDrive extends SubsystemBase {
         Logger.recordOutput("SwerveDrive/rotationRangeMax", max);
     }
 
+    /**
+     * Freezes translational speeds at the current obtainable field-relative speeds.
+     * While frozen, the robot will maintain vx/vy regardless of other inputs.
+     * Omega (rotational) remains controllable.
+     */
+    public void freezeTranslationalSpeeds() {
+        frozenVxMetersPerSec = obtainableFieldRelativeSpeeds.vxMetersPerSecond;
+        frozenVyMetersPerSec = obtainableFieldRelativeSpeeds.vyMetersPerSecond;
+        translationalSpeedsFrozen = true;
+        Logger.recordOutput("SwerveDrive/translationalSpeedsFrozen", true);
+        Logger.recordOutput("SwerveDrive/frozenVxMetersPerSec", frozenVxMetersPerSec);
+        Logger.recordOutput("SwerveDrive/frozenVyMetersPerSec", frozenVyMetersPerSec);
+    }
+
+    /**
+     * Unfreezes translational speeds, allowing normal control inputs to take effect again.
+     */
+    public void unfreezeTranslationalSpeeds() {
+        translationalSpeedsFrozen = false;
+        Logger.recordOutput("SwerveDrive/translationalSpeedsFrozen", false);
+    }
+
+    /**
+     * @return true if translational speeds are currently frozen
+     */
+    public boolean isTranslationalSpeedsFrozen() {
+        return translationalSpeedsFrozen;
+    }
+
+    /**
+     * Enables the shooting velocity cap, limiting max translational velocity during teleop.
+     */
+    public void enableShootingVelocityCap() {
+        shootingVelocityCapEnabled = true;
+        Logger.recordOutput("SwerveDrive/shootingVelocityCapEnabled", true);
+    }
+
+    /**
+     * Disables the shooting velocity cap, restoring normal max velocity.
+     */
+    public void disableShootingVelocityCap() {
+        shootingVelocityCapEnabled = false;
+        Logger.recordOutput("SwerveDrive/shootingVelocityCapEnabled", false);
+    }
+
+    /**
+     * @return true if the shooting velocity cap is enabled
+     */
+    public boolean isShootingVelocityCapEnabled() {
+        return shootingVelocityCapEnabled;
+    }
+
     // State getters/setters
     @AutoLogOutput(key = "SwerveDrive/desiredState")
     public DesiredState getDesiredState() {
@@ -787,8 +889,9 @@ public class SwerveDrive extends SubsystemBase {
     }
     
     /**
-     * Shim for driveRobotRelative that allows omega override for ranged rotation during path following.
-     * Omega override is managed by state handlers, not cleared automatically.
+     * Shim for driveRobotRelative that allows omega override or limiting for ranged rotation during path following.
+     * - If omegaOverride is set, uses that omega directly (for returning to range)
+     * - If shouldLimitOmegaInShim is true, applies limitOmegaForRange to the path's omega
      */
     private void driveRobotRelativeShim(ChassisSpeeds speeds) {
         if (omegaOverride != null) {
@@ -796,6 +899,12 @@ public class SwerveDrive extends SubsystemBase {
                 speeds.vxMetersPerSecond,
                 speeds.vyMetersPerSecond,
                 omegaOverride
+            );
+        } else if (shouldLimitOmegaInShim) {
+            speeds = new ChassisSpeeds(
+                speeds.vxMetersPerSecond,
+                speeds.vyMetersPerSecond,
+                limitOmegaForRange(speeds.omegaRadiansPerSecond)
             );
         }
         driveRobotRelative(speeds);
@@ -811,6 +920,21 @@ public class SwerveDrive extends SubsystemBase {
         Logger.recordOutput("SwerveDrive/desiredFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
         Logger.recordOutput("SwerveDrive/desiredRobotRelativeSpeeds", desiredRobotRelativeSpeeds);
         
+        // Apply shooting velocity cap if enabled (limits translational speed magnitude)
+        if (shootingVelocityCapEnabled) {
+            double maxVelocity = shootingMaxVelocityMetersPerSec.get();
+            double currentMagnitude = Math.hypot(desiredFieldRelativeSpeeds.vxMetersPerSecond, desiredFieldRelativeSpeeds.vyMetersPerSecond);
+            if (currentMagnitude > maxVelocity && currentMagnitude > 0) {
+                double scale = maxVelocity / currentMagnitude;
+                desiredFieldRelativeSpeeds = new ChassisSpeeds(
+                    desiredFieldRelativeSpeeds.vxMetersPerSecond * scale,
+                    desiredFieldRelativeSpeeds.vyMetersPerSecond * scale,
+                    desiredFieldRelativeSpeeds.omegaRadiansPerSecond
+                );
+            }
+            Logger.recordOutput("SwerveDrive/cappedFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
+        }
+        
         // Limit acceleration to prevent sudden changes in speed
         obtainableFieldRelativeSpeeds = ChassisRateLimiter.limit(
             desiredFieldRelativeSpeeds, 
@@ -821,6 +945,15 @@ public class SwerveDrive extends SubsystemBase {
             drivetrainConfig.getMaxTranslationalVelocityMetersPerSec(),
             drivetrainConfig.getMaxAngularVelocityRadiansPerSec()
         );
+        
+        // If translational speeds are frozen, override vx/vy with frozen values but keep omega
+        if (translationalSpeedsFrozen) {
+            obtainableFieldRelativeSpeeds = new ChassisSpeeds(
+                frozenVxMetersPerSec,
+                frozenVyMetersPerSec,
+                obtainableFieldRelativeSpeeds.omegaRadiansPerSecond
+            );
+        }
         Logger.recordOutput("SwerveDrive/obtainableFieldRelativeSpeeds", obtainableFieldRelativeSpeeds);
 
         ChassisSpeeds obtainableRobotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(obtainableFieldRelativeSpeeds, RobotState.getInstance().getEstimatedPose().getRotation());

@@ -135,7 +135,22 @@ public class Superstructure extends SubsystemBase {
 
         // Handle state transition actions
         if (previousState != currentState) {
+            handleStateExit(previousState);
             handleStateEntry(currentState);
+        }
+    }
+
+    /**
+     * Handle cleanup when exiting a state.
+     */
+    private void handleStateExit(CurrentState exitingState) {
+        switch (exitingState) {
+            case SHOOTING:
+                // Unfreeze translational speeds when exiting shooting
+                swerveDrive.unfreezeTranslationalSpeeds();
+                break;
+            default:
+                break;
         }
     }
 
@@ -144,9 +159,31 @@ public class Superstructure extends SubsystemBase {
      */
     private void handleStateEntry(CurrentState enteringState) {
         switch (enteringState) {
+            case PREPARING_FOR_SHOT:
+                swerveDrive.enableShootingVelocityCap();
+                break;
+            case READY_FOR_SHOT:
+                // Enable shooting velocity cap when preparing to shoot
+                swerveDrive.enableShootingVelocityCap();
+                break;
             case SHOOTING:
+                // Ensure shooting velocity cap is enabled
+                swerveDrive.enableShootingVelocityCap();
+                // Freeze translational speeds at current measured speeds during shot (omega remains controlled)
+                swerveDrive.freezeTranslationalSpeeds();
                 // Visualize the shot trajectory
                 new VisualizeShot();
+                break;
+            case STOPPED:
+                swerveDrive.disableShootingVelocityCap();
+                break;
+            case HOME:
+                swerveDrive.disableShootingVelocityCap();
+                break;
+
+            case TRACKING:
+                // Disable shooting velocity cap when returning to non-shooting states
+                swerveDrive.disableShootingVelocityCap();
                 break;
             default:
                 break;
