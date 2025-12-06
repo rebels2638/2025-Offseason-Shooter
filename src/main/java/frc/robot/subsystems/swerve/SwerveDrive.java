@@ -626,9 +626,12 @@ public class SwerveDrive extends SubsystemBase {
 
     /**
      * Limits omega using sqrt(2*a*d) formula to prevent exceeding rotation bounds.
+     * Accounts for current robot angular velocity to be more conservative when already
+     * moving towards a boundary.
      */
     private double limitOmegaForRange(double desiredOmega) {
         Rotation2d currentRotation = RobotState.getInstance().getEstimatedPose().getRotation();
+        double currentOmega = RobotState.getInstance().getYawVelocityRadPerSec();
         
         double current = currentRotation.getRadians();
         double min = rotationRangeMin.getRadians();
@@ -640,9 +643,25 @@ public class SwerveDrive extends SubsystemBase {
         
         double maxAngularAccel = drivetrainConfig.getMaxAngularAccelerationRadiansPerSecSec();
         
-        // sqrt(2*a*d) formula for max velocity to stop at boundary
-        double maxOmegaToMin = Math.sqrt(2 * maxAngularAccel * distToMin);
-        double maxOmegaToMax = Math.sqrt(2 * maxAngularAccel * distToMax);
+        // Calculate stopping distance from current velocity: d = ω² / (2α)
+        double stoppingDistFromCurrent = (currentOmega * currentOmega) / (2 * maxAngularAccel);
+        
+        // Adjust effective distances based on current velocity direction
+        // If moving towards a boundary, reduce effective distance by stopping distance
+        double effectiveDistToMax = distToMax;
+        double effectiveDistToMin = distToMin;
+        
+        if (currentOmega > 0) {
+            // Moving towards max, reduce effective distance to max
+            effectiveDistToMax = Math.max(0, distToMax - stoppingDistFromCurrent);
+        } else if (currentOmega < 0) {
+            // Moving towards min (negative omega), reduce effective distance to min
+            effectiveDistToMin = Math.max(0, distToMin - stoppingDistFromCurrent);
+        }
+        
+        // sqrt(2*a*d) formula for max velocity to stop at boundary using effective distances
+        double maxOmegaToMin = Math.sqrt(2 * maxAngularAccel * effectiveDistToMin);
+        double maxOmegaToMax = Math.sqrt(2 * maxAngularAccel * effectiveDistToMax);
         
         // Clamp omega based on direction
         if (desiredOmega > 0) {
