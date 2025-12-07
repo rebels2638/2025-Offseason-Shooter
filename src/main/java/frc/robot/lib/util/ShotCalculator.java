@@ -50,9 +50,13 @@ public class ShotCalculator {
         double tangentialVyField = tangentialVxRobot * sin + tangentialVyRobot * cos;
         
         // Total shooter velocity in field frame (linear + tangential from rotation)
-        double shooterVxField = fieldRelativeSpeeds.vxMetersPerSecond + tangentialVxField;
-        double shooterVyField = fieldRelativeSpeeds.vyMetersPerSecond + tangentialVyField;
+        // double shooterVxField = fieldRelativeSpeeds.vxMetersPerSecond + tangentialVxField;
+        // double shooterVyField = fieldRelativeSpeeds.vyMetersPerSecond + tangentialVyField;
         
+        double shooterVxField = fieldRelativeSpeeds.vxMetersPerSecond;
+        double shooterVyField = fieldRelativeSpeeds.vyMetersPerSecond;
+        
+
         // Iteratively solve for correct distance and flight time (robot reference frame approach)
         // Use HORIZONTAL distance (2D) as that's what the lerp table expects
         double shooterDistanceToTarget = shooterPosition.toTranslation2d().getDistance(targetLocation.toTranslation2d());
@@ -110,6 +114,8 @@ public class ShotCalculator {
                 break;
             }
         }
+
+
         
         double shooterAngleToTarget = Math.atan2(targetY - shooterPosition.getY(), targetX - shooterPosition.getX());
         

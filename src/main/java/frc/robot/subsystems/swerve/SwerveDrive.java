@@ -66,31 +66,58 @@ public class SwerveDrive extends SubsystemBase {
     }
 
     // FSM State Enums
-    public enum DesiredState {
+    public enum DesiredSystemState {
         STOPPED,
         TELEOP,
-        RANGED_ROTATION_TELEOP,
         FOLLOW_PATH,
         PREPARE_FOR_AUTO,
-        RANGED_ROTATION_FOLLOW_PATH,
         SYSID
     }
 
-    public enum CurrentState {
+    public enum CurrentSystemState {
         STOPPED,
         TELEOP,
-        NOMINAL_RANGED_ROTATION_TELEOP,
-        RETURNING_RANGED_ROTATION_TELEOP,
         FOLLOW_PATH,
         PREPARE_FOR_AUTO,
-        NOMINAL_RANGED_ROTATION_FOLLOW_PATH,
-        RETURNING_RANGED_ROTATION_FOLLOW_PATH,
         SYSID
     }
+
+    public enum DesiredOmegaOverrideState {
+        NONE,
+        RANGED_ROTATION,
+    }
+
+    public enum CurrentOmegaOverrideState {
+        NONE,
+        RANGED_ROTATION_NOMINAL,
+        RANGED_ROTATION_RETURNING,
+    }
+
+    public enum DesiredTranslationOverrideState {
+        NONE,
+        FROZEN,
+        CAPPED
+    }
+
+    public enum CurrentTranslationOverrideState {
+        NONE,
+        FROZEN,
+        CAPPED
+    }
+
 
     // FSM State Variables
-    private DesiredState desiredState = DesiredState.STOPPED;
-    private CurrentState currentState = CurrentState.STOPPED;
+    private DesiredSystemState desiredSystemState = DesiredSystemState.STOPPED;
+    private CurrentSystemState currentSystemState = CurrentSystemState.STOPPED;
+    private CurrentSystemState previousSystemState = CurrentSystemState.STOPPED;
+
+    private DesiredOmegaOverrideState desiredOmegaOverrideState = DesiredOmegaOverrideState.NONE;
+    private CurrentOmegaOverrideState currentOmegaOverrideState = CurrentOmegaOverrideState.NONE;
+    private CurrentOmegaOverrideState previousOmegaOverrideState = CurrentOmegaOverrideState.NONE;
+
+    private DesiredTranslationOverrideState desiredTranslationOverrideState = DesiredTranslationOverrideState.NONE;
+    private CurrentTranslationOverrideState currentTranslationOverrideState = CurrentTranslationOverrideState.NONE;
+    private CurrentTranslationOverrideState previousTranslationOverrideState = CurrentTranslationOverrideState.NONE;
 
     // Teleop input suppliers (normalized -1 to 1)
     private DoubleSupplier vxNormalizedSupplier = () -> 0.0;
@@ -108,22 +135,20 @@ public class SwerveDrive extends SubsystemBase {
     private Rotation2d rotationRangeMax = Rotation2d.fromDegrees(180);
     private PIDController rangedRotationPIDController;
     private static final double RANGED_ROTATION_MAX_VELOCITY_FACTOR = 0.6;
-    private static final double RANGED_ROTATION_BUFFER_RAD = Math.toRadians(5.0); // Buffer to prevent oscillation at boundaries
+    private static final double RANGED_ROTATION_BUFFER_RAD = Math.toRadians(15.0); // Buffer to prevent oscillation at boundaries
 
-    // Omega override for drive shim (used for ranged rotation during path following)
-    private Double omegaOverride = null;
-    // Flag to apply limitOmegaForRange in the shim (used when within padded range during path following)
-    private boolean shouldLimitOmegaInShim = false;
+    private boolean shouldOverrideOmega = false;
+    private double omegaOverride = 0.0;
+    private double lastUnoverriddenOmega = 0.0;
 
     // Translational speed freezing (used during shooting) - only vx/vy are frozen, omega remains controlled
-    private boolean translationalSpeedsFrozen = false;
+    private boolean shouldOverrideTranslationalSpeedsFrozen = false;
     private double frozenVxMetersPerSec = 0.0;
     private double frozenVyMetersPerSec = 0.0;
 
     // Shooting velocity cap (limits max translational velocity during shooting)
-    private boolean shootingVelocityCapEnabled = false;
-    private static final LoggedNetworkNumber shootingMaxVelocityMetersPerSec = 
-        new LoggedNetworkNumber("SwerveDrive/shootingMaxVelocityMetersPerSec", 2.0);
+    private boolean shouldOverrideVelocityCap = false;
+    private double velocityCapMaxVelocityMetersPerSec = 2.0;
 
     // Alliance-based inversion
     private int invert = 1;
@@ -295,7 +320,7 @@ public class SwerveDrive extends SubsystemBase {
             this,
             RobotState.getInstance()::getEstimatedPose,
             RobotState.getInstance()::getRobotRelativeSpeeds,
-            this::driveRobotRelativeShim,
+            this::driveRobotRelative,
             new PIDController(
                 drivetrainConfig.getFollowPathTranslationKP(),
                 drivetrainConfig.getFollowPathTranslationKI(),
@@ -394,85 +419,50 @@ public class SwerveDrive extends SubsystemBase {
      * Determines the next measured state based on the desired state.
      */
     private void handleStateTransitions() {
-        CurrentState previousState = currentState;
-
-        switch (desiredState) {
+        switch (desiredSystemState) {
             case STOPPED:
-                currentState = CurrentState.STOPPED;
+                currentSystemState = CurrentSystemState.STOPPED;
                 break;
 
             case TELEOP:
-                currentState = CurrentState.TELEOP;
-                break;
-
-            case RANGED_ROTATION_TELEOP:
-                if (isWithinRotationRange()) {
-                    currentState = CurrentState.NOMINAL_RANGED_ROTATION_TELEOP;
-                } else {
-                    currentState = CurrentState.RETURNING_RANGED_ROTATION_TELEOP;
-                }
+                currentSystemState = CurrentSystemState.TELEOP;
                 break;
 
             case FOLLOW_PATH:
-                currentState = CurrentState.FOLLOW_PATH;
+                currentSystemState = CurrentSystemState.FOLLOW_PATH;
                 break;
 
             case PREPARE_FOR_AUTO:
-                currentState = CurrentState.PREPARE_FOR_AUTO;
-                break;
-
-            case RANGED_ROTATION_FOLLOW_PATH:
-                if (isWithinRotationRange()) {
-                    currentState = CurrentState.NOMINAL_RANGED_ROTATION_FOLLOW_PATH;
-                } else {
-                    currentState = CurrentState.RETURNING_RANGED_ROTATION_FOLLOW_PATH;
-                }
+                currentSystemState = CurrentSystemState.PREPARE_FOR_AUTO;
                 break;
 
             case SYSID:
-                currentState = CurrentState.SYSID;
+                currentSystemState = CurrentSystemState.SYSID;
                 break;
         }
 
-        // Handle state transition actions
-        if (previousState != currentState) {
-            handleStateExit(previousState);
-            handleStateEntry(currentState, previousState);
-        }
-    }
-
-    /**
-     * Handle setup when entering a state.
-     * Only sets wheel coast when transitioning between STOPPED and enabled states.
-     */
-    private void handleStateEntry(CurrentState enteringState, CurrentState exitingState) {
-        // Only change wheel coast when transitioning between STOPPED and enabled states
-        boolean wasEnabled = exitingState != CurrentState.STOPPED;
-        boolean isEnabled = enteringState != CurrentState.STOPPED;
-        
-        if (wasEnabled != isEnabled) {
-            setWheelCoast(!isEnabled);
-        }
-    }
-
-    /**
-     * Handle cleanup when exiting a state.
-     */
-    private void handleStateExit(CurrentState exitingState) {
-        switch (exitingState) {
-            case FOLLOW_PATH:
-            case NOMINAL_RANGED_ROTATION_FOLLOW_PATH:
-            case RETURNING_RANGED_ROTATION_FOLLOW_PATH:
-                // Cancel the path command if transitioning away from follow path states
-                if (currentPathCommand != null && currentPathCommand.isScheduled()) {
-                    currentPathCommand.cancel();
-                    currentPathCommand = null;
+        switch (desiredOmegaOverrideState) {
+            case NONE:
+                currentOmegaOverrideState = CurrentOmegaOverrideState.NONE;
+                break;
+            case RANGED_ROTATION:
+                if (isWithinRotationRange()) {
+                    currentOmegaOverrideState = CurrentOmegaOverrideState.RANGED_ROTATION_NOMINAL;
+                } else {
+                    currentOmegaOverrideState = CurrentOmegaOverrideState.RANGED_ROTATION_RETURNING;
                 }
-                // Clear omega override and limiting flag when leaving ranged rotation follow path states
-                omegaOverride = null;
-                shouldLimitOmegaInShim = false;
                 break;
-            default:
+        }
+
+        switch (desiredTranslationOverrideState) {
+            case NONE:
+                currentTranslationOverrideState = CurrentTranslationOverrideState.NONE;
+                break;
+            case FROZEN:
+                currentTranslationOverrideState = CurrentTranslationOverrideState.FROZEN;
+                break;
+            case CAPPED:
+                currentTranslationOverrideState = CurrentTranslationOverrideState.CAPPED;
                 break;
         }
     }
@@ -481,99 +471,92 @@ public class SwerveDrive extends SubsystemBase {
      * Executes behavior for the current state.
      */
     private void handleCurrentState() {
-        switch (currentState) {
+        switch (currentSystemState) {
             case STOPPED:
-                handleStoppedState();
+                handleStoppedSystemState();
                 break;
             case TELEOP:
-                handleTeleopState();
-                break;
-            case NOMINAL_RANGED_ROTATION_TELEOP:
-                handleNominalRangedRotationTeleopState();
-                break;
-            case RETURNING_RANGED_ROTATION_TELEOP:
-                handleReturningRangedRotationTeleopState();
+                handleTeleopSystemState();
                 break;
             case FOLLOW_PATH:
-                handleFollowPathState();
+                handleFollowPathSystemState();
                 break;
             case PREPARE_FOR_AUTO:
-                handlePrepareForAutoState();
-                break;
-            case NOMINAL_RANGED_ROTATION_FOLLOW_PATH:
-                handleNominalRangedRotationFollowPathState();
-                break;
-            case RETURNING_RANGED_ROTATION_FOLLOW_PATH:
-                handleReturningRangedRotationFollowPathState();
+                handlePrepareForAutoSystemState();
                 break;
             case SYSID:
-                handleSysIdState();
+                handleSysIdSystemState();
                 break;
         }
+
+        switch (currentOmegaOverrideState) {
+            case NONE:
+                handleNoneOmegaOverrideState();
+                break;
+            case RANGED_ROTATION_NOMINAL:
+                handleRangedRotationNominalOmegaOverrideState();
+                break;
+            case RANGED_ROTATION_RETURNING:
+                handleRangedRotationReturningOmegaOverrideState();
+                break;
+        }
+
+        switch (currentTranslationOverrideState) {
+            case NONE:
+                handleNoneTranslationOverrideState();
+                break;
+            case FROZEN:
+                handleFrozenTranslationOverrideState();
+                break;
+            case CAPPED:
+                handleCappedTranslationOverrideState();
+                break;
+        }
+
+
+    }
+    private void cancelPathCommand() {
+        if (currentPathCommand != null && currentPathCommand.isScheduled()) {
+            currentPathCommand.cancel();
+        }
+        currentPathCommand = null;
     }
 
-    private void handleStoppedState() {
-        driveFieldRelative(new ChassisSpeeds(0, 0, 0));
-    }
-
-    private void handleTeleopState() {
-        // Update alliance inversion
-        invert = Constants.shouldFlipPath() ? -1 : 1;
+    private void handleStoppedSystemState() {
+        if (previousSystemState != CurrentSystemState.STOPPED) {
+            setWheelCoast(true);
+        }
+        cancelPathCommand();
         
-        // Calculate speeds from normalized inputs
+
+        driveFieldRelative(new ChassisSpeeds(0, 0, 0));
+
+        previousSystemState = CurrentSystemState.STOPPED;
+    }
+
+    private void handleTeleopSystemState() {
+        if (previousSystemState == CurrentSystemState.STOPPED) {
+            setWheelCoast(false);
+        }
+        cancelPathCommand();
+
+        invert = Constants.shouldFlipPath() ? -1 : 1;
+
         ChassisSpeeds desiredFieldRelativeSpeeds = new ChassisSpeeds(
             vxNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
             vyNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
             omegaNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxAngularVelocityRadiansPerSec()
         );
-        Logger.recordOutput("SwerveDrive/TeleopDesiredFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
-
         driveFieldRelative(desiredFieldRelativeSpeeds);
+
+        previousSystemState = CurrentSystemState.TELEOP;
     }
 
-    private void handleNominalRangedRotationTeleopState() {
-        // Update alliance inversion
-        invert = Constants.shouldFlipPath() ? -1 : 1;
-        
-        double omega;
-        if (isWithinPaddedRotationRange()) {
-            // Within padded range - use limited omega from driver input
-            double desiredOmega = omegaNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxAngularVelocityRadiansPerSec();
-            omega = limitOmegaForRange(desiredOmega);
-        } else {
-            // Outside padded range but within user range - return to padded range
-            omega = calculateReturnToRangeOmega();
+    private void handleFollowPathSystemState() {
+        if (previousSystemState == CurrentSystemState.STOPPED) {
+            setWheelCoast(false);
         }
         
-        ChassisSpeeds desiredFieldRelativeSpeeds = new ChassisSpeeds(
-            vxNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
-            vyNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
-            omega
-        );
-        Logger.recordOutput("SwerveDrive/RangedTeleopDesiredFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
-        Logger.recordOutput("SwerveDrive/RangedTeleopWithinPaddedRange", isWithinPaddedRotationRange());
-
-        driveFieldRelative(desiredFieldRelativeSpeeds);
-    }
-
-    private void handleReturningRangedRotationTeleopState() {
-        // Update alliance inversion
-        invert = Constants.shouldFlipPath() ? -1 : 1;
-        
-        // Use profiled PID to return to range
-        double correctionOmega = calculateReturnToRangeOmega();
-        
-        ChassisSpeeds desiredFieldRelativeSpeeds = new ChassisSpeeds(
-            vxNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
-            vyNormalizedSupplier.getAsDouble() * drivetrainConfig.getMaxTranslationalVelocityMetersPerSec() * invert,
-            correctionOmega
-        );
-        Logger.recordOutput("SwerveDrive/ReturningRangedTeleopDesiredFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
-
-        driveFieldRelative(desiredFieldRelativeSpeeds);
-    }
-
-    private void handleFollowPathState() {
         // Schedule path command if not already running
         Path path = pathSupplier.get();
         if (path != null && (currentPathCommand == null || !currentPathCommand.isScheduled())) {
@@ -581,44 +564,81 @@ public class SwerveDrive extends SubsystemBase {
             currentPathCommand.schedule();
         }
         // The path command handles driving via the callback
+
+        previousSystemState = CurrentSystemState.FOLLOW_PATH;
     }
 
-    private void handlePrepareForAutoState() {
+    private void handlePrepareForAutoSystemState() {
+        if (previousSystemState == CurrentSystemState.STOPPED) {
+            setWheelCoast(false);
+        }
+        cancelPathCommand();
+
         // No-op placeholder for now
+        previousSystemState = CurrentSystemState.PREPARE_FOR_AUTO;
     }
 
-    private void handleNominalRangedRotationFollowPathState() {
+    private void handleSysIdSystemState() {
+        if (previousSystemState == CurrentSystemState.STOPPED) {
+            setWheelCoast(false);
+        }
+        cancelPathCommand();
+
+        previousSystemState = CurrentSystemState.SYSID;
+        // SysId routines handle their own motor control
+        // This state just prevents other states from interfering
+    }
+
+    private void handleNoneOmegaOverrideState() {
+        shouldOverrideOmega = false;
+        omegaOverride = 0.0;
+
+        previousOmegaOverrideState = CurrentOmegaOverrideState.NONE;
+    }
+    
+    private void handleRangedRotationOmegaOverrideState() {
+        shouldOverrideOmega = true;
         if (isWithinPaddedRotationRange()) {
-            // Within padded range - apply limitOmegaForRange to path's omega via shim
-            omegaOverride = null;
-            shouldLimitOmegaInShim = true;
+            omegaOverride = limitOmegaForRange(lastUnoverriddenOmega);
         } else {
-            // Outside padded range but within user range - override omega to return to padded range
             omegaOverride = calculateReturnToRangeOmega();
-            shouldLimitOmegaInShim = false;
-        }
-        
-        Logger.recordOutput("SwerveDrive/RangedFollowPathWithinPaddedRange", isWithinPaddedRotationRange());
-        
-        // Schedule path command if not already running
-        Path path = pathSupplier.get();
-        if (path != null && (currentPathCommand == null || !currentPathCommand.isScheduled())) {
-            currentPathCommand = buildPathCommand(path);
-            currentPathCommand.schedule();
         }
     }
 
-    private void handleReturningRangedRotationFollowPathState() {
-        // Override omega for the path following shim to return to range
-        omegaOverride = calculateReturnToRangeOmega();
-        shouldLimitOmegaInShim = false;
-        
-        // Schedule path command if not already running
-        Path path = pathSupplier.get();
-        if (path != null && (currentPathCommand == null || !currentPathCommand.isScheduled())) {
-            currentPathCommand = buildPathCommand(path);
-            currentPathCommand.schedule();
+    private void handleRangedRotationNominalOmegaOverrideState() {
+        handleRangedRotationOmegaOverrideState();
+        previousOmegaOverrideState = CurrentOmegaOverrideState.RANGED_ROTATION_NOMINAL;
+    }
+    
+    private void handleRangedRotationReturningOmegaOverrideState() {
+        handleRangedRotationOmegaOverrideState();
+        previousOmegaOverrideState = CurrentOmegaOverrideState.RANGED_ROTATION_RETURNING;
+    }
+
+    private void handleNoneTranslationOverrideState() {
+        shouldOverrideVelocityCap = false;
+        shouldOverrideTranslationalSpeedsFrozen = false;
+
+        previousTranslationOverrideState = CurrentTranslationOverrideState.NONE;
+    }
+
+    private void handleFrozenTranslationOverrideState() {
+        shouldOverrideTranslationalSpeedsFrozen = true;
+        shouldOverrideVelocityCap = false;
+
+        if (previousTranslationOverrideState != CurrentTranslationOverrideState.FROZEN) {
+            frozenVxMetersPerSec = RobotState.getInstance().getFieldRelativeSpeeds().vxMetersPerSecond;
+            frozenVyMetersPerSec = RobotState.getInstance().getFieldRelativeSpeeds().vyMetersPerSecond;
         }
+
+        previousTranslationOverrideState = CurrentTranslationOverrideState.FROZEN;
+    }
+
+    private void handleCappedTranslationOverrideState() {
+        shouldOverrideVelocityCap = true;
+        shouldOverrideTranslationalSpeedsFrozen = false;
+
+        previousTranslationOverrideState = CurrentTranslationOverrideState.CAPPED;
     }
 
     /**
@@ -631,10 +651,7 @@ public class SwerveDrive extends SubsystemBase {
         return followPathBuilder.withPoseReset((Pose2d pose) -> {}).build(path);
     }
 
-    private void handleSysIdState() {
-        // SysId routines handle their own motor control
-        // This state just prevents other states from interfering
-    }
+    
 
     /**
      * Checks if robot rotation is within the specified range.
@@ -784,71 +801,53 @@ public class SwerveDrive extends SubsystemBase {
         Logger.recordOutput("SwerveDrive/rotationRangeMax", max);
     }
 
-    /**
-     * Freezes translational speeds at the current obtainable field-relative speeds.
-     * While frozen, the robot will maintain vx/vy regardless of other inputs.
-     * Omega (rotational) remains controllable.
-     */
-    public void freezeTranslationalSpeeds() {
-        frozenVxMetersPerSec = obtainableFieldRelativeSpeeds.vxMetersPerSecond;
-        frozenVyMetersPerSec = obtainableFieldRelativeSpeeds.vyMetersPerSecond;
-        translationalSpeedsFrozen = true;
-        Logger.recordOutput("SwerveDrive/translationalSpeedsFrozen", true);
-        Logger.recordOutput("SwerveDrive/frozenVxMetersPerSec", frozenVxMetersPerSec);
-        Logger.recordOutput("SwerveDrive/frozenVyMetersPerSec", frozenVyMetersPerSec);
+    public void setVelocityCapMaxVelocityMetersPerSec(double maxVelocity) {
+        this.velocityCapMaxVelocityMetersPerSec = maxVelocity;
     }
 
-    /**
-     * Unfreezes translational speeds, allowing normal control inputs to take effect again.
-     */
-    public void unfreezeTranslationalSpeeds() {
-        translationalSpeedsFrozen = false;
-        Logger.recordOutput("SwerveDrive/translationalSpeedsFrozen", false);
+    // System State getters/setters
+    @AutoLogOutput(key = "SwerveDrive/desiredSystemState")
+    public DesiredSystemState getDesiredSystemState() {
+        return desiredSystemState;
     }
 
-    /**
-     * @return true if translational speeds are currently frozen
-     */
-    public boolean isTranslationalSpeedsFrozen() {
-        return translationalSpeedsFrozen;
+    @AutoLogOutput(key = "SwerveDrive/currentSystemState")
+    public CurrentSystemState getCurrentSystemState() {
+        return currentSystemState;
     }
 
-    /**
-     * Enables the shooting velocity cap, limiting max translational velocity during teleop.
-     */
-    public void enableShootingVelocityCap() {
-        shootingVelocityCapEnabled = true;
-        Logger.recordOutput("SwerveDrive/shootingVelocityCapEnabled", true);
+    public void setDesiredSystemState(DesiredSystemState desiredState) {
+        this.desiredSystemState = desiredState;
     }
 
-    /**
-     * Disables the shooting velocity cap, restoring normal max velocity.
-     */
-    public void disableShootingVelocityCap() {
-        shootingVelocityCapEnabled = false;
-        Logger.recordOutput("SwerveDrive/shootingVelocityCapEnabled", false);
+    // Omega Override State getters/setters
+    @AutoLogOutput(key = "SwerveDrive/desiredOmegaOverrideState")
+    public DesiredOmegaOverrideState getDesiredOmegaOverrideState() {
+        return desiredOmegaOverrideState;
     }
 
-    /**
-     * @return true if the shooting velocity cap is enabled
-     */
-    public boolean isShootingVelocityCapEnabled() {
-        return shootingVelocityCapEnabled;
+    @AutoLogOutput(key = "SwerveDrive/currentOmegaOverrideState")
+    public CurrentOmegaOverrideState getCurrentOmegaOverrideState() {
+        return currentOmegaOverrideState;
     }
 
-    // State getters/setters
-    @AutoLogOutput(key = "SwerveDrive/desiredState")
-    public DesiredState getDesiredState() {
-        return desiredState;
+    public void setDesiredOmegaOverrideState(DesiredOmegaOverrideState desiredOmegaOverrideState) {
+        this.desiredOmegaOverrideState = desiredOmegaOverrideState;
     }
 
-    @AutoLogOutput(key = "SwerveDrive/currentState")
-    public CurrentState getCurrentState() {
-        return currentState;
+    // Translation Override State getters/setters
+    @AutoLogOutput(key = "SwerveDrive/desiredTranslationOverrideState")
+    public DesiredTranslationOverrideState getDesiredTranslationOverrideState() {
+        return desiredTranslationOverrideState;
     }
 
-    public void setDesiredState(DesiredState desiredState) {
-        this.desiredState = desiredState;
+    @AutoLogOutput(key = "SwerveDrive/currentTranslationOverrideState")
+    public CurrentTranslationOverrideState getCurrentTranslationOverrideState() {
+        return currentTranslationOverrideState;
+    }
+
+    public void setDesiredTranslationOverrideState(DesiredTranslationOverrideState desiredTranslationOverrideState) {
+        this.desiredTranslationOverrideState = desiredTranslationOverrideState;
     }
 
     // Existing drive methods
@@ -887,53 +886,48 @@ public class SwerveDrive extends SubsystemBase {
             return true;
         };
     }
-    
-    /**
-     * Shim for driveRobotRelative that allows omega override or limiting for ranged rotation during path following.
-     * - If omegaOverride is set, uses that omega directly (for returning to range)
-     * - If shouldLimitOmegaInShim is true, applies limitOmegaForRange to the path's omega
-     */
-    private void driveRobotRelativeShim(ChassisSpeeds speeds) {
-        if (omegaOverride != null) {
-            speeds = new ChassisSpeeds(
-                speeds.vxMetersPerSecond,
-                speeds.vyMetersPerSecond,
-                omegaOverride
-            );
-        } else if (shouldLimitOmegaInShim) {
-            speeds = new ChassisSpeeds(
-                speeds.vxMetersPerSecond,
-                speeds.vyMetersPerSecond,
-                limitOmegaForRange(speeds.omegaRadiansPerSecond)
-            );
-        }
-        driveRobotRelative(speeds);
-    }
 
     public void driveRobotRelative(ChassisSpeeds speeds) {
         double dt = Timer.getTimestamp() - prevDriveTime; 
         prevDriveTime = Timer.getTimestamp();
 
+        lastUnoverriddenOmega = speeds.omegaRadiansPerSecond;
         desiredRobotRelativeSpeeds = speeds;
+
+        if (shouldOverrideOmega) {
+            desiredRobotRelativeSpeeds = new ChassisSpeeds(
+                desiredRobotRelativeSpeeds.vxMetersPerSecond,
+                desiredRobotRelativeSpeeds.vyMetersPerSecond,
+                omegaOverride
+            );
+        }
+
+        if (shouldOverrideVelocityCap) {
+            double maxVelocity = velocityCapMaxVelocityMetersPerSec;
+            double currentMagnitude = Math.hypot(desiredRobotRelativeSpeeds.vxMetersPerSecond, desiredRobotRelativeSpeeds.vyMetersPerSecond);
+            if (currentMagnitude > maxVelocity && currentMagnitude > 0) {
+                double scale = maxVelocity / currentMagnitude;
+                desiredRobotRelativeSpeeds = new ChassisSpeeds(
+                    desiredRobotRelativeSpeeds.vxMetersPerSecond * scale,
+                    desiredRobotRelativeSpeeds.vyMetersPerSecond * scale,
+                    desiredRobotRelativeSpeeds.omegaRadiansPerSecond
+                );
+            }
+        }
+
+        if (shouldOverrideTranslationalSpeedsFrozen) {
+            ChassisSpeeds frozenFieldRelativeSpeeds = new ChassisSpeeds(
+                frozenVxMetersPerSec,
+                frozenVyMetersPerSec,
+                desiredRobotRelativeSpeeds.omegaRadiansPerSecond
+            );
+
+            desiredRobotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(frozenFieldRelativeSpeeds, RobotState.getInstance().getEstimatedPose().getRotation());
+        }
 
         ChassisSpeeds desiredFieldRelativeSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(desiredRobotRelativeSpeeds, RobotState.getInstance().getEstimatedPose().getRotation());
         Logger.recordOutput("SwerveDrive/desiredFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
         Logger.recordOutput("SwerveDrive/desiredRobotRelativeSpeeds", desiredRobotRelativeSpeeds);
-        
-        // Apply shooting velocity cap if enabled (limits translational speed magnitude)
-        if (shootingVelocityCapEnabled) {
-            double maxVelocity = shootingMaxVelocityMetersPerSec.get();
-            double currentMagnitude = Math.hypot(desiredFieldRelativeSpeeds.vxMetersPerSecond, desiredFieldRelativeSpeeds.vyMetersPerSecond);
-            if (currentMagnitude > maxVelocity && currentMagnitude > 0) {
-                double scale = maxVelocity / currentMagnitude;
-                desiredFieldRelativeSpeeds = new ChassisSpeeds(
-                    desiredFieldRelativeSpeeds.vxMetersPerSecond * scale,
-                    desiredFieldRelativeSpeeds.vyMetersPerSecond * scale,
-                    desiredFieldRelativeSpeeds.omegaRadiansPerSecond
-                );
-            }
-            Logger.recordOutput("SwerveDrive/cappedFieldRelativeSpeeds", desiredFieldRelativeSpeeds);
-        }
         
         // Limit acceleration to prevent sudden changes in speed
         obtainableFieldRelativeSpeeds = ChassisRateLimiter.limit(
@@ -946,14 +940,6 @@ public class SwerveDrive extends SubsystemBase {
             drivetrainConfig.getMaxAngularVelocityRadiansPerSec()
         );
         
-        // If translational speeds are frozen, override vx/vy with frozen values but keep omega
-        if (translationalSpeedsFrozen) {
-            obtainableFieldRelativeSpeeds = new ChassisSpeeds(
-                frozenVxMetersPerSec,
-                frozenVyMetersPerSec,
-                obtainableFieldRelativeSpeeds.omegaRadiansPerSecond
-            );
-        }
         Logger.recordOutput("SwerveDrive/obtainableFieldRelativeSpeeds", obtainableFieldRelativeSpeeds);
 
         ChassisSpeeds obtainableRobotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(obtainableFieldRelativeSpeeds, RobotState.getInstance().getEstimatedPose().getRotation());

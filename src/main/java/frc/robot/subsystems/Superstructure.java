@@ -55,6 +55,7 @@ public class Superstructure extends SubsystemBase {
 
     private CurrentState currentState = CurrentState.STOPPED;
     private DesiredState desiredState = DesiredState.STOPPED;
+    private CurrentState previousState = CurrentState.STOPPED;
 
     private final Shooter shooter = Shooter.getInstance();
     private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
@@ -65,6 +66,7 @@ public class Superstructure extends SubsystemBase {
 
     // Margin for swerve rotation range (degrees)
     private static final double SWERVE_ROTATION_MARGIN_DEG = 20.0;
+    private static final double MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC = 2.0;
 
     private Superstructure() {
         // Set up suppliers for the shooter - these provide dynamic setpoints based on shot calculation
@@ -84,22 +86,32 @@ public class Superstructure extends SubsystemBase {
      * Handles transitions between states with proper validation.
      */
     private void handleStateTransitions() {
-        CurrentState previousState = currentState;
-
         switch (desiredState) {
             case STOPPED:
                 currentState = CurrentState.STOPPED;
                 break;
 
             case HOME:
+                if (currentState == CurrentState.SHOOTING && Timer.getTimestamp() - lastShotTime < SHOT_DURATION_SECONDS) {
+                    break;
+                }
+
                 currentState = CurrentState.HOME;
                 break;
 
             case TRACKING:
+                if (currentState == CurrentState.SHOOTING && Timer.getTimestamp() - lastShotTime < SHOT_DURATION_SECONDS) {
+                    break;
+                }
+
                 currentState = CurrentState.TRACKING;
                 break;
 
             case READY_FOR_SHOT:
+                if (currentState == CurrentState.SHOOTING && Timer.getTimestamp() - lastShotTime < SHOT_DURATION_SECONDS) {
+                    break;
+                }
+
                 // READY_FOR_SHOT requires mechanisms to be at setpoints
                 // Otherwise we're in PREPARING_FOR_SHOT
                 if (isReadyForShot()) {
@@ -114,9 +126,10 @@ public class Superstructure extends SubsystemBase {
                 // SHOOTING only allowed when we're in READY_FOR_SHOT
                 if (currentState == CurrentState.READY_FOR_SHOT) {
                     currentState = CurrentState.SHOOTING;
+                    new VisualizeShot();
                 } else if (currentState == CurrentState.SHOOTING) {
                     // Stay in shooting, check if shot is complete
-                    if (Timer.getTimestamp() - lastShotTime > SHOT_DURATION_SECONDS) {
+                    if (Timer.getTimestamp() - lastShotTime >= SHOT_DURATION_SECONDS) {
                         currentState = CurrentState.READY_FOR_SHOT;
                         desiredState = DesiredState.READY_FOR_SHOT;
                         lastShotTime = Timer.getTimestamp();
@@ -130,62 +143,6 @@ public class Superstructure extends SubsystemBase {
                         currentState = CurrentState.PREPARING_FOR_SHOT;
                     }
                 }
-                break;
-        }
-
-        // Handle state transition actions
-        if (previousState != currentState) {
-            handleStateExit(previousState);
-            handleStateEntry(currentState);
-        }
-    }
-
-    /**
-     * Handle cleanup when exiting a state.
-     */
-    private void handleStateExit(CurrentState exitingState) {
-        switch (exitingState) {
-            case SHOOTING:
-                // Unfreeze translational speeds when exiting shooting
-                swerveDrive.unfreezeTranslationalSpeeds();
-                break;
-            default:
-                break;
-        }
-    }
-
-    /**
-     * Handle setup when entering a state.
-     */
-    private void handleStateEntry(CurrentState enteringState) {
-        switch (enteringState) {
-            case PREPARING_FOR_SHOT:
-                swerveDrive.enableShootingVelocityCap();
-                break;
-            case READY_FOR_SHOT:
-                // Enable shooting velocity cap when preparing to shoot
-                swerveDrive.enableShootingVelocityCap();
-                break;
-            case SHOOTING:
-                // Ensure shooting velocity cap is enabled
-                swerveDrive.enableShootingVelocityCap();
-                // Freeze translational speeds at current measured speeds during shot (omega remains controlled)
-                swerveDrive.freezeTranslationalSpeeds();
-                // Visualize the shot trajectory
-                new VisualizeShot();
-                break;
-            case STOPPED:
-                swerveDrive.disableShootingVelocityCap();
-                break;
-            case HOME:
-                swerveDrive.disableShootingVelocityCap();
-                break;
-
-            case TRACKING:
-                // Disable shooting velocity cap when returning to non-shooting states
-                swerveDrive.disableShootingVelocityCap();
-                break;
-            default:
                 break;
         }
     }
@@ -218,70 +175,53 @@ public class Superstructure extends SubsystemBase {
 
     private void handleStoppedState() {
         shooter.setDesiredState(ShooterDesiredState.STOPPED);
-        swerveDrive.setDesiredState(SwerveDrive.DesiredState.STOPPED);
+        swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.STOPPED);
+        swerveDrive.setDesiredOmegaOverrideState(SwerveDrive.DesiredOmegaOverrideState.NONE);
+        swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.NONE);
     }
 
     private void handleHomeState() {
         shooter.setDesiredState(ShooterDesiredState.HOME);
-        
-        // Transition swerve back from ranged rotation modes to regular modes
-        if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.RANGED_ROTATION_FOLLOW_PATH) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.FOLLOW_PATH);
-        } else if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.RANGED_ROTATION_TELEOP) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.TELEOP);
-        }
+        swerveDrive.setDesiredOmegaOverrideState(SwerveDrive.DesiredOmegaOverrideState.NONE);
+        swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.NONE);
     }
 
     private void handleTrackingState() {
         shooter.setDesiredState(ShooterDesiredState.TRACKING);
-        
-        // Transition swerve back from ranged rotation modes to regular modes
-        if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.RANGED_ROTATION_FOLLOW_PATH) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.FOLLOW_PATH);
-        } else if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.RANGED_ROTATION_TELEOP) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.TELEOP);
-        }
+        swerveDrive.setDesiredOmegaOverrideState(SwerveDrive.DesiredOmegaOverrideState.NONE);
+        swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.NONE);
     }
 
     private void handlePreparingForShotState() {
-        shooter.setDesiredState(ShooterDesiredState.READY_FOR_SHOT);
-        
-        // Update swerve rotation range based on turret limits and set ranged rotation mode
         updateSwerveRotationRange();
-        
-        // Set swerve to ranged rotation mode based on current mode (teleop or auto)
-        if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.FOLLOW_PATH) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.RANGED_ROTATION_FOLLOW_PATH);
-        } else if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.TELEOP) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.RANGED_ROTATION_TELEOP);
-        } 
+        swerveDrive.setVelocityCapMaxVelocityMetersPerSec(MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC);
+
+
+        shooter.setDesiredState(ShooterDesiredState.READY_FOR_SHOT);
+        swerveDrive.setDesiredOmegaOverrideState(SwerveDrive.DesiredOmegaOverrideState.RANGED_ROTATION);
+        swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.CAPPED);
     }
 
     private void handleReadyForShotState() {
-        shooter.setDesiredState(ShooterDesiredState.READY_FOR_SHOT);
-        
-        // Continue updating swerve rotation range
         updateSwerveRotationRange();
-        
-        // Maintain ranged rotation mode
-        if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.FOLLOW_PATH) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.RANGED_ROTATION_FOLLOW_PATH);
-        } else if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.TELEOP) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.RANGED_ROTATION_TELEOP);
-        } 
+        swerveDrive.setVelocityCapMaxVelocityMetersPerSec(MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC);
+
+        shooter.setDesiredState(ShooterDesiredState.READY_FOR_SHOT);
+        swerveDrive.setDesiredOmegaOverrideState(SwerveDrive.DesiredOmegaOverrideState.RANGED_ROTATION);
+        swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.CAPPED);
     }
 
-    private void handleShootingState() {
-        shooter.setDesiredState(ShooterDesiredState.SHOOTING);
-        
-        // Continue updating swerve rotation range during shot
+    private void handleShootingState() {        
         updateSwerveRotationRange();
-        
-        // Maintain ranged rotation mode during shot
-        if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.FOLLOW_PATH) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.RANGED_ROTATION_FOLLOW_PATH);
-        } else if (swerveDrive.getDesiredState() == SwerveDrive.DesiredState.TELEOP) {
-            swerveDrive.setDesiredState(SwerveDrive.DesiredState.RANGED_ROTATION_TELEOP);
+        swerveDrive.setVelocityCapMaxVelocityMetersPerSec(MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC);
+
+        shooter.setDesiredState(ShooterDesiredState.SHOOTING);
+        swerveDrive.setDesiredOmegaOverrideState(SwerveDrive.DesiredOmegaOverrideState.RANGED_ROTATION);
+
+        if (Timer.getTimestamp() - lastShotTime < shooter.getLatencyCompensationSeconds()) {
+            swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.FROZEN);
+        } else {
+            swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.CAPPED);
         }
     }
 
@@ -292,9 +232,12 @@ public class Superstructure extends SubsystemBase {
      */
     private boolean isReadyForShot() {
         // Check if swerve is in a nominal ranged rotation state
-        boolean swerveInRange = 
-            swerveDrive.getCurrentState() == SwerveDrive.CurrentState.NOMINAL_RANGED_ROTATION_TELEOP ||
-            swerveDrive.getCurrentState() == SwerveDrive.CurrentState.NOMINAL_RANGED_ROTATION_FOLLOW_PATH;
+        boolean swerveReady = 
+            swerveDrive.getCurrentOmegaOverrideState() == SwerveDrive.CurrentOmegaOverrideState.RANGED_ROTATION_NOMINAL &&
+            Math.hypot(
+                robotState.getFieldRelativeSpeeds().vxMetersPerSecond,
+                robotState.getFieldRelativeSpeeds().vyMetersPerSecond
+            ) < MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC;
         
         // Check if shooter is ready
         boolean shooterReady = shooter.getCurrentState() == ShooterCurrentState.READY_FOR_SHOT;
@@ -305,7 +248,7 @@ public class Superstructure extends SubsystemBase {
         boolean withinShotDistance = distance >= shooter.getMinShotDistFromShooterMeters() 
                                   && distance <= shooter.getMaxShotDistFromShooterMeters();
         
-        return swerveInRange && shooterReady && withinShotDistance;
+        return swerveReady && shooterReady && withinShotDistance;
     }
 
     /**

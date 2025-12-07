@@ -6,7 +6,6 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.InterpolatingMatrixTreeMap;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -221,14 +220,10 @@ public class Shooter extends SubsystemBase {
                 // SHOOTING only allowed when we're in READY_FOR_SHOT
                 if (currentState == ShooterCurrentState.READY_FOR_SHOT) {
                     currentState = ShooterCurrentState.SHOOTING;
-                } else {
-                    // Not ready yet, go to preparing
-                    if (isReadyForShot()) {
-                        currentState = ShooterCurrentState.READY_FOR_SHOT;
-                    } else {
-                        currentState = ShooterCurrentState.PREPARING_FOR_SHOT;
-                    }
+                } else if (currentState != ShooterCurrentState.SHOOTING) {
+                    currentState = ShooterCurrentState.PREPARING_FOR_SHOT;
                 }
+                // Otherwise we're in SHOOTING, and allow superstructure to handle the transition to READY_FOR_SHOT
                 break;
         }
     }
@@ -384,6 +379,8 @@ public class Shooter extends SubsystemBase {
     }
 
     private void setTurretAngle(Rotation2d angle) {
+        Logger.recordOutput("Shooter/unclampedTurretAngleRotations", angle.getRotations());
+
         double minRot = config.getTurretMinAngleDeg();
         double maxRot = config.getTurretMaxAngleDeg();
         double clampedAngle = MathUtil.clamp(angle.getDegrees(), minRot, maxRot) / 360.0; 

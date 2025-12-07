@@ -60,7 +60,7 @@ public class RobotContainer {
         swerveDrive.setPathSupplier(() -> currentPath);
 
         // Set default state to TELEOP
-        swerveDrive.setDesiredState(SwerveDrive.DesiredState.TELEOP);
+        swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.TELEOP);
         
         // Set default superstructure state to HOME
         superstructure.setDesiredState(Superstructure.DesiredState.HOME);
@@ -86,7 +86,7 @@ public class RobotContainer {
 
     public void teleopInit() {
         // Ensure we're in teleop state
-        swerveDrive.setDesiredState(SwerveDrive.DesiredState.TELEOP);
+        swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.TELEOP);
         superstructure.setDesiredState(Superstructure.DesiredState.HOME);
     }
 
@@ -97,7 +97,7 @@ public class RobotContainer {
 
     public void disabledInit() {
         superstructure.setDesiredState(Superstructure.DesiredState.STOPPED);
-        swerveDrive.setDesiredState(SwerveDrive.DesiredState.STOPPED);
+        swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.STOPPED);
     }
 
     public Command getAlignModulesCommand(Path path) {

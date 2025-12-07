@@ -6,7 +6,8 @@
         "lerp",
         "setpoint",
         "Setpoints",
-        "teleop"
+        "teleop",
+        "Unoverridden"
     ],
     "java.configuration.updateBuildConfiguration": "interactive"
 }
