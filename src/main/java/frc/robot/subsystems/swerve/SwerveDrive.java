@@ -902,6 +902,7 @@ public class SwerveDrive extends SubsystemBase {
             );
         }
 
+        // TODO: SIM BUG WERE robot kind of goes off in a direction and then control comes back. happens randomly in capped state?
         if (shouldOverrideVelocityCap) {
             double maxVelocity = velocityCapMaxVelocityMetersPerSec;
             double currentMagnitude = Math.hypot(desiredRobotRelativeSpeeds.vxMetersPerSecond, desiredRobotRelativeSpeeds.vyMetersPerSecond);
