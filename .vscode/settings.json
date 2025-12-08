@@ -1,0 +1,13 @@
+{
+    "java.debug.settings.onBuildFailureProceed": true,
+    "cSpell.words": [
+        "apriltag",
+        "desaturated",
+        "lerp",
+        "setpoint",
+        "Setpoints",
+        "teleop",
+        "Unoverridden"
+    ],
+    "java.configuration.updateBuildConfiguration": "interactive"
+}
