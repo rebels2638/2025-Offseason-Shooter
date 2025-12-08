@@ -190,3 +190,4 @@ simgui-ds.json
 # editor files
 .cursor
 agent
+venv
