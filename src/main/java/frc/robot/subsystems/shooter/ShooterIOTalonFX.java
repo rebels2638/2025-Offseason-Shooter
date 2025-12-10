@@ -5,6 +5,8 @@ import static edu.wpi.first.units.Units.Fahrenheit;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import org.littletonrobotics.junction.Logger;
+
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -354,6 +356,8 @@ public class ShooterIOTalonFX implements ShooterIO {
         inputs.feederTemperatureFahrenheit = feederTemperature.getValue().in(Fahrenheit);
 
         inputs.indexerTemperatureFahrenheit = indexerTemperature.getValue().in(Fahrenheit);
+
+        Logger.recordOutput("Shooter/turretTalonSetpoint", turretMotor.getClosedLoopReference().getValueAsDouble());
     }
 
     @Override

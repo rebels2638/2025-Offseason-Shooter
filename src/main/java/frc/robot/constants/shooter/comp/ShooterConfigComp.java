@@ -75,7 +75,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getLatencyCompensationSeconds() {
-        return 0.0;
+        return 0.15;
     }
 
     @Override
@@ -233,7 +233,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getTurretKP() {
-        return 10;
+        return 75;
     }
 
     @Override
@@ -254,30 +254,30 @@ public class ShooterConfigComp extends ShooterConfigBase {
     @Override
     public double getTurretStartingAngleDeg() {
         // Default turret starting angle: pointing straight ahead
-        return 0.0;
+        return 180.0;
     }
 
     @Override
     public double getTurretMinAngleDeg() {
         // +/- 180 degrees by default
-        return -100.0;
+        return 90.0;
     }
 
     @Override
     public double getTurretMaxAngleDeg() {
-        return 100.0;
+        return 270.0;
     }
 
     @Override
     public double getTurretMaxVelocityDegPerSec() {
         // Default turret cruise velocity (deg/s), tune as needed
-        return 180.0;
+        return 720.0;
     }
 
     @Override
     public double getTurretMaxAccelerationDegPerSec2() {
         // Default turret acceleration (deg/s^2), tune as needed
-        return 360.0;
+        return 3000.0;
     }
 
     // Flywheel motor config

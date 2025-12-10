@@ -204,7 +204,7 @@ public class Shooter extends SubsystemBase {
 
             case READY_FOR_SHOT:
                 // Update setpoints from suppliers before checking readiness
-                updateSetpointsForReadyCheck();
+                // updateSetpointsForReadyCheck();
                 // READY_FOR_SHOT requires mechanisms to be at setpoints
                 // Otherwise we're in PREPARING_FOR_SHOT
                 if (isReadyForShot()) {
@@ -216,7 +216,7 @@ public class Shooter extends SubsystemBase {
 
             case SHOOTING:
                 // Update setpoints in case we entered SHOOTING directly (not via fall-through)
-                updateSetpointsForReadyCheck();
+                // updateSetpointsForReadyCheck();
                 // SHOOTING only allowed when we're in READY_FOR_SHOT
                 if (currentState == ShooterCurrentState.READY_FOR_SHOT) {
                     currentState = ShooterCurrentState.SHOOTING;
@@ -261,7 +261,7 @@ public class Shooter extends SubsystemBase {
         setIndexerVelocity(0);
         // Keep current hood/turret position or go to default
         setHoodAngle(Rotation2d.fromDegrees(45.0));
-        setTurretAngle(new Rotation2d(0));
+        setTurretAngle(new Rotation2d(Math.PI));
     }
 
     private void handleHomeState() {
@@ -270,7 +270,7 @@ public class Shooter extends SubsystemBase {
         setFeedVelocity(0);
         setIndexerVelocity(0);
         setHoodAngle(Rotation2d.fromDegrees(45.0));
-        setTurretAngle(new Rotation2d(0));
+        setTurretAngle(new Rotation2d(Math.PI));
     }
 
     private void handleTrackingState() {
@@ -381,14 +381,29 @@ public class Shooter extends SubsystemBase {
     private void setTurretAngle(Rotation2d angle) {
         Logger.recordOutput("Shooter/unclampedTurretAngleRotations", angle.getRotations());
 
-        double minRot = config.getTurretMinAngleDeg();
-        double maxRot = config.getTurretMaxAngleDeg();
-        double clampedAngle = MathUtil.clamp(angle.getDegrees(), minRot, maxRot) / 360.0; 
+        double initAngle = angle.getDegrees();
+        double minDeg = config.getTurretMinAngleDeg();
+        double maxDeg = config.getTurretMaxAngleDeg();
+        
+        double targetAngleDeg;
+        
+        // Check if the angle (or wrapped equivalents) are within the valid range
+        if (initAngle >= minDeg && initAngle <= maxDeg) {
+            targetAngleDeg = initAngle;
+        } else if (initAngle + 360.0 >= minDeg && initAngle + 360.0 <= maxDeg) {
+            targetAngleDeg = initAngle + 360.0;
+        } else if (initAngle - 360.0 >= minDeg && initAngle - 360.0 <= maxDeg) {
+            targetAngleDeg = initAngle - 360.0;
+        } else {
+            // None of the wrapped angles are in range, clamp to nearest bound
+            targetAngleDeg = MathUtil.clamp(initAngle, minDeg, maxDeg);
+        }
 
-        turretSetpointRotations = clampedAngle;
-        Logger.recordOutput("Shooter/turretAngleSetpointRotations", clampedAngle);
+        double clampedAngleRotations = targetAngleDeg / 360.0;
+        turretSetpointRotations = clampedAngleRotations;
+        Logger.recordOutput("Shooter/turretAngleSetpointRotations", clampedAngleRotations);
 
-        shooterIO.setTurretAngle(clampedAngle);
+        shooterIO.setTurretAngle(clampedAngleRotations);
     }
 
     private void setShotVelocity(double velocityRotationsPerSec) {

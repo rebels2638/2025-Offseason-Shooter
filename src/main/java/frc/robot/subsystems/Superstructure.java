@@ -4,6 +4,7 @@ import java.util.function.DoubleUnaryOperator;
 
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 import edu.wpi.first.math.InterpolatingMatrixTreeMap;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -67,6 +68,7 @@ public class Superstructure extends SubsystemBase {
     // Margin for swerve rotation range (degrees)
     private static final double SWERVE_ROTATION_MARGIN_DEG = 20.0;
     private static final double MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC = 2.0;
+    private LoggedNetworkNumber latencyCompensationSeconds = new LoggedNetworkNumber("Shooter/latencyCompSec");
 
     private Superstructure() {
         // Set up suppliers for the shooter - these provide dynamic setpoints based on shot calculation
@@ -145,6 +147,8 @@ public class Superstructure extends SubsystemBase {
                 }
                 break;
         }
+
+        latencyCompensationSeconds.setDefault(shooter.getLatencyCompensationSeconds());
     }
 
     /**
@@ -218,7 +222,7 @@ public class Superstructure extends SubsystemBase {
         shooter.setDesiredState(ShooterDesiredState.SHOOTING);
         swerveDrive.setDesiredOmegaOverrideState(SwerveDrive.DesiredOmegaOverrideState.RANGED_ROTATION);
 
-        if (Timer.getTimestamp() - lastShotTime < shooter.getLatencyCompensationSeconds()) {
+        if (Timer.getTimestamp() - lastShotTime < SHOT_DURATION_SECONDS) {
             swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.FROZEN);
         } else {
             swerveDrive.setDesiredTranslationOverrideState(SwerveDrive.DesiredTranslationOverrideState.CAPPED);
@@ -238,7 +242,7 @@ public class Superstructure extends SubsystemBase {
                 robotState.getFieldRelativeSpeeds().vxMetersPerSecond,
                 robotState.getFieldRelativeSpeeds().vyMetersPerSecond
             ) < MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC;
-        
+        Logger.recordOutput("Superstructure/swerveReady", swerveReady);
         // Check if shooter is ready
         boolean shooterReady = shooter.getCurrentState() == ShooterCurrentState.READY_FOR_SHOT;
         
@@ -248,6 +252,8 @@ public class Superstructure extends SubsystemBase {
         boolean withinShotDistance = distance >= shooter.getMinShotDistFromShooterMeters() 
                                   && distance <= shooter.getMaxShotDistFromShooterMeters();
         
+        Logger.recordOutput("Superstructure/withinShotDistance", withinShotDistance);
+
         return swerveReady && shooterReady && withinShotDistance;
     }
 
@@ -310,7 +316,7 @@ public class Superstructure extends SubsystemBase {
         
         ChassisSpeeds speeds = robotState.getFieldRelativeSpeeds();
         InterpolatingMatrixTreeMap<Double, N2, N1> lerpTable = shooter.getLerpTable();
-        double latencyCompensationSeconds = shooter.getLatencyCompensationSeconds();
+        double lcomp = latencyCompensationSeconds.get();
         DoubleUnaryOperator rpsToExitVelocity = shooter::calculateShotExitVelocityMetersPerSec;
         
         // Get shooter offset from robot center (for omega compensation)
@@ -322,7 +328,7 @@ public class Superstructure extends SubsystemBase {
             shooterPosition,
             speeds,
             lerpTable,
-            latencyCompensationSeconds,
+            lcomp,
             rpsToExitVelocity,
             shooterOffsetFromRobotCenter,
             robotHeading

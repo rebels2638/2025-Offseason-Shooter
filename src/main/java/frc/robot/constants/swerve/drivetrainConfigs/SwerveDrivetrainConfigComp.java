@@ -100,12 +100,12 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getRotationVelocityToleranceDegPerSec() {
-        return 5.0;
+        return 10.0;
     }
 
     @Override
     public double getRangedRotationKP() {
-        return 12.0;
+        return 5.0;// 5
     }
 
     @Override
@@ -115,7 +115,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getRangedRotationKD() {
-        return 1.1;
+        return 0;
     }
 
     @Override

@@ -288,18 +288,18 @@ public class ShooterConfigSim extends ShooterConfigBase {
     @Override
     public double getTurretStartingAngleDeg() {
         // Default turret starting angle: pointing straight ahead
-        return 0.0;
+        return 180.0;
     }
 
     @Override
     public double getTurretMinAngleDeg() {
         // +/- 180 degrees by default
-        return -100.0;
+        return 80.0;
     }
 
     @Override
     public double getTurretMaxAngleDeg() {
-        return 100.0;
+        return 280.0;
     }
 
     @Override

@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
-import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
@@ -345,7 +344,7 @@ public class SwerveDrive extends SubsystemBase {
             drivetrainConfig.getRangedRotationKD()
         );
         rangedRotationPIDController.enableContinuousInput(-Math.PI, Math.PI);
-        rangedRotationPIDController.setTolerance(Math.toRadians(drivetrainConfig.getRangedRotationToleranceDeg()));
+        // rangedRotationPIDController.setTolerance(Math.toRadians(drivetrainConfig.getRangedRotationToleranceDeg()));
 
     }
 
@@ -598,8 +597,8 @@ public class SwerveDrive extends SubsystemBase {
     
     private void handleRangedRotationOmegaOverrideState() {
         shouldOverrideOmega = true;
-        if (isWithinPaddedRotationRange()) {
-            omegaOverride = limitOmegaForRange(lastUnoverriddenOmega);
+        if (isWithinRotationRange(RANGED_ROTATION_BUFFER_RAD-Math.toRadians(drivetrainConfig.getRangedRotationToleranceDeg()))) {
+            omegaOverride = limitOmegaForRange(lastUnoverriddenOmega); // TODO: BAD FIX
         } else {
             omegaOverride = calculateReturnToRangeOmega();
         }
@@ -729,6 +728,13 @@ public class SwerveDrive extends SubsystemBase {
         // sqrt(2*a*d) formula for max velocity to stop at boundary using effective distances
         double maxOmegaToMin = Math.sqrt(2 * maxAngularAccel * effectiveDistToMin);
         double maxOmegaToMax = Math.sqrt(2 * maxAngularAccel * effectiveDistToMax);
+
+        if (currentRotation.getRadians() < min) {
+            return Math.max(desiredOmega, 0);
+        }
+        if (currentRotation.getRadians() > max) {
+            return Math.min(desiredOmega, 0);
+        }        
         
         // Clamp omega based on direction
         if (desiredOmega > 0) {
@@ -765,10 +771,13 @@ public class SwerveDrive extends SubsystemBase {
         }
         
         // Calculate PID output
-        double pidOutput = rangedRotationPIDController.calculate(current, targetAngle);
+        rangedRotationPIDController.setSetpoint(targetAngle);
+        double pidOutput = rangedRotationPIDController.calculate(current);
         
         // Apply velocity limit (0.6 of max omega)
         double maxOmega = drivetrainConfig.getMaxAngularVelocityRadiansPerSec() * RANGED_ROTATION_MAX_VELOCITY_FACTOR;
+
+        
         return MathUtil.clamp(pidOutput, -maxOmega, maxOmega);
     }
 
