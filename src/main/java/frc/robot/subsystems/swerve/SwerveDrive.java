@@ -67,6 +67,7 @@ public class SwerveDrive extends SubsystemBase {
     // FSM State Enums
     public enum DesiredSystemState {
         STOPPED,
+        IDLE,
         TELEOP,
         FOLLOW_PATH,
         PREPARE_FOR_AUTO,
@@ -75,9 +76,11 @@ public class SwerveDrive extends SubsystemBase {
 
     public enum CurrentSystemState {
         STOPPED,
+        IDLE,
         TELEOP,
         FOLLOW_PATH,
         PREPARE_FOR_AUTO,
+        READY_FOR_AUTO,
         SYSID
     }
 
@@ -147,10 +150,13 @@ public class SwerveDrive extends SubsystemBase {
 
     // Shooting velocity cap (limits max translational velocity during shooting)
     private boolean shouldOverrideVelocityCap = false;
-    private double velocityCapMaxVelocityMetersPerSec = 2.0;
+    private double velocityCapMaxVelocityMetersPerSec = 1.0;
 
     // Alliance-based inversion
     private int invert = 1;
+
+    private double modulesAlignmentToleranceDeg = 15.0;
+    private Rotation2d modulesAlignmentTargetRotation = Rotation2d.fromDegrees(0);
 
     public static final double ODOMETRY_FREQUENCY = 250;
 
@@ -422,17 +428,31 @@ public class SwerveDrive extends SubsystemBase {
             case STOPPED:
                 currentSystemState = CurrentSystemState.STOPPED;
                 break;
-
+            case IDLE:
+                currentSystemState = CurrentSystemState.IDLE;
+                break;
             case TELEOP:
                 currentSystemState = CurrentSystemState.TELEOP;
                 break;
 
             case FOLLOW_PATH:
-                currentSystemState = CurrentSystemState.FOLLOW_PATH;
+                if (currentPathCommand != null && currentPathCommand.isFinished()) {
+                    currentSystemState = CurrentSystemState.IDLE;
+                } else {
+                    currentSystemState = CurrentSystemState.FOLLOW_PATH;
+                }
                 break;
-
+                
             case PREPARE_FOR_AUTO:
-                currentSystemState = CurrentSystemState.PREPARE_FOR_AUTO;
+                if (pathSupplier.get() != null) {
+                    modulesAlignmentTargetRotation = pathSupplier.get().getInitialModuleDirection();
+                    modulesAlignmentToleranceDeg = 15;
+                }
+                if (areModulesAligned()) {
+                    currentSystemState = CurrentSystemState.READY_FOR_AUTO;
+                } else {
+                    currentSystemState = CurrentSystemState.PREPARE_FOR_AUTO;
+                }
                 break;
 
             case SYSID:
@@ -474,6 +494,9 @@ public class SwerveDrive extends SubsystemBase {
             case STOPPED:
                 handleStoppedSystemState();
                 break;
+            case IDLE:
+                handleIdleSystemState();
+                break;
             case TELEOP:
                 handleTeleopSystemState();
                 break;
@@ -482,6 +505,9 @@ public class SwerveDrive extends SubsystemBase {
                 break;
             case PREPARE_FOR_AUTO:
                 handlePrepareForAutoSystemState();
+                break;
+            case READY_FOR_AUTO:
+                handleReadyForAutoSystemState();
                 break;
             case SYSID:
                 handleSysIdSystemState();
@@ -527,10 +553,23 @@ public class SwerveDrive extends SubsystemBase {
         }
         cancelPathCommand();
         
-
         driveFieldRelative(new ChassisSpeeds(0, 0, 0));
 
         previousSystemState = CurrentSystemState.STOPPED;
+    }
+
+    private void handleIdleSystemState() {
+        if (previousSystemState == CurrentSystemState.STOPPED) {
+            setWheelCoast(false);
+        }
+        // Only cancel running commands, but don't null out finished commands
+        // This prevents re-scheduling when path completes while desired state is still FOLLOW_PATH
+        if (currentPathCommand != null && currentPathCommand.isScheduled()) {
+            currentPathCommand.cancel();
+        }
+        driveFieldRelative(new ChassisSpeeds(0, 0, 0));
+
+        previousSystemState = CurrentSystemState.IDLE;
     }
 
     private void handleTeleopSystemState() {
@@ -558,7 +597,7 @@ public class SwerveDrive extends SubsystemBase {
         
         // Schedule path command if not already running
         Path path = pathSupplier.get();
-        if (path != null && (currentPathCommand == null || !currentPathCommand.isScheduled())) {
+        if (path != null && (currentPathCommand == null || (!currentPathCommand.isScheduled() && !currentPathCommand.isFinished()))) {
             currentPathCommand = buildPathCommand(path);
             currentPathCommand.schedule();
         }
@@ -567,14 +606,25 @@ public class SwerveDrive extends SubsystemBase {
         previousSystemState = CurrentSystemState.FOLLOW_PATH;
     }
 
-    private void handlePrepareForAutoSystemState() {
-        if (previousSystemState == CurrentSystemState.STOPPED) {
+    private void prepareForAuto() {
+        if (previousSystemState != CurrentSystemState.PREPARE_FOR_AUTO && previousSystemState != CurrentSystemState.READY_FOR_AUTO) {
             setWheelCoast(false);
         }
         cancelPathCommand();
 
-        // No-op placeholder for now
+        if (pathSupplier.get() != null) {
+            alignModules(pathSupplier.get().getInitialModuleDirection(), 15);
+        }
+    }
+
+    private void handlePrepareForAutoSystemState() {
+        prepareForAuto();
         previousSystemState = CurrentSystemState.PREPARE_FOR_AUTO;
+    }
+
+    private void handleReadyForAutoSystemState() {
+        prepareForAuto();
+        previousSystemState = CurrentSystemState.READY_FOR_AUTO;
     }
 
     private void handleSysIdSystemState() {
@@ -735,7 +785,7 @@ public class SwerveDrive extends SubsystemBase {
         if (currentRotation.getRadians() > max) {
             return Math.min(desiredOmega, 0);
         }        
-        
+
         // Clamp omega based on direction
         if (desiredOmega > 0) {
             // Rotating towards max bound
@@ -795,11 +845,15 @@ public class SwerveDrive extends SubsystemBase {
     public void setPathSupplier(Supplier<Path> pathSupplier) {
         this.pathSupplier = pathSupplier;
         this.shouldPoseResetSupplier = () -> false;
+        // Clear existing command to allow fresh path to be scheduled
+        cancelPathCommand();
     }
 
     public void setPathSupplier(Supplier<Path> pathSupplier, Supplier<Boolean> shouldPoseResetSupplier) {
         this.pathSupplier = pathSupplier;
         this.shouldPoseResetSupplier = shouldPoseResetSupplier;
+        // Clear existing command to allow fresh path to be scheduled
+        cancelPathCommand();
     }
 
     public void setRotationRange(Rotation2d min, Rotation2d max) {
@@ -878,22 +932,24 @@ public class SwerveDrive extends SubsystemBase {
     }
 
     // return a supplier that is true if the modules are aligned within the tolerance
-    public Supplier<Boolean> alignModules(Rotation2d targetRotation, double toleranceDeg) {
+    private void alignModules(Rotation2d targetRotation, double toleranceDeg) {
+        modulesAlignmentTargetRotation = targetRotation;
+        modulesAlignmentToleranceDeg = toleranceDeg;
         for (int i = 0; i < 4; i++) {
             SwerveModuleState state = new SwerveModuleState(0, targetRotation);
             state.optimize(moduleStates[i].angle);
             modules[i].setState(state);
         }
+    }
 
-        return () -> {
-            for (int i = 0; i < 4; i++) {
-                if (Math.abs(moduleStates[i].angle.minus(targetRotation).getDegrees()) > toleranceDeg && 
-                    Math.abs(moduleStates[i].angle.plus(Rotation2d.fromDegrees(180)).minus(targetRotation).getDegrees()) > toleranceDeg) {
-                    return false;
-                }
+    private boolean areModulesAligned() {
+        for (int i = 0; i < 4; i++) {
+            if (Math.abs(moduleStates[i].angle.minus(modulesAlignmentTargetRotation).getDegrees()) > modulesAlignmentToleranceDeg && 
+                Math.abs(moduleStates[i].angle.plus(Rotation2d.fromDegrees(180)).minus(modulesAlignmentTargetRotation).getDegrees()) > modulesAlignmentToleranceDeg) {
+                return false;
             }
-            return true;
-        };
+        }
+        return true;
     }
 
     public void driveRobotRelative(ChassisSpeeds speeds) {

@@ -63,11 +63,11 @@ public class Superstructure extends SubsystemBase {
     private final RobotState robotState = RobotState.getInstance();
 
     private double lastShotTime = 0;
-    private static final double SHOT_DURATION_SECONDS = 0.5; // Time to complete one shot
+    private static final double SHOT_DURATION_SECONDS = 1; // Time to complete one shot
 
     // Margin for swerve rotation range (degrees)
     private static final double SWERVE_ROTATION_MARGIN_DEG = 20.0;
-    private static final double MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC = 2.0;
+    private static final double MAX_TRANSLATIONAL_VELOCITY_DURING_SHOT_METERS_PER_SEC = 1.0;
     private LoggedNetworkNumber latencyCompensationSeconds = new LoggedNetworkNumber("Shooter/latencyCompSec");
 
     private Superstructure() {
@@ -287,16 +287,19 @@ public class Superstructure extends SubsystemBase {
     // Shooter decides when to use them based on its state
     private Rotation2d getTargetHoodAngle() {
         ShotData shotData = calculateShotData();
+        Logger.recordOutput("Superstructure/shotData", shotData);
         return shotData.hoodPitch();
     }
 
     private Rotation2d getTargetTurretAngle() {
         ShotData shotData = calculateShotData();
+        Logger.recordOutput("Superstructure/shotData", shotData);
         return shotData.targetFieldYaw().minus(robotState.getEstimatedPose().getRotation());
     }
 
     private double getTargetFlywheelRPS() {
         ShotData shotData = calculateShotData();
+        Logger.recordOutput("Superstructure/shotData", shotData);
         return shotData.flywheelRPS();
     }
 

@@ -49,6 +49,11 @@ public class ShooterConfigComp extends ShooterConfigBase {
             15.0 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
         }));
 
+        table.put(1.08 , new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
+            40.0/360.0, // hood angle = 45.00° (optimal for flat trajectory)
+            21.0 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
+        }));
+
         table.put(1.32 , new Matrix<N2, N1>(Nat.N2(), Nat.N1(), new double[]{
             40.0/360.0, // hood angle = 45.00° (optimal for flat trajectory)
             23.0 // flywheel velocity in RPS (exit velocity = 1.88 m/s)
@@ -75,7 +80,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
 
     @Override
     public double getLatencyCompensationSeconds() {
-        return 0.15;
+        return 0.3;
     }
 
     @Override
@@ -369,7 +374,7 @@ public class ShooterConfigComp extends ShooterConfigBase {
         // Z: height above ground (meters)
         // Yaw: 0 means turret angle 0 points forward relative to robot
         return new Pose3d(
-            new Translation3d(-0.11, 0.0, 0.46),
+            new Translation3d(-0.19, 0.0, 0.46),
             new Rotation3d(0.0, 0.0, 0.0)
         );
     }
