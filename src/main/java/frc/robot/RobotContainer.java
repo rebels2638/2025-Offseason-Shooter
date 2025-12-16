@@ -81,6 +81,8 @@ public class RobotContainer {
     }
 
     public void teleopInit() {
+        shouldResetPose = false; 
+
         // Ensure we're in teleop state
         swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.TELEOP);
         superstructure.setDesiredState(Superstructure.DesiredState.HOME);
