@@ -438,6 +438,7 @@ public class SwerveDrive extends SubsystemBase {
             case FOLLOW_PATH:
                 if (currentPathCommand != null && currentPathCommand.isFinished()) {
                     currentSystemState = CurrentSystemState.IDLE;
+                    desiredSystemState = DesiredSystemState.IDLE;
                 } else {
                     currentSystemState = CurrentSystemState.FOLLOW_PATH;
                 }
@@ -562,6 +563,8 @@ public class SwerveDrive extends SubsystemBase {
         if (previousSystemState == CurrentSystemState.STOPPED) {
             setWheelCoast(false);
         }
+        cancelPathCommand();
+
         // Only cancel running commands, but don't null out finished commands
         // This prevents re-scheduling when path completes while desired state is still FOLLOW_PATH
         if (currentPathCommand != null && currentPathCommand.isScheduled()) {

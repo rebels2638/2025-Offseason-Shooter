@@ -125,7 +125,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getFollowPathTranslationKP() {
-        return 6.3;
+        return 5.3;
     }
 
     @Override
@@ -140,7 +140,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getFollowPathRotationKP() {
-        return 12.0;
+        return 7.0;
     }
 
     @Override
@@ -150,7 +150,7 @@ public class SwerveDrivetrainConfigComp extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getFollowPathRotationKD() {
-        return 1.1;
+        return 0.2;
     }
 
     @Override

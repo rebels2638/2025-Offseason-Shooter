@@ -3,11 +3,13 @@ package frc.robot;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import frc.robot.constants.Constants;
 import frc.robot.lib.BLine.Path;
+import frc.robot.lib.BLine.Path.Waypoint;
 import frc.robot.lib.input.XboxController;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.Superstructure.DesiredState;
@@ -33,7 +35,7 @@ public class RobotContainer {
     private final RobotState robotState = RobotState.getInstance();
     private final SwerveDrive swerveDrive = SwerveDrive.getInstance();
     private final Superstructure superstructure = Superstructure.getInstance();
-    private final Vision vision = Vision.getInstance();
+    // private final Vision vision = Vision.getInstance();
 
     // Path for follow path state
     private Path currentPath = null;
@@ -65,19 +67,32 @@ public class RobotContainer {
     }
 
     private void configureBindings() {
-        xboxDriver.getAButton().onTrue(
-            new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.SHOOTING))
-        ).onFalse(
-            new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.READY_FOR_SHOT))
-        );
+        // xboxDriver.getAButton().onTrue(
+        //     new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.SHOOTING))
+        // ).onFalse(
+        //     new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.READY_FOR_SHOT))
+        // );
 
-        xboxDriver.getXButton().onTrue(
-            new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.TRACKING))
-        );
+        // xboxDriver.getXButton().onTrue(
+        //     new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.TRACKING))
+        // );
 
+        // xboxDriver.getYButton().onTrue(
+        //     new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.HOME))
+        // );
+
+        // xboxDriver.getAButton().onTrue(
+        //     new InstantCommand(() -> currentPath = new Path(new Waypoint(5,5,new Rotation2d(0)))).andThen(
+        //         new InstantCommand(() -> swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.FOLLOW_PATH))
+        //     ).andThen(new WaitUntilCommand(() -> swerveDrive.getCurrentSystemState() == SwerveDrive.CurrentSystemState.IDLE)).andThen(
+        //         new InstantCommand(() -> swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.TELEOP))
+        //     )
+        // );
+        
         xboxDriver.getYButton().onTrue(
-            new InstantCommand(() -> superstructure.setDesiredState(Superstructure.DesiredState.HOME))
+            new InstantCommand(() -> robotState.resetPose(new Pose2d(new Translation2d(5, 5), new Rotation2d(0))))
         );
+
     }
 
     public void teleopInit() {
@@ -100,12 +115,13 @@ public class RobotContainer {
     }
     
     public Command getAutonomousCommand() {
-        currentPath = new Path("new_path");
+        currentPath = new Path("drivescore");
         shouldResetPose = true; 
 
         return new InstantCommand(() -> swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.PREPARE_FOR_AUTO)).andThen(
             new WaitUntilCommand(() -> swerveDrive.getCurrentSystemState() == SwerveDrive.CurrentSystemState.READY_FOR_AUTO)).andThen(
             new InstantCommand(() -> swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.FOLLOW_PATH))
         );
+
     }
 }
