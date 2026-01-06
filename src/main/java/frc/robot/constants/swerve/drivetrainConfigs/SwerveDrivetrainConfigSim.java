@@ -156,16 +156,16 @@ public class SwerveDrivetrainConfigSim extends SwerveDrivetrainConfigBase {
 
     @Override
     public double getFollowPathCrossTrackKP() {
-        return 3.0;
+        return 6; // 6
     }
 
     @Override
     public double getFollowPathCrossTrackKI() {
-        return 0.0;
+        return 0;  // .1
     }
 
     @Override
     public double getFollowPathCrossTrackKD() {
-        return 0.0;
+        return 0; // .2
     }
 }
