@@ -15,7 +15,7 @@ import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.Superstructure.DesiredState;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.swerve.SwerveDrive;
-import frc.robot.subsystems.vision.Vision;
+// import frc.robot.subsystems.vision.Vision;
 
 public class RobotContainer {
     public static RobotContainer instance = null;
@@ -115,7 +115,7 @@ public class RobotContainer {
     }
     
     public Command getAutonomousCommand() {
-        currentPath = new Path("drivescore");
+        currentPath = new Path("lknkn");
         shouldResetPose = true; 
 
         return new InstantCommand(() -> swerveDrive.setDesiredSystemState(SwerveDrive.DesiredSystemState.PREPARE_FOR_AUTO)).andThen(
